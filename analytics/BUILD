@@ -29,7 +29,7 @@ deploy_script = bash(
 
 echo "#!/bin/bash" >> ./output.sh
 echo 'if [[ -z "$1" ]]; then echo "Missing STACK_NAME parameter"; exit 1; fi' >> ./output.sh
-echo "aws cloudformation deploy --template-file "$TEMPLATE" --stack-name "\$1" --capabilities CAPABILITY_NAMED_IAM" >> ./output.sh
+echo "aws cloudformation deploy --template-file "$TEMPLATE" --stack-name "\$1" --capabilities CAPABILITY_NAMED_IAM --no-fail-on-empty-changeset" >> ./output.sh
 chmod +x ./output.sh
 mv ./output.sh $OUTPUT
     """,

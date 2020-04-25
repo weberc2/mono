@@ -8,7 +8,7 @@ from nimbus_resources.s3.bucket import (
     Bucket,
     BucketEncryption,
     ServerSideEncryptionRule,
-    ServerSideEncryptionByDefault,
+    ServerSideEncryptionByDefault as Encryption,
 )
 from nimbus_util.iam import PolicyDocument, Statement, Principal
 
@@ -19,7 +19,7 @@ def main():
         BucketEncryption=BucketEncryption(
             ServerSideEncryptionConfiguration=[
                 ServerSideEncryptionRule(
-                    ServerSideEncryptionByDefault=ServerSideEncryptionByDefault(
+                    ServerSideEncryptionByDefault=Encryption(
                         SSEAlgorithm="AES256",
                     ),
                 )
@@ -67,7 +67,10 @@ def main():
                             Action=["s3:PutObject"],
                             Effect="Allow",
                             Resource=[
-                                Sub("${Bucket}/*", Bucket=source_bucket.GetArn())
+                                Sub(
+                                    "${Bucket}/*",
+                                    Bucket=source_bucket.GetArn(),
+                                )
                             ],
                         ),
                     ],
