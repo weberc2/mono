@@ -1,6 +1,6 @@
 import json
 
-from nimbus_core import Sub, Template, AccountID
+from nimbus_core import Sub, Template
 from nimbus_resources.apigatewayv2.api import Api
 from nimbus_resources.iam.role import Role, Policy
 from nimbus_resources.lambda_.function import Function, Code, Environment
@@ -10,14 +10,6 @@ from nimbus_resources.s3.bucket import (
     ServerSideEncryptionRule,
     ServerSideEncryptionByDefault,
 )
-from nimbus_resources.crawler import (
-    Crawler,
-    Targets,
-    S3Target,
-    SchemaChangePolicy,
-    Schedule,
-)
-from nimbus_resources.glue.database import Database, DatabaseInput
 from nimbus_util.iam import PolicyDocument, Statement, Principal
 
 
@@ -175,23 +167,6 @@ def handler(event, context):
         CredentialsArn=gateway_role.GetArn(),
     )
 
-    database = Database(
-        CatalogId=AccountID,
-        DatabaseInput=DatabaseInput(
-            Description=Sub("Database for web analytics for ${AWS::StackName} stack.",),
-        ),
-    )
-
-    crawler = Crawler(
-        Name=database,  # name the crawler the same as the database.
-        # Crawl the whole bucket
-        Targets=Targets(S3Targets=[S3Target(Path=source_bucket)]),
-        SchemaChangePolicy=SchemaChangePolicy(
-            UpdateBehavior="UPDATE_IN_DATABASE", DeleteBehavior="DELETE_FROM_DATABASE"
-        ),
-        Schedule=Schedule(ScheduleExpression=""),  # TODO
-    )
-
     t = Template(
         description="Analytics backend",
         parameters={},
@@ -201,8 +176,6 @@ def handler(event, context):
             "Function": function,
             "GatewayRole": gateway_role,
             "API": api,
-            "Database": database,
-            "Crawler": crawler,
         },
     )
     print(json.dumps(t.template_to_cloudformation(), indent=4))

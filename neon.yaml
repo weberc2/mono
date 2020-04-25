@@ -8,7 +8,7 @@ theme_config:
       text: Twitter
     - url: http://github.com/weberc2
       text: Github
-  analytics_url: https://1m5rr6060e.execute-api.us-east-1.amazonaws.com
+  analytics_url: https://azd7mnx3pk.execute-api.us-east-2.amazonaws.com
 index_page_size: 10
 site_root: https://weberc2.github.io
 code_highlight_theme: friendly
