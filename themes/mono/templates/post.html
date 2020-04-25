@@ -1,0 +1,13 @@
+{{define "head"}}
+    <title>{{.Title}}</title>
+{{end}}
+{{define "body"}}
+    <div id="post">
+        <h2 id="post-title">{{.Title}}</h2>
+        <div><span class="post-date">{{.Date}}</span></div>
+        <div class="post-body">
+            {{$md := markdown .Body .ID}}
+            {{html_ $md}}
+        </div>
+    </div>
+{{end}}

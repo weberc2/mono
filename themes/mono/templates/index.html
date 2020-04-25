@@ -1,0 +1,22 @@
+{{define "body"}}
+    <div id="post-list">
+    {{range .}}
+        <div id="post">
+            <h2 class="post-title">
+                <a href="{{rellink .ID}}">{{.Title}}</a>
+            </h2>
+            <div><span class="post-date">{{.Date}}</span></div>
+            <div class="post-body">
+                {{$md := markdown .Body .ID}}
+                {{$snippet := snippet $md}}
+                {{if $snippet}}
+                    {{html_ $snippet}}
+                    <a href="{{rellink .ID}}">Read more...</a>
+                {{else}}
+                    {{html_ $md}}
+                {{end}}
+            </div>
+        </div>
+    {{end}}
+    </div>
+{{end}}

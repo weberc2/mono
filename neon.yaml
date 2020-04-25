@@ -1,0 +1,14 @@
+theme: default
+live_reload_port: 8081
+theme_config:
+  site_title: Craig Weber
+  copyright: Craig Weber 2016
+  contact:
+    - url: http://twitter.com/weberc2
+      text: Twitter
+    - url: http://github.com/weberc2
+      text: Github
+  analytics_url: https://1m5rr6060e.execute-api.us-east-1.amazonaws.com
+index_page_size: 10
+site_root: https://weberc2.github.io
+code_highlight_theme: friendly

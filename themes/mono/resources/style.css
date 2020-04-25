@@ -1,0 +1,28 @@
+body {
+    font-family: monospace;
+    width: 80ch;
+}
+
+pre code {
+    padding-left: 1ch;
+    padding-top: 1ch;
+    padding-bottom: 1ch;
+}
+
+#pagination {
+    width: 100%;
+    display: table;
+}
+
+.pagination {
+    width: 100%;
+    display: table-cell;
+}
+
+#pagination-prev {
+    text-align: left;
+}
+
+#pagination-next {
+    text-align: right;
+}

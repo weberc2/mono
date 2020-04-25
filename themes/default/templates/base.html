@@ -1,0 +1,86 @@
+{{define "base"}}
+<html>
+
+<head>
+    <meta name=viewport content='width=350'>
+    <meta name="google-site-verification" content="cw0Nbm73FcLB9kSYvCUhc5q-6CrLFcgJQy0h_qzG0O8" />
+    <link href='https://fonts.googleapis.com/css?family=Neuton|Merriweather|Inconsolata:400,700' rel='stylesheet'
+        type='text/css'>
+    <link rel="stylesheet" type="text/css" href="{{rellink "/resources/style.css"}}" />
+    <script>
+        function submitAnalytics() {
+            const analyticsUrl = "{{index .ThemeConfig "analytics_url"}}";
+            var body = document.getElementById("body");
+            var img = document.createElement("img");
+            var qstring = [
+                `path=${encodeURIComponent(window.location.pathname)}`,
+                `host=${encodeURIComponent(window.location.hostname)}`,
+                `proto=${encodeURIComponent(window.location.protocol)}`,
+                `referer=${encodeURIComponent(window.referer)}`,
+            ].join("&");
+            img.setAttribute("src", `${analyticsUrl}/?${qstring}`);
+            body.appendChild(img);
+        }
+    </script>
+    {{template "head" .Page.Content}}
+</head>
+
+<body onload=submitAnalytics()>
+    <script src="{{rellink "livereload.js"}}"></script>
+    <h1 id="site-header">
+        <a id="site-title" href="{{rellink "/index.html"}}">
+            {{index .ThemeConfig "site_title"}}
+        </a>
+    </h1>
+    <div id="page" class="center-column">
+        {{template "body" .Page.Content}}
+        <div id="pagination">
+            {{if .Page.PrevID}}
+            <div class="pagination" id="pagination-prev">
+                <a href="{{rellink .Page.PrevID}}">&laquo;&nbsp;Previous</a>
+            </div>
+            {{end}}
+            {{if .Page.NextID}}
+            <div class="pagination" id="pagination-next">
+                <a href="{{rellink .Page.NextID}}">Next&nbsp;&raquo;</a>
+            </div>
+            {{end}}
+        </div>
+    </div>
+    <div id="footer">
+        <div id="footer-content" class="center-column">
+            <div class="footer-section">
+                <h4>About</h4>
+                <p>Software enthusiast. Amateur blogger. I build things at
+                    <a href="https://narrativescience.com">
+                        Narrative Science.
+                    </a> Thoughts and opinions are my own.
+                </p>
+            </div>
+            {{with $contact := index .ThemeConfig "contact"}}
+            <div class="footer-section">
+                <h4>Contact</h4>
+                <ul>
+                    {{range $contact}}
+                    <li>
+                        <a href="{{index . "url"}}">
+                            {{index . "text"}}
+                        </a>
+                    </li>
+                    {{end}}
+                </ul>
+            </div>
+            {{end}}
+            {{with $copy := index .ThemeConfig "copyright"}}
+            <div class="footer-section">
+                <h4>Copyright</h4>
+                {{$copy}}
+            </div>
+            {{end}}
+        </div>
+    </div>
+</body>
+
+</html>
+{{end}}
+{{define "head"}}<title>Craig Weber</title>{{end}}
