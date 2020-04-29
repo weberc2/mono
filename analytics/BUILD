@@ -1,18 +1,25 @@
-load("std/python", "py_source_library", "py_source_binary", "pypi")
 load("std/command", "bash")
-load("3rdParty/python", "typing_extensions", "black_check", black = "black")
+load(
+    "3rdParty/python",
+    "typing_extensions",
+    "black_check",
+    black = "black",
+    "pypi",
+    "library",
+    "binary",
+)
 load("nimbus/resources", nimbus_resources = "lib")
 load("nimbus/core", nimbus_core = "lib")
 load("nimbus/util", nimbus_util = "lib")
 
 src = glob("setup.py", "src/**/*.py")
 
-bin = py_source_binary(
+bin = binary(
     name = "bin",
     package_name = "blog_analytics",
     sources = src,
     dependencies = [ nimbus_resources, nimbus_core, nimbus_util ],
-    entry_point = "main",
+    entrypoint = "main",
 )
 
 cfn_template = bash(
