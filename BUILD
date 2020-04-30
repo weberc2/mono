@@ -1,6 +1,6 @@
 load("std/golang", "go_module")
 load("std/git", "git_clone")
-load("std/command", "bash")
+load("std/bash", "bash")
 load("neon", "neon") 
 
 blog = bash(
