@@ -13,6 +13,8 @@ I'm not sure about returning a pointer to the type as opposed to a `(T, bool)`
 tuple. In particular, I suspect this will cause unnecessary allocations, but I
 haven't tested at all.
 
+<!-- more -->
+
 I'd love feedback:
 
 * [HackerNews](https://news.ycombinator.com/item?id=23556737)
