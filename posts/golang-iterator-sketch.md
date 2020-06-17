@@ -15,8 +15,8 @@ haven't tested at all.
 
 I'd love feedback:
 
-* [HackerNews](https://news.ycombinator.com/item?id=23556494)
-* [/r/golang](https://www.reddit.com/r/golang/comments/hb00f1/go_generics_iterator_sketch/)
+* [HackerNews](https://news.ycombinator.com/item?id=23556737)
+* [/r/golang](https://www.reddit.com/r/golang/comments/hb031l/go_generics_iterator_sketch/)
 * [Twitter](https://twitter.com/weberc2)
 
 
