@@ -2,8 +2,9 @@ load("std/golang", "go_module")
 load("std/git", "git_clone")
 load("std/bash", "bash")
 load("neon", "neon") 
+load("system/stdenv", "runInStdenv", "coreutils")
 
-blog = bash(
+blog = runInStdenv(
     name = "blog",
     environment = {
         "SOURCES": glob("neon.yaml", "posts/**", "themes/**"),
@@ -12,8 +13,7 @@ blog = bash(
     script = 'cd $SOURCES && $NEON build && mv _output $OUTPUT',
 )
 
-# NOTE this depends on `md5sum` and `awk` system utilities.
-deploy_script = bash(
+deploy_script = runInStdenv(
     name = "deploy_script",
     environment = {
         "SOURCE_DIRECTORY": blog,
