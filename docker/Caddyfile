@@ -1,2 +1,2 @@
-root * /srv
+:80
 file_server

@@ -1,16 +1,55 @@
 load("std/golang", "go_module")
 load("std/git", "git_clone")
 load("std/bash", "bash")
-load("neon", "neon") 
-load("system/stdenv", "runInStdenv", "coreutils")
+load("neon", "neon")
+load("system/stdenv", "runInStdenv")
 
-blog = runInStdenv(
-    name = "blog",
-    environment = {
-        "SOURCES": glob("neon.yaml", "posts/**", "themes/**"),
-        "NEON": neon,
-    },
-    script = 'cd $SOURCES && $NEON build && mv _output $OUTPUT',
+def _blog(name, site_root="https://weberc2.github.io"):
+    return runInStdenv(
+        name = name,
+        environment = {
+            "SOURCES": glob("neon.yaml", "posts/**", "themes/**"),
+            "NEON": neon,
+            "SITE_ROOT": site_root,
+        },
+        script = """
+        set -eo pipefail
+        cp -r $SOURCES ./sources
+        cd ./sources
+        sed -i.bak 's|https://weberc2.github.io|{}|g' ./neon.yaml
+        $NEON build
+        mv _output $OUTPUT
+        """.format(site_root),
+    )
+
+def _dockerTar(name, sources):
+    """Builds a .tar.gz that's ready to be unpacked and `docker build`-ed.
+
+    Contents:
+    - site/ # static site root
+    - Dockerfile
+    - Caddyfile
+    """
+    return runInStdenv(
+        name = name,
+        environment = {
+            "SOURCES": sources,
+            "DOCKERDIR": glob("docker/**"),
+        },
+        script = """
+        cp -r "$SOURCES" ./site
+        cp "$DOCKERDIR/docker/Dockerfile" .
+        cp "$DOCKERDIR/docker/Caddyfile" .
+        tar -czvf output.tar.gz *
+        mv output.tar.gz $OUTPUT
+        """,
+    )
+
+blog = _blog("blog")
+
+blogDevTar = _dockerTar(
+    "blog-dev-tar",
+    _blog("blog-dev", site_root="http://10.5.51.14/blog/"),
 )
 
 deploy_script = runInStdenv(
