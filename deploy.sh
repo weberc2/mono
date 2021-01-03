@@ -1,7 +1,8 @@
 function cloneTargetRepo() {
     local tmpdir="$(mktemp -d)"
     local tmpRepo="$tmpdir/weberc2.github.io"
-    local cloneOutput="$(git clone "git@github.com:weberc2/weberc2.github.io.git" "$tmpRepo" 2>&1)"
+    local cloneOutput # https://superuser.com/a/1103711/116125
+    cloneOutput="$(git clone "git@github.com:weberc2/weberc2.github.io.git" "$tmpRepo" 2>&1)"
     local retVal=$?
     if [[ $retVal -ne 0 ]]; then
         echo "$cloneOutput" 1>&2 # output to stderr
@@ -13,12 +14,12 @@ function cloneTargetRepo() {
 function deploy() {
     local sourceDirectory="$1"
     local sourceVersion="$2"
-    
+
     if [[ -z "$sourceDirectory" ]]; then
         echo "USAGE deploy SOURCE_DIRECTORY SOURCE_VERSION"
         exit 1
     fi
-    
+
     if [[ -z "$sourceVersion" ]]; then
         echo "USAGE deploy SOURCE_DIRECTORY SOURCE_VERSION"
         exit 1
