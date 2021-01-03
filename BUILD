@@ -47,9 +47,9 @@ def _dockerTar(name, sources):
 
 blog = _blog("blog")
 
-blogDevTar = _dockerTar(
-    "blog-dev-tar",
-    _blog("blog-dev", site_root="http://10.5.51.14/blog/"),
+rpiTar = _dockerTar(
+    "rpi-tar",
+    _blog("rpi", site_root="http://blog.home/blog/"),
 )
 
 deploy_script = runInStdenv(
