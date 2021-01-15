@@ -189,3 +189,30 @@ pre code {
     border: none;
     padding: 0px;
 }
+
+table {
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+  border: 2px solid #ddd;
+}
+
+th, td {
+  padding: 1rem;
+}
+
+td {
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+th {
+  text-align: center;
+  background-color: #ddd;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+tbody tr:nth-child(even){
+  background-color: #eee;
+}

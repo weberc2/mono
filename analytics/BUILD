@@ -1,4 +1,5 @@
-load("std/bash", "bash")
+load("system/stdenv", "runInStdenv")
+load("system", "PYTHON36")
 load(
     "3rdParty/python",
     "typing_extensions",
@@ -22,20 +23,20 @@ bin = binary(
     entrypoint = "main",
 )
 
-cfn_template = bash(
+cfn_template = runInStdenv(
     name = "cfn_template",
-    environment = {"GENERATE": bin},
+    environment = {"PYTHON": PYTHON36, "GENERATE": bin},
     # We don't want to do `$GENERATE > $OUTPUT` in case there is an error.
-    script = "$GENERATE > ./output.json && mv ./output.json $OUTPUT",
+    script = "$PYTHON $GENERATE > ./output.json && mv ./output.json $OUTPUT",
 )
 
-deploy_script = bash(
+deploy_script = runInStdenv(
     name = "deploy_script",
     environment = {"TEMPLATE": cfn_template},
     script = """
 echo "#!/bin/bash" >> ./output.sh
 echo 'if [[ -z "$1" ]]; then echo "Missing STACK_NAME parameter"; exit 1; fi' >> ./output.sh
-echo "aws cloudformation deploy --template-file "$TEMPLATE" --stack-name "\$1" --capabilities CAPABILITY_NAMED_IAM --no-fail-on-empty-changeset" >> ./output.sh
+echo "aws cloudformation deploy --template-file "$TEMPLATE" --stack-name "\$1" --capabilities CAPABILITY_NAMED_IAM --no-fail-on-empty-changeset" \${@:2} >> ./output.sh
 chmod +x ./output.sh
 mv ./output.sh $OUTPUT
     """,

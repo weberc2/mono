@@ -23,4 +23,7 @@ they're considering getting into!).
 
 Next time, I'll delve into the hardware I'm using for my cluster.
 
-[0]: ./k3s-tailscale.md
+* [Part I: Hardware][1]
+
+[0]: ./k3s-tailscale.html
+[1]: ./homelab-part-i-hardware.html
