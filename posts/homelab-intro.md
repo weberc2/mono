@@ -25,5 +25,5 @@ Next time, I'll delve into the hardware I'm using for my cluster.
 
 * [Part I: Hardware][1]
 
-[0]: ./k3s-tailscale.html
-[1]: ./homelab-part-i-hardware.html
+[0]: ./k3s-tailscale.md
+[1]: ./homelab-part-i-hardware.md

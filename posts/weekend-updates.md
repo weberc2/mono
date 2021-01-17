@@ -107,7 +107,7 @@ Now it's in the daily
 trying-to-keep-our-heating-bill-low-and-save-the-planet-by-bundling-up
 hoodie/sweater rotation (at least until Jen pilfers it, as she's known to do).
 
-[0]: ./homelab-part-i-hardware.html
+[0]: ./homelab-part-i-hardware.md
 [1]: https://reederapp.com/
 [2]: https://grammarist.com/idiom/from-soup-to-nuts/
 [3]: https://github.com/gorilla/feeds

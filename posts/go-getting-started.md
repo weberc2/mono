@@ -26,7 +26,7 @@ testing).
 Now without further ado...
 
 <!-- more -->
- 
+
 <!--
 NOTE: headers start at h3 b/c h1 is for site header and h2 is for post title
 -->
@@ -227,7 +227,7 @@ Updated according to some feedback.
 * Removed the reference to `godoc` from the "Documentation" section per
   [/u/qu33ksilver][10] on [Reddit][9].
 
-[0]: ./installing-go-on-linux-and-osx.html
+[0]: ./installing-go-on-linux-and-osx.md
 [1]: https://github.com/golang/go/wiki/Modules
 [2]: https://tour.golang.org
 [3]: https://golang.org/dl/
