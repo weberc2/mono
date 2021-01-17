@@ -111,6 +111,9 @@ h1, h2, h3, h4 {
     border-bottom: 1px solid #F0C808; /* gold */
 }
 
+h2 { font-size: 32px; }
+h3 { font-size: 24px; }
+
 .center-column {
     margin: 0 auto 0 auto;
     max-width: 700px;
