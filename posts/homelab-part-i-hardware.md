@@ -23,6 +23,7 @@ Item                   | Price  | Quantity
 [PoE Hat][3]           | $25    | 2
 [Samsung 500GB SSD][4] | $85    | 1
 [M.2 NVMe SSD case][5] | $24    | 1
+[Cluster Case][10]     | $19    | 1
 
 I have 2 Raspberry Pi 4Bs and 2 PoE hats, but I expect to procure more of these
 incrementally. The 8GB nodes probably aren't necessary, but I wouldn't get 1GB
@@ -69,3 +70,4 @@ simple automation to allow us to maintainably set up hosts to join the cluster.
 [7]: https://www.jeffgeerling.com/blog/2020/uasp-makes-raspberry-pi-4-disk-io-50-faster
 [8]: https://longhorn.io/
 [9]: https://www.amazon.com/dp/B0721V1TGV/?coliid=I3MS3H10K66CGU&colid=9GAEGP20CUK&psc=1&ref_=lv_ov_lig_dp_it
+[10]: https://www.amazon.com/dp/B07K72STFB/?coliid=IIMX6TFCHY31M&colid=3T0XFW8OAF4UV&psc=1&ref_=lv_ov_lig_dp_it

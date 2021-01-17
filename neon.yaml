@@ -1,5 +1,8 @@
 theme: default
 live_reload_port: 8081
+title: Craig Weber
+description: "My blog; mostly tech"
+author: Craig Weber
 theme_config:
   site_title: Craig Weber
   copyright: Craig Weber 2016
