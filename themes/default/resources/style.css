@@ -158,13 +158,13 @@ h3 { font-size: 24px; }
     font-family: 'Merriweather', Serif;
 }
 
-a {
+a, a * {
     color: #333;
     border-bottom: 1px dotted #999;
     text-decoration: none;
 }
 
-a:hover {
+a:hover, a:hover * {
     color: #F0C808; /* gold */
 }
 
@@ -175,7 +175,7 @@ code {
     border-radius: 4px;
     color: #333;
     font-family: 'Inconsolata', ;
-    font-size: 0.9em;
+    font-size: 16px;
 }
 
 pre {
@@ -186,6 +186,8 @@ pre {
     border: 1px solid #ddd;
     border-radius: 4px;
     line-height: 1.5em;
+    font-size: 16px;
+    tab-size: 4;
 }
 
 pre code {
