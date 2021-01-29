@@ -7,6 +7,12 @@
     <link href='https://fonts.googleapis.com/css?family=Neuton|Merriweather|Inconsolata:400,700' rel='stylesheet'
         type='text/css'>
     <link rel="stylesheet" type="text/css" href="{{rellink "/resources/style.css"}}" />
+    <link
+        rel="alternate"
+        type="application/atom+xml"
+        title="{{index .ThemeConfig "site_title"}}"
+        href="{{rellink "/feed.atom"}}"
+    />
     <script>
         function submitAnalytics() {
             const analyticsUrl = "{{index .ThemeConfig "analytics_url"}}";
