@@ -22,7 +22,7 @@ on for details.
 <!-- more -->
 
 <!-- h3 because the site header is h1 and the post title is h2 -->
-### Solution 1: Managing multiple GitHub SSH keys with [`direnv`][0]
+# Solution 1: Managing multiple GitHub SSH keys with [`direnv`][0]
 
 The `git` CLI respects a `GIT_SSH_COMMAND` environment variable, and the `ssh`
 CLI takes a `-i` flag to specify an "identity file" or private key. If I run
@@ -44,7 +44,7 @@ cd $PERSONAL_REPO && \
     direnv allow`
 ```
 
-#### Limitation
+## Limitation
 
 This doesn't work if you're using `git -C` to run commands on a git repository
 outside that is not an ancestor of your current working directory, e.g., if you
@@ -54,7 +54,7 @@ trigger `direnv` to load your `.envrc` file because `direnv` hooks into your
 shell, not into the `git` CLI. To support the `git -C` usecase, you'll need to
 pass the `GIT_SSH_COMMAND` env var to the `git` subprocess.
 
-### Solution 1 Alternative: the SSH config trick
+# Solution 1 Alternative: the SSH config trick
 
 For a while, I was using the [SSH config trick][2] which told `ssh` to use my
 personal SSH key for requests to the host `github-personal` while using my work
@@ -66,7 +66,7 @@ that's a weird thing to do--it's always going to GitHub, and any tool that
 wants to make authenticated requests to GitHub on my behalf would also have to
 support this kind of host parameterization.
 
-### Solution 2: Using Firefox Containers for multiple accounts
+# Solution 2: Using Firefox Containers for multiple accounts
 
 Firefox has a feature called "Containers" which are basically collections of
 tabs that share the same cookies, history, etc. Each container is sort of its
@@ -79,7 +79,7 @@ new Personal container tab and navigate to github.com, I'm already signed into
 my personal GH account, and vice versa for my work account in Work container
 tabs.
 
-## Conclusion
+# Conclusion
 
 I use these tools for lots of other applications as well, including AWS
 (including using `direnv` to set `AWS_DEFAULT_PROFILE` and

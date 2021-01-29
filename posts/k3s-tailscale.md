@@ -37,7 +37,7 @@ either the controller needs to be Tailscale-aware (determine the host for the
 host) or Klipper needs to assign services external IP addresses from the
 `100.*` address space instead of the `192.168.*` address space.
 
-### Solution: Configure K3s to use the Tailscale network
+# Solution: Configure K3s to use the Tailscale network
 
 The latter seemed easier and generally keeps my DNS controller decoupled from
 the details of my VPN and Load Balancer controller, so I went that route. I use
@@ -85,7 +85,7 @@ host network, so in theory (i.e., I haven't confirmed this yet) I should be
 able to add a node in the same way even if it's not on the same host network
 (e.g., an EC2 instance running in an AWS VPC).
 
-### Alternative Solution: Bridge Host and Tailscale Networks
+# Alternative Solution: Bridge Host and Tailscale Networks
 
 Another solution would have been to bridge the host network with the Tailscale
 network such that a device running on a different physical network (but still

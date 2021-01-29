@@ -220,11 +220,11 @@ that--[which may be a more practical concern than I originally thought][0].
 NOTE: headers start at h3 b/c h1 is for site header and h2 is for post title
 -->
 
-### Contact
+# Contact
 
 Please share corrections, comments, or feedback on [Reddit][2] or [Twitter][3].
 
-### TL;DR
+# TL;DR
 
 By using a `scratch` base image, we save about ~5MB over Alpine base images and
 we ship with a smaller attack surface.
@@ -271,7 +271,7 @@ COPY --from=0 /etc_passwd /etc/passwd
 USER nobody
 ```
 
-### EDIT
+# EDIT
 
 * Thanks to Reddit user [ROL_A][4] for correcting a typo in the COPY statement
   that copied the /etc/passwd into the target stage, as well as for pointing out

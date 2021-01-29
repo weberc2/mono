@@ -15,7 +15,7 @@ highlights:
 
 <!-- more -->
 
-### iPad Viewport Bug
+# iPad Viewport Bug
 
 Jen got a new iPad this morning, so I decided to check out how this blog looked
 in iPad format. It turns out, not great. Everything was zoomed in about 3x. It
@@ -38,7 +38,7 @@ least on iPad) to scale everything up. The fix was to set this width property
 to a special `device-width` value.
 
 
-### Syndication
+# Syndication
 
 One of the reasons I built this blog is that the idea of blogging harkens back
 to the pre-social-media days when the Internet was smaller, more heterogeneous,
@@ -101,7 +101,7 @@ func buildFeed(conf config.Config, posts ByDate) error {
 }
 ```
 
-### Markdown Table
+# Markdown Table
 
 For my [Homelab/Hardware post][0], I wanted an HTML table to represent my bill
 of materials for my Raspberry Pi cluster. Neon uses a high-quality, extensible
@@ -124,7 +124,7 @@ blackfriday.Run(
 That generates a bare HTML table, but I still had to style it with CSS to make
 it render like one would expect when viewing it on a website.
 
-### Broken links in snippets
+# Broken links in snippets
 
 When writing a post such as this one, I often want to link to other posts that
 I've written. I don't want to hard-code the `SiteRoot` (e.g.,
@@ -191,7 +191,7 @@ func (r *renderer) RenderNode(
 }
 ```
 
-### Decoupling source files from Neon details
+# Decoupling source files from Neon details
 
 Part of my philosophy for Neon is that the input markdown files should be
 loosely-coupled from various details about Neon and from its configuration. If

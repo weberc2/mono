@@ -31,7 +31,7 @@ Now without further ado...
 NOTE: headers start at h3 b/c h1 is for site header and h2 is for post title
 -->
 
-### Installing Go
+# Installing Go
 
 Here are the updated installation instructions:
 
@@ -52,7 +52,7 @@ Here are the updated installation instructions:
 
 That's it. Now you can compile any Go program.
 
-### Text Editor
+# Text Editor
 
 Go has the highest quality text editor plugins of any programming language I've
 used. The plugins all have the features you would expect from an IDE--the
@@ -72,7 +72,7 @@ it's the easiest, most stable way to work with Go, especially if you're more
 comfortable in a GUI environment (although this vim user has found himself
 using VS Code more and more lately).
 
-### Hello world
+# Hello world
 
 Create a new project directory anywhere on your system, say `/tmp/hello`. Now
 copy and paste the following into `/tmp/hello/main.go`:
@@ -101,7 +101,7 @@ didn't need to figure out how to point the compiler at your source files or
 tell the compiler the order in which it needs to process them. `go build` is
 sufficient to build most Go programs.
 
-### Dependencies
+# Dependencies
 
 Dependency management is a critical function for writing software, yet most
 languages' "getting started" guides don't guide you to the best practices if
@@ -159,13 +159,13 @@ dependencies to your system, and build the binary. Let's try it:
     Git, Subversion, and Mercurial to do this, so make sure you have those
     installed on your system.
 
-### Publishing packages
+# Publishing packages
 
 Go doesn't have a package repository; to "publish" packages, you just push your
 code up to Github or BitBucket or wherever (you can even run your own
 git/hg/svn server). No need to write CI scripts to publish packages for you.
 
-### Testing
+# Testing
 
 Go has unit tests built in, so you don't need to worry about figuring out what
 unit test library or test runner to install nor how to run them. Just use the
@@ -190,7 +190,7 @@ func TestAdd(t *testing.T) {
 }
 ```
 
-### Documentation
+# Documentation
 
 Go doesn't require you to learn a special documentation syntax like javadoc or
 Sphinx; it just pulls documentation from your normal code comments. If you push
@@ -201,7 +201,7 @@ is also a subcommand on the `go` tool called `go doc` which takes a symbol
 identifier (such as `fmt.Printf`) and returns the documentation associated with
 that symbol; check out `go help doc` for more details.
 
-### Other tools
+# Other tools
 
 Go also has support for the following:
 
@@ -213,12 +213,12 @@ Go also has support for the following:
 
 For a truly comprehensive list, check out [Awesome Go][5]
 
-### Contact
+# Contact
 
 For questions, corrections, suggestions, or criticism, hit me up via [email][6]
 or [Twitter][7].
 
-### Edit (2018-10-20)
+# Edit (2018-10-20)
 
 Updated according to some feedback.
 

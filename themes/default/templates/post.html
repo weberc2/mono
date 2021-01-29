@@ -6,7 +6,7 @@
     <h2 id="post-title">{{.Title}}</h2>
     <div><span class="post-date">{{.Date}}</span></div>
     <div class="post-body">
-        {{$markdown := markdown .Body .ID}}
+        {{$markdown := markdown .Body .ID 2}}
         {{html_ $markdown}}
     </div>
 </div>

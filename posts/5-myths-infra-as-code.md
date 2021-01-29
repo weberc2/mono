@@ -15,7 +15,7 @@ can focus on more substantial concerns.
 
 <!-- more -->
 
-## Disclaimer
+# Disclaimer
 
 These are all concerns I've heard/read. They aren't strawman arguments, and
 anyway popular misconceptions among my 'opponents' doesn't imply that their
@@ -26,9 +26,9 @@ configuration language camp believes any or all of these myths, and many
 people that I respect are in the configuration language camp (for now,
 anyway!).
 
-## Myths
+# Myths
 
-### 1. Using a programming language implies imperatively updating infrastructure
+## 1. Using a programming language implies imperatively updating infrastructure
 
 Some people are concerned that an infinite loop in their program might spawn
 an infinite number of VMs or other resources. Others imagine that they will
@@ -41,7 +41,7 @@ that--you're generating the static configuration that is then fed into a tool
 like Terraform or CloudFormation. The tools still do the hard part: figuring
 out what updates to apply, rollbacks, etc.
 
-### 2. Using a programming language introduces unpredictability
+## 2. Using a programming language introduces unpredictability
 
 Some are worried that if they aren't reading and writing static configuration
 files and committing them to git, it will be opaque to them what changes will
@@ -53,7 +53,7 @@ just like if your team had written it directly, modulo perhaps comments, style,
 etc. Further, Terraform and CloudFormation also have the ability to preview
 changes before you apply them, and those same features are also available.
 
-### 3. Using a programming language is incompatible with declarative infrastructure
+## 3. Using a programming language is incompatible with declarative infrastructure
 
 I think this is just a misunderstanding of what "declarative" means. I think
 people initially confuse it with "static" or "constant" (as in "it doesn't
@@ -134,7 +134,7 @@ t = Template(
 print(yaml.dump(t.template_to_cloudformation()))
 ```
 
-### 4. Programming languages are necessarily turing complete (and that's a big problem)
+## 4. Programming languages are necessarily turing complete (and that's a big problem)
 
 There's a potential semantic argument about whether or not 'programming
 language' implies 'Turing completeness'. Certainly most are, and I'm happy to
@@ -165,7 +165,7 @@ in code review (and if your organization really can't be trusted to
 consistently avoid these bugs, then any embedded scripting language would
 suit, including Dhall and Starlark).
 
-### 5. The principle of least power says that we should use configuration languages
+## 5. The principle of least power says that we should use configuration languages
 
 The principle of least power states that we should aim for "the least powerful
 language that is *suitable for the task*" (emphasis mine) not the least

@@ -5,7 +5,7 @@
             <h2 class="post-title"><a href="{{rellink .ID}}">{{.Title}}</a></h2>
             <div><span class="post-date">{{.Date}}</span></div>
             <div class="post-body">
-                {{$md := markdown .Body .ID}}
+                {{$md := markdown .Body .ID 2}}
                 {{$snippet := snippet $md}}
                 {{if $snippet}}
                     {{html_ $snippet}}

@@ -29,7 +29,7 @@ I have 2 Raspberry Pi 4Bs and 2 PoE hats, but I expect to procure more of these
 incrementally. The 8GB nodes probably aren't necessary, but I wouldn't get 1GB
 nodes despite the tempting price point.
 
-### Power
+# Power
 
 Since I'm using PoE for a power supply, if I exceed the 4 PoE ports allowed by
 my PoE switch, I'll have to buy another PoE switch or upgrade. TP-Link, the
@@ -38,7 +38,7 @@ switches are a little confusing because they're actually 8-port and 16-port
 switches respectively, but only half of the ports are PoE--I'm listing them
 here by their PoE port count which is more interesting for our purposes).
 
-### Storage
+# Storage
 
 My storage solution was informed by Jeff Geerling's excellent blog posts:
 
@@ -54,7 +54,7 @@ I only have one disk for now, and I'll either simply sync (rclone) that with S3
 for backups or I'll get another disk or two and do some sort of replication
 (such as RAID or [Longhorn.io][8] or similar) or both.
 
-### Conclusion
+# Conclusion
 
 This pretty much covers it for the hardware. Next time we'll dig into some
 simple automation to allow us to maintainably set up hosts to join the cluster.

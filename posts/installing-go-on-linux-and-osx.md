@@ -26,7 +26,7 @@ variables" should suffice). Without further ado:
     can run the go tool by its name (e.g., `go build` vs `~/.go/bin/go build`). Add
     this to the bottom of your `~/.bashrc` (this file sets up your terminal every
     time you log in):
-    
+
     ``` bash
     # Add Go to your path
     PATH=$PATH:$HOME/.go/bin
@@ -66,9 +66,9 @@ variables" should suffice). Without further ado:
 
     ``` go
     package main
-    
+
     import "fmt"
-    
+
     func main() {
     	fmt.Println("Hello, world!")
     }
