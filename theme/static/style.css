@@ -96,6 +96,40 @@ sub { top: 0.4em; }
     text-transform: uppercase;
 }
 
+.tag, .tag a, .tag a:hover {
+    padding: 2px 3px;
+    font-family: sans-serif;
+    font-weight: bold;
+    color: #fff;
+    background-color: #AAA;
+    font-size: 80%;
+    border-radius: 3px;
+    letter-spacing: 0.2em;
+}
+
+.tag a:hover {
+    color: #ebdd9b;
+}
+
+.post-meta span {
+    margin: 0 2px;
+}
+
+.post-meta * {
+    color: #666;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.post-meta a {
+    border: none;
+}
+
+.post-title {
+    margin-bottom: 0.4em;
+}
+
 .post-title a {
     text-decoration: none;
     border: none;
@@ -146,7 +180,7 @@ h3 { font-size: 24px; }
     text-align: right;
 }
 
-#post {
+.post {
     padding: 1em 0em 1em 0em;
 }
 
@@ -173,9 +207,9 @@ code {
     background-color: #eee;
     border: 1px solid #ddd;
     border-radius: 4px;
-    color: #333;
-    font-family: 'Inconsolata', ;
-    font-size: 16px;
+    color: #444;
+    font-family: 'Inconsolata';
+    font-size: 70%;
 }
 
 pre {
@@ -193,31 +227,44 @@ pre {
 pre code {
     border: none;
     padding: 0px;
+    font-size: 100%;
 }
 
 table {
-  table-layout: fixed;
-  width: 100%;
-  border-collapse: collapse;
-  border: 2px solid #ddd;
+    table-layout: fixed;
+    width: 100%;
+    border-collapse: collapse;
+    border: 2px solid #ddd;
 }
 
 th, td {
-  padding: 1rem;
+    padding: 1rem;
 }
 
 td {
-  letter-spacing: 1px;
-  text-align: center;
+    letter-spacing: 1px;
+    text-align: center;
 }
 
 th {
-  text-align: center;
-  background-color: #ddd;
-  letter-spacing: 2px;
-  text-transform: uppercase;
+    text-align: center;
+    background-color: #ddd;
+    letter-spacing: 2px;
+    text-transform: uppercase;
 }
 
 tbody tr:nth-child(even){
-  background-color: #eee;
+    background-color: #eee;
+}
+
+.footnote-definition p {
+    display: inline;
+}
+
+.footnote-definition {
+    padding-top: 1em;
+    border-top: 1px dotted #666;
+    font-family: 'Nueton', Serif;
+    letter-spacing: 0.1em;
+    font-size: 14px;
 }
