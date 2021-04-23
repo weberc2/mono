@@ -1,21 +1,25 @@
-{{define "base"}}
+{{- define "post-meta" }}
+<div class="post-meta">
+    <span class="post-date">{{.date}}</span>
+    {{- range .tags }}
+    <span class="tag"><a href="{{.url}}">{{.tag}}</a></span>
+    {{- end }}
+</div>
+{{- end }}
 <html>
 
 <head>
+    {{- template "head" . }}
+    <meta charset="UTF-8">
     <meta name=viewport content='width=device-width'>
     <meta name="google-site-verification" content="cw0Nbm73FcLB9kSYvCUhc5q-6CrLFcgJQy0h_qzG0O8" />
     <link href='https://fonts.googleapis.com/css?family=Neuton|Merriweather|Inconsolata:400,700' rel='stylesheet'
         type='text/css'>
-    <link rel="stylesheet" type="text/css" href="{{rellink "/resources/style.css"}}" />
-    <link
-        rel="alternate"
-        type="application/atom+xml"
-        title="{{index .ThemeConfig "site_title"}}"
-        href="{{rellink "/feed.atom"}}"
-    >
+    <link rel="stylesheet" type="text/css" href="{{.static_url}}/style.css">
+    <link rel="alternate" type="application/atom+xml" title="Craig Weber" href="{{.atom_url}}">
     <script>
         function submitAnalytics() {
-            const analyticsUrl = "{{index .ThemeConfig "analytics_url"}}";
+            const analyticsUrl = "https://azd7mnx3pk.execute-api.us-east-2.amazonaws.com";
             var body = document.getElementById("body");
             var img = document.createElement("img");
             var qstring = [
@@ -28,28 +32,23 @@
             body.appendChild(img);
         }
     </script>
-    {{template "head" .Page.Content}}
 </head>
 
-<body onload=submitAnalytics()>
-    <h1 id="site-header">
-        <a id="site-title" href="{{rellink "/index.html"}}">
-            {{index .ThemeConfig "site_title"}}
-        </a>
-    </h1>
+<body>
+    <h1 id="site-header"><a id="site-title" href="{{.home_page}}">Craig Weber</a></h1>
     <div id="page" class="center-column">
-        {{template "body" .Page.Content}}
+        {{- template "body" . }}
         <div id="pagination">
-            {{if .Page.PrevID}}
+            {{- if .prev }}
             <div class="pagination" id="pagination-prev">
-                <a href="{{rellink .Page.PrevID}}">&laquo;&nbsp;Previous</a>
+                <a href={{.prev}}>&laquo;&nbsp;Previous</a>
             </div>
-            {{end}}
-            {{if .Page.NextID}}
+            {{- end }}
+            {{- if .next }}
             <div class="pagination" id="pagination-next">
-                <a href="{{rellink .Page.NextID}}">Next&nbsp;&raquo;</a>
+                <a href={{.next}}>Next&nbsp;&raquo;</a>
             </div>
-            {{end}}
+            {{- end }}
         </div>
     </div>
     <div id="footer">
@@ -62,31 +61,21 @@
                     opinions are my own.
                 </p>
             </div>
-            {{with $contact := index .ThemeConfig "contact"}}
             <div class="footer-section">
                 <h4>Contact</h4>
                 <ul>
-                    {{range $contact}}
-                    <li>
-                        <a href="{{index . "url"}}">
-                            {{index . "text"}}
-                        </a>
-                    </li>
-                    {{end}}
-                    <li><a href="{{rellink "/feed.atom"}}">Atom Feed</a></li>
+                    <li><a href="https://twitter.com/weberc2">Twitter</a></li>
+                    <li><a href="https://github.com/weberc2">Github</a></li>
+                    <li><a href="{{.atom_url}}">Atom Feed</a></li>
                 </ul>
             </div>
-            {{end}}
-            {{with $copy := index .ThemeConfig "copyright"}}
             <div class="footer-section">
                 <h4>Copyright</h4>
-                {{$copy}}
+                Craig Weber 2016
             </div>
-            {{end}}
         </div>
     </div>
+
 </body>
 
 </html>
-{{end}}
-{{define "head"}}<title>Craig Weber</title>{{end}}

@@ -1,3 +1,5 @@
+#!/bin/bash
+
 function cloneTargetRepo() {
     local tmpdir="$(mktemp -d)"
     local tmpRepo="$tmpdir/weberc2.github.io"
@@ -15,12 +17,7 @@ function deploy() {
     local sourceDirectory="$1"
     local sourceVersion="$2"
 
-    if [[ -z "$sourceDirectory" ]]; then
-        echo "USAGE deploy SOURCE_DIRECTORY SOURCE_VERSION"
-        exit 1
-    fi
-
-    if [[ -z "$sourceVersion" ]]; then
+    if [[ -z "$sourceDirectory" ]] || [[ -z "$sourceVersion" ]]; then
         echo "USAGE deploy SOURCE_DIRECTORY SOURCE_VERSION"
         exit 1
     fi
