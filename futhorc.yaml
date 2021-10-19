@@ -8,4 +8,8 @@ profiles:
     site_root: "https://weberc2.github.io"
     home_page: "index.html"
     title: "Craig Weber"
+  - name: blog-weberc2-com
+    site_root: "https://blog.weberc2.com"
+    home_page: "index.html"
+    title: "Craig Weber"
 default: "dev"
