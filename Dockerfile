@@ -1,11 +1,9 @@
-FROM ubuntu
+FROM rust
 
 ARG ARCH=amd64
 ARG OS=linux
 
-RUN apt-get update && apt-get install -y curl && \
-    curl -L https://github.com/weberc2/futhorc/releases/download/latest/futhorc-${ARCH}-${OS}-v0.1.6 -o /bin/futhorc && \
-    chmod +x /bin/futhorc
+RUN cargo install futhorc
 
 WORKDIR /workspace
 
