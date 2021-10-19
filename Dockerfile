@@ -1,4 +1,4 @@
-FROM rust
+FROM rustlang/rust:nightly
 
 ARG ARCH=amd64
 ARG OS=linux
