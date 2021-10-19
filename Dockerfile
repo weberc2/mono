@@ -10,7 +10,7 @@ WORKDIR /workspace
 COPY . .
 
 ARG FUTHORC_PROFILE=release
-RUN /bin/futhorc build --profile ${FUTHORC_PROFILE} --output /blog
+RUN futhorc build --profile ${FUTHORC_PROFILE} --output /blog
 
 FROM caddy:2.4.5
 
