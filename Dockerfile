@@ -1,8 +1,5 @@
 FROM rustlang/rust:nightly
 
-ARG ARCH=amd64
-ARG OS=linux
-
 RUN cargo install futhorc
 
 WORKDIR /workspace
