@@ -1,6 +1,4 @@
-FROM rustlang/rust:nightly
-
-RUN cargo install futhorc
+FROM weberc2/futhorc:0.0.6
 
 WORKDIR /workspace
 
