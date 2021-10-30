@@ -1,18 +1,18 @@
 :80 {
-	# Set this path to your site's directory.
-	root * /usr/share/caddy
+    # Set this path to your site's directory.
+    root * /usr/share/caddy
 
-	# Enable the static file server.
-	file_server
+    # Enable the static file server.
+    file_server
 
     # GZip compression
     encode gzip
-}
 
-log {
-	output stderr
-	format json
-	level  INFO
+    log {
+        output stderr
+        format json
+        level  INFO
+    }
 }
 
 # Refer to the Caddy docs for more information:
