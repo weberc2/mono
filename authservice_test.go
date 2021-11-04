@@ -153,6 +153,17 @@ func (rtsm *resetTokenStoreMock) Get(user UserID) (*ResetToken, error) {
 	return rtsm.get(user)
 }
 
+type notificationServiceMock struct {
+	notify func(UserID, uuid.UUID) error
+}
+
+func (nsm *notificationServiceMock) Notify(u UserID, t uuid.UUID) error {
+	if nsm.notify == nil {
+		panic("notificationServiceMock: missing `notify` hook")
+	}
+	return nsm.notify(u, t)
+}
+
 func TestRegister(t *testing.T) {
 	now := time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
 	var creds Credentials

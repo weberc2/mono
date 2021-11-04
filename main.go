@@ -7,44 +7,56 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/google/uuid"
 	pz "github.com/weberc2/httpeasy"
 )
 
-type notificationServiceMock struct {
-	notify func(UserID, uuid.UUID) error
-}
-
-func (nsm *notificationServiceMock) Notify(u UserID, t uuid.UUID) error {
-	if nsm.notify == nil {
-		panic("notificationServiceMock: `notify` hook unset")
-	}
-	return nsm.notify(u, t)
-}
-
 func main() {
-	const (
-		issuer            = "weberc2.com"
-		wildcardAudience  = "*.weberc2.com"
-		accessSigningKey  = "access-signing-key"
-		refreshSigningKey = "refresh-signing-key"
-	)
+	addr := os.Getenv("ADDR")
+	if addr == "" {
+		addr = "127.0.0.1:8080"
+	}
+
+	hostName := os.Getenv("HOST_NAME")
+	if hostName == "" {
+		hostName = addr
+	}
+
+	issuer := os.Getenv("ISSUER")
+	if issuer == "" {
+		log.Fatal("Missing required env var: ISSUER")
+	}
+
+	audience := os.Getenv("AUDIENCE")
+	if audience == "" {
+		log.Fatal("Missing required env var: AUDIENCE")
+	}
+
+	accessSigningKey := os.Getenv("ACCESS_KEY")
+	if accessSigningKey == "" {
+		log.Fatal("Missing required env var: ACCESS_KEY")
+	}
+
+	refreshSigningKey := os.Getenv("REFRESH_KEY")
+	if refreshSigningKey == "" {
+		log.Fatal("Missing required env var: REFRESH_KEY")
+	}
+
 	authService := AuthHTTPService{AuthService{
 		Creds:         &MemCredStore{},
 		ResetTokens:   &MemResetTokenStore{},
 		Notifications: ConsoleNotificationService{},
-		Hostname:      "auth.weberc2.com",
+		Hostname:      hostName,
 		TokenDetails: TokenDetailsFactory{
 			AccessTokens: TokenFactory{
 				Issuer:           issuer,
-				WildcardAudience: wildcardAudience,
+				WildcardAudience: audience,
 				TokenValidity:    15 * time.Minute,
 				SigningKey:       []byte(accessSigningKey),
 				SigningMethod:    jwt.SigningMethodHS512,
 			},
 			RefreshTokens: TokenFactory{
 				Issuer:           issuer,
-				WildcardAudience: wildcardAudience,
+				WildcardAudience: audience,
 				TokenValidity:    7 * 24 * time.Hour,
 				SigningKey:       []byte(refreshSigningKey),
 				SigningMethod:    jwt.SigningMethodHS512,
@@ -54,11 +66,6 @@ func main() {
 		ResetTokenValidity: 1 * time.Hour,
 		TimeFunc:           time.Now,
 	}}
-
-	addr := os.Getenv("ADDR")
-	if addr == "" {
-		addr = "127.0.0.1:8080"
-	}
 
 	log.Printf("Listening on %s", addr)
 	if err := http.ListenAndServe(
