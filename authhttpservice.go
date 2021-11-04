@@ -28,10 +28,28 @@ func (ahs *AuthHTTPService) LoginRoute() pz.Route {
 			tokens, err := ahs.Login(&creds)
 			if err != nil {
 				if errors.Is(err, ErrCredentials) {
-					return pz.Unauthorized(pz.String(
-						"Invalid username or password",
-					))
+					return pz.Unauthorized(
+						pz.String("Invalid username or password"),
+						struct {
+							Message string
+							User    UserID
+						}{
+							Message: "invalid username or password",
+							User:    creds.User,
+						},
+					)
 				}
+
+				return pz.InternalServerError(
+					struct {
+						Message, Error string
+						User           UserID
+					}{
+						Message: "logging in",
+						Error:   err.Error(),
+						User:    creds.User,
+					},
+				)
 			}
 
 			return pz.Ok(

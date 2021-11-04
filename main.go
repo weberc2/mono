@@ -1,6 +1,10 @@
 package main
 
 import (
+	"crypto/ecdsa"
+	"crypto/x509"
+	"encoding/pem"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -31,14 +35,22 @@ func main() {
 		log.Fatal("Missing required env var: AUDIENCE")
 	}
 
-	accessSigningKey := os.Getenv("ACCESS_KEY")
-	if accessSigningKey == "" {
-		log.Fatal("Missing required env var: ACCESS_KEY")
+	accessSigningKeyEncoded := os.Getenv("ACCESS_PRIVATE_KEY")
+	if accessSigningKeyEncoded == "" {
+		log.Fatal("Missing required env var: ACCESS_PRIVATE_KEY")
+	}
+	accessSigningKey, err := decodeKey(accessSigningKeyEncoded)
+	if err != nil {
+		log.Fatalf("Decoding access key: %v", err)
 	}
 
-	refreshSigningKey := os.Getenv("REFRESH_KEY")
-	if refreshSigningKey == "" {
-		log.Fatal("Missing required env var: REFRESH_KEY")
+	refreshSigningKeyEncoded := os.Getenv("REFRESH_PRIVATE_KEY")
+	if refreshSigningKeyEncoded == "" {
+		log.Fatal("Missing required env var: REFRESH_PRIVATE_KEY")
+	}
+	refreshSigningKey, err := decodeKey(refreshSigningKeyEncoded)
+	if err != nil {
+		log.Fatalf("Decoding refresh key: %v", err)
 	}
 
 	authService := AuthHTTPService{AuthService{
@@ -51,15 +63,15 @@ func main() {
 				Issuer:           issuer,
 				WildcardAudience: audience,
 				TokenValidity:    15 * time.Minute,
-				SigningKey:       []byte(accessSigningKey),
-				SigningMethod:    jwt.SigningMethodHS512,
+				SigningKey:       accessSigningKey,
+				SigningMethod:    jwt.SigningMethodES512,
 			},
 			RefreshTokens: TokenFactory{
 				Issuer:           issuer,
 				WildcardAudience: audience,
 				TokenValidity:    7 * 24 * time.Hour,
-				SigningKey:       []byte(refreshSigningKey),
-				SigningMethod:    jwt.SigningMethodHS512,
+				SigningKey:       refreshSigningKey,
+				SigningMethod:    jwt.SigningMethodES512,
 			},
 			TimeFunc: time.Now,
 		},
@@ -73,5 +85,24 @@ func main() {
 		pz.Register(pz.JSONLog(os.Stderr), authService.Routes()...),
 	); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func decodeKey(encoded string) (*ecdsa.PrivateKey, error) {
+	data := []byte(encoded)
+	for {
+		block, rest := pem.Decode(data)
+		if block.Type != "PRIVATE KEY" {
+			if len(rest) > 0 {
+				data = rest
+				continue
+			}
+			return nil, fmt.Errorf("PEM data is missing a 'PRIVATE KEY' block")
+		}
+		key, err := x509.ParseECPrivateKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("parsing ecdsa private key: %w", err)
+		}
+		return key, nil
 	}
 }

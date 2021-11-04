@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -52,7 +53,7 @@ type TokenFactory struct {
 	Issuer           string
 	WildcardAudience string
 	TokenValidity    time.Duration
-	SigningKey       []byte
+	SigningKey       *ecdsa.PrivateKey
 	SigningMethod    jwt.SigningMethod
 }
 
