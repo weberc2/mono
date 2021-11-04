@@ -9,7 +9,6 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
-	pz "github.com/weberc2/httpeasy"
 )
 
 type UserID string
@@ -19,7 +18,7 @@ var ErrUserExists = errors.New("User already exists")
 var ErrUserNotFound = errors.New("User not found")
 
 type Credentials struct {
-	Username UserID `json:"username"`
+	User     UserID `json:"user"`
 	Password string `json:"password"`
 }
 
@@ -120,7 +119,7 @@ func (as *AuthService) Login(c *Credentials) (*TokenDetails, error) {
 		return nil, err
 	}
 
-	return as.TokenDetails.Create(string(c.Username))
+	return as.TokenDetails.Create(string(c.User))
 }
 
 func (as *AuthService) Refresh(refreshToken string) (string, error) {
@@ -144,7 +143,7 @@ func (as *AuthService) Refresh(refreshToken string) (string, error) {
 
 func (as *AuthService) Register(user UserID) error {
 	if err := as.Creds.Create(&Credentials{
-		Username: user,
+		User:     user,
 		Password: uuid.NewString(),
 	}); err != nil {
 		if !errors.Is(err, ErrUserExists) {
@@ -217,7 +216,7 @@ func (as *AuthService) UpdatePassword(up *UpdatePassword) error {
 	}
 
 	if err := as.Creds.Update(&Credentials{
-		Username: up.User,
+		User:     up.User,
 		Password: up.Password,
 	}); err != nil {
 		return fmt.Errorf("updating password: %w", err)

@@ -15,7 +15,7 @@ func (mcs *MemCredStore) Validate(creds *Credentials) error {
 
 func (mcs *MemCredStore) Create(creds *Credentials) error {
 	for _, cs := range mcs.Credentials {
-		if cs.Username == creds.Username {
+		if cs.User == creds.User {
 			return ErrUserExists
 		}
 	}
@@ -25,7 +25,7 @@ func (mcs *MemCredStore) Create(creds *Credentials) error {
 
 func (mcs *MemCredStore) Update(creds *Credentials) error {
 	for i, cs := range mcs.Credentials {
-		if cs.Username == creds.Username {
+		if cs.User == creds.User {
 			mcs.Credentials[i] = creds
 			return nil
 		}

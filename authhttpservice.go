@@ -41,7 +41,7 @@ func (ahs *AuthHTTPService) LoginRoute() pz.Route {
 					User    UserID
 				}{
 					Message: "authentication succeeded",
-					User:    creds.Username,
+					User:    creds.User,
 				},
 			)
 		},

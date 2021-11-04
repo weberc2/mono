@@ -42,7 +42,7 @@ func TestLogin(t *testing.T) {
 	authService := AuthService{
 		Creds: &credStoreMock{
 			validate: func(cs *Credentials) error {
-				if cs.Username == "user" && cs.Password == "pass" {
+				if cs.User == "user" && cs.Password == "pass" {
 					return nil
 				}
 				return ErrCredentials
@@ -68,7 +68,7 @@ func TestLogin(t *testing.T) {
 	}
 
 	tokens, err := authService.Login(&Credentials{
-		Username: "user",
+		User:     "user",
 		Password: "pass",
 	})
 
@@ -153,7 +153,7 @@ func (rtsm *resetTokenStoreMock) Get(user UserID) (*ResetToken, error) {
 	return rtsm.get(user)
 }
 
-func TestBeginRegistration(t *testing.T) {
+func TestRegister(t *testing.T) {
 	now := time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
 	var creds Credentials
 	var token ResetToken
@@ -172,14 +172,14 @@ func TestBeginRegistration(t *testing.T) {
 		ResetTokenValidity: 24 * time.Hour,
 	}
 
-	if err := authService.BeginRegistration("user"); err != nil {
+	if err := authService.Register("user"); err != nil {
 		t.Fatalf("Unexpected err: %v", err)
 	}
 
-	if creds.Username != "user" {
+	if creds.User != "user" {
 		t.Fatalf(
-			"Credentials.Username: wanted 'user'; found '%s'",
-			creds.Username,
+			"Credentials.User: wanted 'user'; found '%s'",
+			creds.User,
 		)
 	}
 
@@ -217,7 +217,7 @@ func TestBeginRegistration_UserExists(t *testing.T) {
 		ResetTokenValidity: 24 * time.Hour,
 	}
 
-	if err := authService.BeginRegistration("user"); err != nil {
+	if err := authService.Register("user"); err != nil {
 		t.Fatalf("Unexpected err: %v", err)
 	}
 
@@ -261,11 +261,9 @@ func TestUpdatePassword(t *testing.T) {
 	}
 
 	if err := authService.UpdatePassword(&UpdatePassword{
-		Credentials: Credentials{
-			Username: "user",
-			Password: "my-new-password",
-		},
-		Token: tok,
+		User:     "user",
+		Password: "my-new-password",
+		Token:    tok,
 	}); err != nil {
 		t.Fatalf("Unexpected err: %v", err)
 	}
@@ -273,10 +271,10 @@ func TestUpdatePassword(t *testing.T) {
 	if creds == nil {
 		t.Fatal("CredStore: Failed to update credentials")
 	}
-	if creds.Username != "user" {
+	if creds.User != "user" {
 		t.Fatalf(
-			"Credentials.Username: wanted 'user'; found '%s'",
-			creds.Username,
+			"Credentials.User: wanted 'user'; found '%s'",
+			creds.User,
 		)
 	}
 	if creds.Password != "my-new-password" {
