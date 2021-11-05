@@ -23,12 +23,6 @@ type Credentials struct {
 	Password string `json:"password"`
 }
 
-type CredStore interface {
-	Validate(*Credentials) error
-	Update(*Credentials) error
-	Create(*Credentials) error
-}
-
 type NotificationService interface {
 	Notify(user UserID, resetToken uuid.UUID) error
 }
@@ -117,10 +111,15 @@ type AuthService struct {
 
 func (as *AuthService) Login(c *Credentials) (*TokenDetails, error) {
 	if err := as.Creds.Validate(c); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("validating credentials: %w", err)
 	}
 
-	return as.TokenDetails.Create(string(c.User))
+	tokenDetails, err := as.TokenDetails.Create(string(c.User))
+	if err != nil {
+		return nil, fmt.Errorf("creating token details: %w", err)
+	}
+
+	return tokenDetails, nil
 }
 
 func (as *AuthService) Refresh(refreshToken string) (string, error) {

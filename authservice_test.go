@@ -1,67 +1,90 @@
 package main
 
 import (
+	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
-type credStoreMock struct {
-	validate func(*Credentials) error
-	update   func(*Credentials) error
-	create   func(*Credentials) error
+type userStoreMock struct {
+	get    func(UserID) (*UserEntry, error)
+	update func(*UserEntry) error
+	create func(*UserEntry) error
 }
 
-func (csf *credStoreMock) Validate(cs *Credentials) error {
-	if csf.validate == nil {
-		panic("credStoreMock: missing `validate` hook")
+func (usm *userStoreMock) Get(u UserID) (*UserEntry, error) {
+	if usm.get == nil {
+		panic("userStoreMock: missing `get` hook")
 	}
-	return csf.validate(cs)
+	return usm.get(u)
 }
 
-func (csf *credStoreMock) Update(cs *Credentials) error {
-	if csf.update == nil {
-		panic("credStoreMock: missing `update` hook")
+func (usm *userStoreMock) Update(entry *UserEntry) error {
+	if usm.update == nil {
+		panic("userStoreMock: missing `update` hook")
 	}
-	return csf.update(cs)
+	return usm.update(entry)
 }
 
-func (csf *credStoreMock) Create(cs *Credentials) error {
-	if csf.create == nil {
-		panic("credStoreMock: missing `create` hook")
+func (usm *userStoreMock) Create(entry *UserEntry) error {
+	if usm.create == nil {
+		panic("userStoreMock: missing `create` hook")
 	}
-	return csf.create(cs)
+	return usm.create(entry)
 }
 
 func TestLogin(t *testing.T) {
+	accessKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	if err != nil {
+		t.Fatalf("Unexpected err: %v", err)
+	}
+	refreshKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	if err != nil {
+		t.Fatalf("Unexpected err: %v", err)
+	}
+	const password = "pass"
+	hashed, err := bcrypt.GenerateFromPassword(
+		[]byte(password),
+		bcrypt.DefaultCost,
+	)
+	if err != nil {
+		t.Fatalf("Unexpected err: %v", err)
+	}
+
 	now := time.Date(2022, 01, 01, 0, 0, 0, 0, time.UTC)
 	jwt.TimeFunc = func() time.Time { return now.Add(1 * time.Second) }
 	authService := AuthService{
-		Creds: &credStoreMock{
-			validate: func(cs *Credentials) error {
-				if cs.User == "user" && cs.Password == "pass" {
-					return nil
+		Creds: CredStore{&userStoreMock{
+			get: func(u UserID) (*UserEntry, error) {
+				if u != "user" {
+					return nil, ErrUserNotFound
 				}
-				return ErrCredentials
+				return &UserEntry{User: "user", PasswordHash: hashed}, nil
 			},
-		},
+		}},
 		TokenDetails: TokenDetailsFactory{
 			AccessTokens: TokenFactory{
 				Issuer:           "issuer",
 				WildcardAudience: "*.example.com",
 				TokenValidity:    15 * time.Minute,
-				SigningKey:       []byte("access-signing-key"),
-				SigningMethod:    jwt.SigningMethodHS512,
+				SigningKey:       accessKey,
+				SigningMethod:    jwt.SigningMethodES512,
 			},
 			RefreshTokens: TokenFactory{
 				Issuer:           "issuer",
 				WildcardAudience: "*.example.com",
 				TokenValidity:    7 * 24 * time.Hour,
-				SigningKey:       []byte("refresh-signing-key"),
-				SigningMethod:    jwt.SigningMethodHS512,
+				SigningKey:       refreshKey,
+				SigningMethod:    jwt.SigningMethodES512,
 			},
 			TimeFunc: func() time.Time { return now },
 		},
@@ -69,14 +92,14 @@ func TestLogin(t *testing.T) {
 
 	tokens, err := authService.Login(&Credentials{
 		User:     "user",
-		Password: "pass",
+		Password: password,
 	})
 
 	if err != nil {
 		t.Fatalf("Unexpected err: %v", err)
 	}
 
-	claims, err := parseToken(tokens.AccessToken, "access-signing-key")
+	claims, err := parseToken(tokens.AccessToken, accessKey)
 	if err != nil {
 		t.Fatalf("Unexpected err: %v", err)
 	}
@@ -92,7 +115,7 @@ func TestLogin(t *testing.T) {
 		t.Fatalf("Wanted:\n%# v\n\nFound:\n%# v", wanted, claims)
 	}
 
-	claims, err = parseToken(tokens.RefreshToken, "refresh-signing-key")
+	claims, err = parseToken(tokens.RefreshToken, refreshKey)
 	if err != nil {
 		t.Fatalf("Unexpected err: %v", err)
 	}
@@ -109,20 +132,20 @@ func TestLogin(t *testing.T) {
 	}
 }
 
-func parseToken(token, key string) (*jwt.StandardClaims, error) {
+func parseToken(token string, key *ecdsa.PrivateKey) (*jwt.StandardClaims, error) {
 	tok, err := jwt.ParseWithClaims(
 		token,
 		&jwt.StandardClaims{},
-		func(*jwt.Token) (interface{}, error) { return []byte(key), nil },
+		func(*jwt.Token) (interface{}, error) { return &key.PublicKey, nil },
 	)
 	if err != nil {
 		return nil, fmt.Errorf("parsing token: %w", err)
 	}
 
-	if tok.Method != jwt.SigningMethodHS512 {
+	if tok.Method != jwt.SigningMethodES512 {
 		return nil, fmt.Errorf(
 			"wanted method '%v'; found '%v'",
-			jwt.SigningMethodHS512,
+			jwt.SigningMethodES512,
 			tok.Method,
 		)
 	}
@@ -166,12 +189,12 @@ func (nsm *notificationServiceMock) Notify(u UserID, t uuid.UUID) error {
 
 func TestRegister(t *testing.T) {
 	now := time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
-	var creds Credentials
+	var entry UserEntry
 	var token ResetToken
 	authService := AuthService{
-		Creds: &credStoreMock{
-			create: func(c *Credentials) error { creds = *c; return nil },
-		},
+		Creds: CredStore{&userStoreMock{
+			create: func(e *UserEntry) error { entry = *e; return nil },
+		}},
 		ResetTokens: &resetTokenStoreMock{
 			create: func(rt *ResetToken) error { token = *rt; return nil },
 		},
@@ -187,10 +210,10 @@ func TestRegister(t *testing.T) {
 		t.Fatalf("Unexpected err: %v", err)
 	}
 
-	if creds.User != "user" {
+	if entry.User != "user" {
 		t.Fatalf(
-			"Credentials.User: wanted 'user'; found '%s'",
-			creds.User,
+			"UserEntry.User: wanted 'user'; found '%s'",
+			entry.User,
 		)
 	}
 
@@ -214,9 +237,9 @@ func TestBeginRegistration_UserExists(t *testing.T) {
 	now := time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
 	var token ResetToken
 	authService := AuthService{
-		Creds: &credStoreMock{
-			create: func(c *Credentials) error { return ErrUserExists },
-		},
+		Creds: CredStore{&userStoreMock{
+			create: func(*UserEntry) error { return ErrUserExists },
+		}},
 		ResetTokens: &resetTokenStoreMock{
 			create: func(rt *ResetToken) error { token = *rt; return nil },
 		},
@@ -251,11 +274,19 @@ func TestBeginRegistration_UserExists(t *testing.T) {
 func TestUpdatePassword(t *testing.T) {
 	now := time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
 	tok := uuid.New()
-	var creds *Credentials
+	const password = "osakldflhkjewadfkjsfduIHUHKJGFU"
+	hashed, err := bcrypt.GenerateFromPassword(
+		[]byte(password),
+		bcrypt.DefaultCost,
+	)
+	if err != nil {
+		t.Fatalf("Unexpected err: %v", err)
+	}
+	var entry *UserEntry
 	authService := AuthService{
-		Creds: &credStoreMock{
-			update: func(c *Credentials) error { creds = c; return nil },
-		},
+		Creds: CredStore{&userStoreMock{
+			update: func(e *UserEntry) error { entry = e; return nil },
+		}},
 		ResetTokens: &resetTokenStoreMock{
 			get: func(user UserID) (*ResetToken, error) {
 				if user == "user" {
@@ -273,25 +304,26 @@ func TestUpdatePassword(t *testing.T) {
 
 	if err := authService.UpdatePassword(&UpdatePassword{
 		User:     "user",
-		Password: "my-new-password",
+		Password: password,
 		Token:    tok,
 	}); err != nil {
 		t.Fatalf("Unexpected err: %v", err)
 	}
 
-	if creds == nil {
+	if entry == nil {
 		t.Fatal("CredStore: Failed to update credentials")
 	}
-	if creds.User != "user" {
+	if entry.User != "user" {
 		t.Fatalf(
-			"Credentials.User: wanted 'user'; found '%s'",
-			creds.User,
+			"UserEntry.User: wanted 'user'; found '%s'",
+			entry.User,
 		)
 	}
-	if creds.Password != "my-new-password" {
+	if bytes.Equal(entry.PasswordHash, hashed) {
 		t.Fatalf(
-			"Credentials.Password: wanted 'my-new-password'; found '%s'",
-			creds.Password,
+			"UserEntry.PasswordHash: wanted '%s'; found '%s'",
+			base64.RawStdEncoding.EncodeToString(hashed),
+			base64.RawStdEncoding.EncodeToString(entry.PasswordHash),
 		)
 	}
 }

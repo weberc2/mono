@@ -54,7 +54,7 @@ func main() {
 	}
 
 	authService := AuthHTTPService{AuthService{
-		Creds:         &MemCredStore{},
+		Creds:         CredStore{Users: &MemUserStore{}},
 		ResetTokens:   &MemResetTokenStore{},
 		Notifications: ConsoleNotificationService{},
 		Hostname:      hostName,
