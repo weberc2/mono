@@ -10,6 +10,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/dgrijalva/jwt-go"
 	pz "github.com/weberc2/httpeasy"
 )
@@ -54,7 +56,10 @@ func main() {
 	}
 
 	authService := AuthHTTPService{AuthService{
-		Creds:         CredStore{Users: &MemUserStore{}},
+		Creds: CredStore{Users: &DynamoDBUserStore{
+			Client: dynamodb.New(session.New()),
+			Table:  "Users",
+		}},
 		ResetTokens:   &MemResetTokenStore{},
 		Notifications: ConsoleNotificationService{},
 		Hostname:      hostName,

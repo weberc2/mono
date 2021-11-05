@@ -125,6 +125,14 @@ func (ahs *AuthHTTPService) RegisterRoute() pz.Route {
 						},
 					)
 				}
+				return pz.InternalServerError(struct {
+					Message, Error string
+					User           UserID
+				}{
+					Message: "registering user",
+					Error:   err.Error(),
+					User:    payload.User,
+				})
 			}
 
 			return pz.Created(pz.String("Created user"), struct {

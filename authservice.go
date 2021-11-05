@@ -142,11 +142,13 @@ func (as *AuthService) Refresh(refreshToken string) (string, error) {
 }
 
 func (as *AuthService) Register(user UserID) error {
+	log.Printf("creating credentials for user %s", user)
 	if err := as.Creds.Create(&Credentials{
 		User:     user,
 		Password: uuid.NewString(),
 	}); err != nil {
 		if !errors.Is(err, ErrUserExists) {
+			log.Printf("Encountered an error registering user %s: %v", user, err)
 			return fmt.Errorf("Beginning registration: %w", err)
 		}
 		// If the user already exists, we'll continue.
@@ -160,10 +162,12 @@ func (as *AuthService) Register(user UserID) error {
 
 	// Create a new token, possibly overwriting an existing token if the user
 	// already existed.
+	log.Printf("Creating reset token for user %s", user)
 	if err := as.ResetTokens.Create(&token); err != nil {
 		return fmt.Errorf("Beginning registration: %w", err)
 	}
 
+	log.Printf("Notifying user %s of their reset token", user)
 	if err := as.Notifications.Notify(
 		user,
 		token.Token,
@@ -171,6 +175,7 @@ func (as *AuthService) Register(user UserID) error {
 		return fmt.Errorf("Beginning registration: %w", err)
 	}
 
+	log.Printf("Successfully registered user %s", user)
 	return nil
 }
 
