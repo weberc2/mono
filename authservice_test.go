@@ -1,17 +1,15 @@
 package main
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"encoding/base64"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -52,10 +50,7 @@ func TestLogin(t *testing.T) {
 		t.Fatalf("Unexpected err: %v", err)
 	}
 	const password = "pass"
-	hashed, err := bcrypt.GenerateFromPassword(
-		[]byte(password),
-		bcrypt.DefaultCost,
-	)
+	hashed := hashBcrypt(password)
 	if err != nil {
 		t.Fatalf("Unexpected err: %v", err)
 	}
@@ -74,14 +69,14 @@ func TestLogin(t *testing.T) {
 		TokenDetails: TokenDetailsFactory{
 			AccessTokens: TokenFactory{
 				Issuer:           "issuer",
-				WildcardAudience: "*.example.com",
+				WildcardAudience: "*.example.org",
 				TokenValidity:    15 * time.Minute,
 				SigningKey:       accessKey,
 				SigningMethod:    jwt.SigningMethodES512,
 			},
 			RefreshTokens: TokenFactory{
 				Issuer:           "issuer",
-				WildcardAudience: "*.example.com",
+				WildcardAudience: "*.example.org",
 				TokenValidity:    7 * 24 * time.Hour,
 				SigningKey:       refreshKey,
 				SigningMethod:    jwt.SigningMethodES512,
@@ -110,7 +105,7 @@ func TestLogin(t *testing.T) {
 		NotBefore: now.Unix(),
 		Issuer:    "issuer",
 		Subject:   "user",
-		Audience:  "*.example.com",
+		Audience:  "*.example.org",
 	}); wanted != *claims {
 		t.Fatalf("Wanted:\n%# v\n\nFound:\n%# v", wanted, claims)
 	}
@@ -126,7 +121,7 @@ func TestLogin(t *testing.T) {
 		NotBefore: now.Unix(),
 		Issuer:    "issuer",
 		Subject:   "user",
-		Audience:  "*.example.com",
+		Audience:  "*.example.org",
 	}); wanted != *claims {
 		t.Fatalf("Wanted:\n%# v\n\nFound:\n%# v", wanted, claims)
 	}
@@ -157,149 +152,204 @@ func parseToken(token string, key *ecdsa.PrivateKey) (*jwt.StandardClaims, error
 	return nil, fmt.Errorf("invalid claims type: %T", tok.Claims)
 }
 
-type resetTokenStoreMock struct {
-	create func(*ResetToken) error
-	get    func(UserID) (*ResetToken, error)
-}
-
-func (rtsm *resetTokenStoreMock) Create(rt *ResetToken) error {
-	if rtsm.create == nil {
-		panic("resetTokenStoreMock: missing `create` hook")
-	}
-	return rtsm.create(rt)
-}
-
-func (rtsm *resetTokenStoreMock) Get(user UserID) (*ResetToken, error) {
-	if rtsm.get == nil {
-		panic("resetTokenStoreMock: missing `get` hook")
-	}
-	return rtsm.get(user)
-}
-
 type notificationServiceMock struct {
-	notify func(UserID, uuid.UUID) error
+	notify func(*Notification) error
 }
 
-func (nsm *notificationServiceMock) Notify(u UserID, t uuid.UUID) error {
+func (nsm *notificationServiceMock) Notify(rt *Notification) error {
 	if nsm.notify == nil {
 		panic("notificationServiceMock: missing `notify` hook")
 	}
-	return nsm.notify(u, t)
+	return nsm.notify(rt)
 }
 
 func TestRegister(t *testing.T) {
-	now := time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
-	var entry UserEntry
-	var token ResetToken
+	var (
+		notifyCalledWithToken *Notification
+		now                   = time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
+	)
+	resetKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	if err != nil {
+		t.Fatalf("Unexpected err: %v", err)
+	}
 	authService := AuthService{
-		Creds: CredStore{&userStoreMock{
-			create: func(e *UserEntry) error { entry = *e; return nil },
-		}},
-		ResetTokens: &resetTokenStoreMock{
-			create: func(rt *ResetToken) error { token = *rt; return nil },
+		Creds: CredStore{
+			Users: &userStoreMock{
+				get: func(u UserID) (*UserEntry, error) {
+					return nil, ErrUserNotFound
+				},
+			},
+		},
+		ResetTokens: ResetTokenFactory{
+			Issuer:           "issuer",
+			WildcardAudience: "audience",
+			TokenValidity:    5 * time.Minute,
+			SigningKey:       resetKey,
+			SigningMethod:    jwt.SigningMethodES512,
 		},
 		Notifications: &notificationServiceMock{
-			notify: func(UserID, uuid.UUID) error { return nil },
+			notify: func(n *Notification) error {
+				notifyCalledWithToken = n
+				return nil
+			},
 		},
-		Hostname:           "auth.example.org",
-		TimeFunc:           func() time.Time { return now },
-		ResetTokenValidity: 24 * time.Hour,
+		Hostname: "auth.example.org",
+		TimeFunc: func() time.Time { return now },
 	}
 
-	if err := authService.Register("user"); err != nil {
+	if err := authService.Register("user", "user@example.org"); err != nil {
 		t.Fatalf("Unexpected err: %v", err)
 	}
 
-	if entry.User != "user" {
-		t.Fatalf(
-			"UserEntry.User: wanted 'user'; found '%s'",
-			entry.User,
-		)
+	wantedToken := &Notification{
+		Type:  NotificationTypeRegister,
+		User:  "user",
+		Email: "user@example.org",
+		Token: notifyCalledWithToken.Token,
 	}
 
-	if token.User != "user" {
-		t.Fatalf(
-			"ResetToken.User: wanted 'user'; found '%s'",
-			token.User,
-		)
-	}
-
-	if wanted := now.Add(24 * time.Hour); token.ExpiresAt != wanted {
-		t.Fatalf(
-			"ResetToken.ExpiresAt: wanted '%s'; found '%s'",
-			wanted,
-			token.ExpiresAt,
-		)
+	if err := wantedToken.compare(notifyCalledWithToken); err != nil {
+		t.Fatalf("NotificationService.Notify(*ResetToken): %v", err)
 	}
 }
 
-func TestBeginRegistration_UserExists(t *testing.T) {
-	now := time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
-	var token ResetToken
+func TestRegister_UserNameExists(t *testing.T) {
 	authService := AuthService{
-		Creds: CredStore{&userStoreMock{
-			create: func(*UserEntry) error { return ErrUserExists },
-		}},
-		ResetTokens: &resetTokenStoreMock{
-			create: func(rt *ResetToken) error { token = *rt; return nil },
+		Creds: CredStore{
+			Users: &userStoreMock{
+				get: func(u UserID) (*UserEntry, error) {
+					return &UserEntry{
+						User:         u,
+						Email:        "user@example.org",
+						PasswordHash: hashBcrypt("password"),
+					}, nil
+				},
+			},
 		},
-		Notifications: &notificationServiceMock{
-			notify: func(UserID, uuid.UUID) error { return nil },
-		},
-		Hostname:           "auth.example.org",
-		TimeFunc:           func() time.Time { return now },
-		ResetTokenValidity: 24 * time.Hour,
 	}
 
-	if err := authService.Register("user"); err != nil {
+	if err := authService.Register("user", "user@example.org"); err != nil {
+		if !errors.Is(err, ErrUserExists) {
+			t.Fatalf(
+				"Wanted error '%s'; found '%s'",
+				ErrUserExists.Error(),
+				err.Error(),
+			)
+		}
+		return
+	}
+	t.Fatal("Wanted `ErrUserExists`; found `<nil>`")
+}
+
+func TestRegister_InvalidEmailAddress(t *testing.T) {
+	authService := AuthService{}
+	for _, email := range []string{"", "nodomain@", "noatsign"} {
+		if err := authService.Register("user", email); err != nil {
+			if errors.Is(err, ErrInvalidEmail) {
+				continue
+			}
+			t.Fatalf("Unexpected err: %v", err)
+		}
+		t.Fatal("Wanted `ErrInvalidEmail`; found `<nil>`")
+	}
+}
+
+func TestForgotPassword(t *testing.T) {
+	var (
+		getCalledWithUser     UserID
+		notifyCalledWithToken *Notification
+		now                   = time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
+		validity              = 5 * time.Minute
+	)
+	resetKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	if err != nil {
+		t.Fatalf("Unexpected err: %v", err)
+	}
+	authService := AuthService{
+		Creds: CredStore{
+			Users: &userStoreMock{
+				get: func(u UserID) (*UserEntry, error) {
+					getCalledWithUser = u
+					return &UserEntry{User: u, Email: "user@example.org"}, nil
+				},
+			},
+		},
+		Notifications: &notificationServiceMock{
+			notify: func(n *Notification) error {
+				notifyCalledWithToken = n
+				return nil
+			},
+		},
+		ResetTokens: ResetTokenFactory{
+			Issuer:           "issuer",
+			WildcardAudience: "audience",
+			TokenValidity:    validity,
+			SigningKey:       resetKey,
+			SigningMethod:    jwt.SigningMethodES512,
+		},
+		TimeFunc: func() time.Time { return now },
+	}
+
+	if err := authService.ForgotPassword("user"); err != nil {
 		t.Fatalf("Unexpected err: %v", err)
 	}
 
-	if token.User != "user" {
+	if getCalledWithUser != "user" {
 		t.Fatalf(
-			"ResetToken.User: wanted 'user'; found '%s'",
-			token.User,
+			"UserStore.Get(): wanted 'user'; found '%s'",
+			getCalledWithUser,
 		)
 	}
 
-	if wanted := now.Add(24 * time.Hour); token.ExpiresAt != wanted {
-		t.Fatalf(
-			"ResetToken.ExpiresAt: wanted '%s'; found '%s'",
-			wanted,
-			token.ExpiresAt,
-		)
+	wantedToken := &Notification{
+		Type:  NotificationTypeForgotPassword,
+		User:  "user",
+		Email: "user@example.org",
+		Token: notifyCalledWithToken.Token, // force a match on this field
+	}
+
+	if err := wantedToken.compare(notifyCalledWithToken); err != nil {
+		t.Fatalf("NotificationService.Notify(*ResetToken): %v", err)
 	}
 }
 
 func TestUpdatePassword(t *testing.T) {
-	now := time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
-	tok := uuid.New()
-	const password = "osakldflhkjewadfkjsfduIHUHKJGFU"
-	hashed, err := bcrypt.GenerateFromPassword(
-		[]byte(password),
-		bcrypt.DefaultCost,
+	var (
+		now      = time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
+		password = "osakldflhkjewadfkjsfduIHUHKJGFU"
+		entry    *UserEntry
 	)
+	resetKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
 		t.Fatalf("Unexpected err: %v", err)
 	}
-	var entry *UserEntry
 	authService := AuthService{
 		Creds: CredStore{&userStoreMock{
+			get: func(UserID) (*UserEntry, error) {
+				return &UserEntry{
+					User:         "user",
+					Email:        "user@example.org",
+					PasswordHash: hashBcrypt(password),
+				}, nil
+			},
 			update: func(e *UserEntry) error { entry = e; return nil },
 		}},
-		ResetTokens: &resetTokenStoreMock{
-			get: func(user UserID) (*ResetToken, error) {
-				if user == "user" {
-					return &ResetToken{
-						User:      user,
-						Token:     tok,
-						ExpiresAt: now.Add(1 * time.Hour),
-					}, nil
-				}
-				return nil, ErrResetTokenNotFound
-			},
+		Notifications: &notificationServiceMock{
+			notify: func(n *Notification) error { return nil },
+		},
+		ResetTokens: ResetTokenFactory{
+			Issuer:           "issuer",
+			WildcardAudience: "audience",
+			TokenValidity:    5 * time.Minute,
+			SigningKey:       resetKey,
+			SigningMethod:    jwt.SigningMethodES512,
 		},
 		TimeFunc: func() time.Time { return now },
+	}
+
+	tok, err := authService.ResetTokens.Create(now, "user", "user@example.org")
+	if err != nil {
+		t.Fatalf("Unexpected err: %v", err)
 	}
 
 	if err := authService.UpdatePassword(&UpdatePassword{
@@ -310,20 +360,131 @@ func TestUpdatePassword(t *testing.T) {
 		t.Fatalf("Unexpected err: %v", err)
 	}
 
-	if entry == nil {
-		t.Fatal("CredStore: Failed to update credentials")
+	wantedCredentials := &Credentials{
+		User:     "user",
+		Email:    "user@example.org",
+		Password: password,
 	}
-	if entry.User != "user" {
-		t.Fatalf(
-			"UserEntry.User: wanted 'user'; found '%s'",
-			entry.User,
-		)
-	}
-	if bytes.Equal(entry.PasswordHash, hashed) {
-		t.Fatalf(
-			"UserEntry.PasswordHash: wanted '%s'; found '%s'",
-			base64.RawStdEncoding.EncodeToString(hashed),
-			base64.RawStdEncoding.EncodeToString(entry.PasswordHash),
-		)
+
+	if err := wantedCredentials.compare(entry); err != nil {
+		t.Fatalf("CredStore.Update(*Credentials): %v", err)
 	}
 }
+
+func (wanted *Credentials) compare(found *UserEntry) error {
+	if wanted == nil && found == nil {
+		return nil
+	}
+
+	if wanted != nil && found == nil {
+		return fmt.Errorf("unexpected `nil`")
+	}
+
+	if wanted == nil && found != nil {
+		return fmt.Errorf("wanted `nil`; found not `nil`")
+	}
+
+	if wanted.User != found.User {
+		return fmt.Errorf(
+			"UserEntry.User: wanted `%s`; found `%s`",
+			wanted.User,
+			found.User,
+		)
+	}
+
+	if wanted.Email != found.Email {
+		return fmt.Errorf(
+			"UserEntry.Email: wanted `%s`; found `%s`",
+			wanted.Email,
+			found.Email,
+		)
+	}
+
+	if bcrypt.CompareHashAndPassword(
+		found.PasswordHash,
+		[]byte(wanted.Password),
+	) != nil {
+		return fmt.Errorf(
+			"UserEntry.PasswordHash: hash doesn't match password `%s`",
+			wanted.Password,
+		)
+	}
+
+	return nil
+}
+
+func (wanted *Notification) compare(found *Notification) error {
+	if wanted == nil && found == nil {
+		return nil
+	}
+
+	if wanted != nil && found == nil {
+		return fmt.Errorf("unexpected `nil`")
+	}
+
+	if wanted == nil && found != nil {
+		return fmt.Errorf("wanted `nil`; found not `nil`")
+	}
+
+	if wanted.Type != found.Type {
+		return fmt.Errorf(
+			"ResetToken.Type: `%s`; found `%s`",
+			wanted.Type,
+			found.Type,
+		)
+	}
+
+	if wanted.User != found.User {
+		return fmt.Errorf(
+			"ResetToken.User: wanted `%s`; found `%s`",
+			wanted.User,
+			found.User,
+		)
+	}
+
+	if wanted.Email != found.Email {
+		return fmt.Errorf(
+			"ResetToken.Email: wanted `%s`; found `%s`",
+			wanted.Email,
+			found.Email,
+		)
+	}
+
+	if wanted.Token != found.Token {
+		return fmt.Errorf(
+			"ResetToken.Token: wanted `%s`; found `%s`",
+			wanted.Token,
+			found.Token,
+		)
+	}
+
+	return nil
+}
+
+func hashBcrypt(password string) []byte {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		panic(fmt.Sprintf("bcrypt-hashing password '%s': %v", password, err))
+	}
+	return hash
+}
+
+// SCENARIOS:
+//
+// * Multiple registrations with the same email address but different usernames
+//   (neither registration is completed)
+//   - Option 1: the first to confirm wins (second confirmation gets an error)
+//   - Option 2: "registration already exists with the given email address"
+// * Multiple registrations for the same email address and username (neither
+//   registration is completed)
+//   - Invalidate the first token and send a new one
+// * Multiple registrations with the same username but different email address
+//   - Option 1: update the registration with a new email address and send a
+//     new token. This would facilitate the "typo in the email address for the
+//     original registration" use case.
+// * User attempts to register with an email address (different username) that
+//   is already taken
+//   - Error: "email address exists"
+// * User attempts to register with a username (different email address) that
+//   is already taken
+//   - Error: "username exists"

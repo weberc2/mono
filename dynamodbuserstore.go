@@ -17,20 +17,25 @@ func (ddbus *DynamoDBUserStore) Create(entry *UserEntry) error {
 	if _, err := ddbus.Client.PutItem(&dynamodb.PutItemInput{
 		TableName:           aws.String(ddbus.Table),
 		Item:                userToAttributes(entry),
-		ConditionExpression: aws.String("attribute_not_exists(user)"),
+		ConditionExpression: aws.String("attribute_not_exists(#User)"),
+		ExpressionAttributeNames: map[string]*string{
+			"#User": aws.String("User"),
+		},
 	}); err != nil {
+		if _, ok := err.(*dynamodb.ConditionalCheckFailedException); ok {
+			return ErrUserExists
+		}
 		return fmt.Errorf("creating user: %w", err)
 	}
 	return nil
 }
 
-func (ddbus *DynamoDBUserStore) Update(entry *UserEntry) error {
+func (ddbus *DynamoDBUserStore) Upsert(entry *UserEntry) error {
 	if _, err := ddbus.Client.PutItem(&dynamodb.PutItemInput{
-		TableName:           aws.String(ddbus.Table),
-		Item:                userToAttributes(entry),
-		ConditionExpression: aws.String("attribute_exists(user)"),
+		TableName: aws.String(ddbus.Table),
+		Item:      userToAttributes(entry),
 	}); err != nil {
-		return fmt.Errorf("updating user: %w", err)
+		return fmt.Errorf("upserting user: %w", err)
 	}
 	return nil
 }
@@ -39,11 +44,14 @@ func (ddbus *DynamoDBUserStore) Get(user UserID) (*UserEntry, error) {
 	rsp, err := ddbus.Client.GetItem(&dynamodb.GetItemInput{
 		TableName: aws.String(ddbus.Table),
 		Key: map[string]*dynamodb.AttributeValue{
-			"user": &dynamodb.AttributeValue{S: aws.String(string(user))},
+			"User": {S: aws.String(string(user))},
 		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("getting user: %w", err)
+	}
+	if rsp.Item == nil {
+		return nil, ErrUserNotFound
 	}
 
 	return attributesToUser(rsp.Item), nil
@@ -51,11 +59,9 @@ func (ddbus *DynamoDBUserStore) Get(user UserID) (*UserEntry, error) {
 
 func userToAttributes(entry *UserEntry) map[string]*dynamodb.AttributeValue {
 	return map[string]*dynamodb.AttributeValue{
-		"user": &dynamodb.AttributeValue{
-			S: aws.String(string(entry.User)),
-		},
-		"email": &dynamodb.AttributeValue{S: aws.String(entry.Email)},
-		"passwordHash": &dynamodb.AttributeValue{
+		"User":  {S: aws.String(string(entry.User))},
+		"Email": {S: aws.String(entry.Email)},
+		"PasswordHash": {
 			S: aws.String(base64.RawStdEncoding.EncodeToString(
 				entry.PasswordHash,
 			)),
@@ -64,12 +70,12 @@ func userToAttributes(entry *UserEntry) map[string]*dynamodb.AttributeValue {
 }
 
 func attributesToUser(attrs map[string]*dynamodb.AttributeValue) *UserEntry {
-	user := UserID(*attrs["user"].S)
-	email := *attrs["email"].S
-	data, err := base64.RawStdEncoding.DecodeString(*attrs["passwordHash"].S)
+	user := UserID(*attrs["User"].S)
+	email := *attrs["Email"].S
+	data, err := base64.RawStdEncoding.DecodeString(*attrs["PasswordHash"].S)
 	if err != nil {
 		panic(fmt.Sprintf(
-			"non-base64-encoded `passwordHash` value for user `%s`: %v",
+			"non-base64-encoded `PasswordHash` value for user `%s`: %v",
 			user,
 			err,
 		))

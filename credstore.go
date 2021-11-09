@@ -18,7 +18,7 @@ type UserEntry struct {
 type UserStore interface {
 	Get(UserID) (*UserEntry, error)
 	Create(*UserEntry) error
-	Update(*UserEntry) error
+	Upsert(*UserEntry) error
 }
 
 var ErrPasswordTooSimple = errors.New("Password is too simple")
@@ -45,7 +45,7 @@ func (cs *CredStore) Validate(creds *Credentials) error {
 func validatePassword(creds *Credentials) error {
 	minEntropyMatch := zxcvbn.PasswordStrength(
 		creds.Password,
-		[]string{string(creds.User)},
+		[]string{string(creds.User), creds.Email},
 	)
 	if minEntropyMatch.Score < 3 {
 		return fmt.Errorf("validating password: %w", ErrPasswordTooSimple)
@@ -64,7 +64,11 @@ func makeUserEntry(creds *Credentials) (*UserEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &UserEntry{User: creds.User, PasswordHash: hashedPassword}, nil
+	return &UserEntry{
+		User:         creds.User,
+		Email:        creds.Email,
+		PasswordHash: hashedPassword,
+	}, nil
 }
 
 func (cs *CredStore) Create(creds *Credentials) error {
@@ -79,14 +83,14 @@ func (cs *CredStore) Create(creds *Credentials) error {
 	return nil
 }
 
-func (cs *CredStore) Update(creds *Credentials) error {
+func (cs *CredStore) Upsert(creds *Credentials) error {
 	entry, err := makeUserEntry(creds)
 	if err != nil {
-		return fmt.Errorf("updating credentials: %w", err)
+		return fmt.Errorf("creating user entry: %w", err)
 	}
 
-	if err := cs.Users.Update(entry); err != nil {
-		return fmt.Errorf("updating credentials: %w", err)
+	if err := cs.Users.Upsert(entry); err != nil {
+		return fmt.Errorf("upserting user store: %w", err)
 	}
 
 	return nil

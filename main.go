@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/ses"
 	"github.com/dgrijalva/jwt-go"
 	pz "github.com/weberc2/httpeasy"
 )
@@ -55,14 +56,44 @@ func main() {
 		log.Fatalf("Decoding refresh key: %v", err)
 	}
 
+	resetSigningKeyEncoded := os.Getenv("RESET_PRIVATE_KEY")
+	if resetSigningKeyEncoded == "" {
+		log.Fatal("Missing required env var: RESET_PRIVATE_KEY")
+	}
+	resetSigningKey, err := decodeKey(resetSigningKeyEncoded)
+	if err != nil {
+		log.Fatalf("Decoding reset key: %v", err)
+	}
+
+	sender := os.Getenv("SENDER")
+	if sender == "" {
+		log.Fatal("Missing required env var: SENDER")
+	}
+
+	sess := session.New()
+
 	authService := AuthHTTPService{AuthService{
 		Creds: CredStore{Users: &DynamoDBUserStore{
-			Client: dynamodb.New(session.New()),
+			Client: dynamodb.New(sess),
 			Table:  "Users",
 		}},
-		ResetTokens:   &MemResetTokenStore{},
-		Notifications: ConsoleNotificationService{},
-		Hostname:      hostName,
+		ResetTokens: ResetTokenFactory{
+			Issuer:           issuer,
+			WildcardAudience: audience,
+			TokenValidity:    1 * time.Hour,
+			SigningKey:       resetSigningKey,
+			SigningMethod:    jwt.SigningMethodES512,
+		},
+		Notifications: (&SESNotificationService{
+			Client: ses.New(sess),
+			Sender: sender,
+			TokenURL: func(tok string) string {
+				return fmt.Sprintf("https://%s/password?t=%s", hostName, tok)
+			},
+			RegistrationSettings:   DefaultRegistrationSettings,
+			ForgotPasswordSettings: DefaultForgotPasswordSettings,
+		}),
+		Hostname: hostName,
 		TokenDetails: TokenDetailsFactory{
 			AccessTokens: TokenFactory{
 				Issuer:           issuer,
@@ -80,8 +111,7 @@ func main() {
 			},
 			TimeFunc: time.Now,
 		},
-		ResetTokenValidity: 1 * time.Hour,
-		TimeFunc:           time.Now,
+		TimeFunc: time.Now,
 	}}
 
 	log.Printf("Listening on %s", addr)

@@ -102,7 +102,8 @@ func (ahs *AuthHTTPService) RegisterRoute() pz.Route {
 		Method: "POST",
 		Handler: func(r pz.Request) pz.Response {
 			var payload struct {
-				User UserID `json:"user"`
+				User  UserID `json:"user"`
+				Email string `json:"email"`
 			}
 			if err := r.JSON(&payload); err != nil {
 				return pz.BadRequest(nil, struct{ Message, Error string }{
@@ -111,7 +112,7 @@ func (ahs *AuthHTTPService) RegisterRoute() pz.Route {
 				})
 			}
 
-			if err := ahs.Register(payload.User); err != nil {
+			if err := ahs.Register(payload.User, payload.Email); err != nil {
 				if errors.Is(err, ErrUserExists) {
 					return pz.Conflict(
 						pz.String("User already exists"),
@@ -164,19 +165,21 @@ func (ahs *AuthHTTPService) UpdatePasswordRoute() pz.Route {
 			}
 
 			if err := ahs.UpdatePassword(&payload); err != nil {
-				if errors.Is(err, ErrResetTokenNotFound) {
+				l := struct {
+					Message, Error string
+					User           UserID
+				}{
+					Message: "updating password",
+					Error:   err.Error(),
+					User:    payload.User,
+				}
+				if errors.Is(err, ErrInvalidResetToken) {
 					return pz.NotFound(
-						pz.String(ErrResetTokenNotFound.Error()),
-						struct {
-							Message, Error string
-							User           UserID
-						}{
-							Message: "updating password",
-							Error:   err.Error(),
-							User:    payload.User,
-						},
+						pz.String(ErrInvalidResetToken.Error()),
+						l,
 					)
 				}
+				return pz.InternalServerError(l)
 			}
 
 			return pz.Ok(pz.String("Password updated"), struct {
