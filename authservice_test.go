@@ -15,7 +15,7 @@ import (
 
 type userStoreMock struct {
 	get    func(UserID) (*UserEntry, error)
-	update func(*UserEntry) error
+	upsert func(*UserEntry) error
 	create func(*UserEntry) error
 }
 
@@ -26,11 +26,11 @@ func (usm *userStoreMock) Get(u UserID) (*UserEntry, error) {
 	return usm.get(u)
 }
 
-func (usm *userStoreMock) Update(entry *UserEntry) error {
-	if usm.update == nil {
-		panic("userStoreMock: missing `update` hook")
+func (usm *userStoreMock) Upsert(entry *UserEntry) error {
+	if usm.upsert == nil {
+		panic("userStoreMock: missing `upsert` hook")
 	}
-	return usm.update(entry)
+	return usm.upsert(entry)
 }
 
 func (usm *userStoreMock) Create(entry *UserEntry) error {
@@ -193,7 +193,6 @@ func TestRegister(t *testing.T) {
 				return nil
 			},
 		},
-		Hostname: "auth.example.org",
 		TimeFunc: func() time.Time { return now },
 	}
 
@@ -332,7 +331,7 @@ func TestUpdatePassword(t *testing.T) {
 					PasswordHash: hashBcrypt(password),
 				}, nil
 			},
-			update: func(e *UserEntry) error { entry = e; return nil },
+			upsert: func(e *UserEntry) error { entry = e; return nil },
 		}},
 		Notifications: &notificationServiceMock{
 			notify: func(n *Notification) error { return nil },
@@ -367,7 +366,7 @@ func TestUpdatePassword(t *testing.T) {
 	}
 
 	if err := wantedCredentials.compare(entry); err != nil {
-		t.Fatalf("CredStore.Update(*Credentials): %v", err)
+		t.Fatalf("UserStore.Upsert(*Credentials): %v", err)
 	}
 }
 
@@ -468,23 +467,3 @@ func hashBcrypt(password string) []byte {
 	}
 	return hash
 }
-
-// SCENARIOS:
-//
-// * Multiple registrations with the same email address but different usernames
-//   (neither registration is completed)
-//   - Option 1: the first to confirm wins (second confirmation gets an error)
-//   - Option 2: "registration already exists with the given email address"
-// * Multiple registrations for the same email address and username (neither
-//   registration is completed)
-//   - Invalidate the first token and send a new one
-// * Multiple registrations with the same username but different email address
-//   - Option 1: update the registration with a new email address and send a
-//     new token. This would facilitate the "typo in the email address for the
-//     original registration" use case.
-// * User attempts to register with an email address (different username) that
-//   is already taken
-//   - Error: "email address exists"
-// * User attempts to register with a username (different email address) that
-//   is already taken
-//   - Error: "username exists"

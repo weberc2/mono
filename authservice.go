@@ -148,7 +148,6 @@ func (tdf *TokenDetailsFactory) AccessToken(subject string) (string, error) {
 type AuthService struct {
 	Creds         CredStore
 	Notifications NotificationService
-	Hostname      string
 	ResetTokens   ResetTokenFactory
 	TokenDetails  TokenDetailsFactory
 	TimeFunc      func() time.Time

@@ -30,6 +30,11 @@ type CredStore struct {
 func (cs *CredStore) Validate(creds *Credentials) error {
 	entry, err := cs.Users.Get(creds.User)
 	if err != nil {
+		// If the user doesn't exist, we want to return ErrCredentials in order
+		// to minimize the information we give to potential attackers.
+		if errors.Is(err, ErrUserNotFound) {
+			return ErrCredentials
+		}
 		return fmt.Errorf("validating credentials: %w", err)
 	}
 

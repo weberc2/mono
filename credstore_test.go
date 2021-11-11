@@ -47,13 +47,13 @@ func TestCreate(t *testing.T) {
 	}
 }
 
-func TestUpdate(t *testing.T) {
+func TestUpsert(t *testing.T) {
 	const password = "oiusdpafohwerkljsfkljads;fweqr"
 
 	var entry *UserEntry
 	if err := (&CredStore{&userStoreMock{
-		update: func(e *UserEntry) error { entry = e; return nil },
-	}}).Update(&Credentials{
+		upsert: func(e *UserEntry) error { entry = e; return nil },
+	}}).Upsert(&Credentials{
 		User:     "user",
 		Email:    "user@example.org",
 		Password: password,
@@ -62,7 +62,7 @@ func TestUpdate(t *testing.T) {
 	}
 
 	if entry == nil {
-		t.Fatalf("UserStore.Update() not called or called with nil value")
+		t.Fatalf("UserStore.Upsert() not called or called with nil value")
 	}
 
 	if entry.User != "user" {
