@@ -15,6 +15,14 @@ func (cs *CommentsService) PutComment(r pz.Request) pz.Response {
 	if err := r.JSON(&c); err != nil {
 		return pz.BadRequest(pz.String("Malformed `Comment` JSON"), e{err})
 	}
+	if user := UserID(r.Headers.Get("User")); user != c.Author {
+		pz.Unauthorized(nil, struct {
+			Message, Error string
+		}{
+			Message: "mismatch between 'User' header and 'Author' body field",
+			Error:   "user %s tried posting a comment from user %s",
+		})
+	}
 	id, err := cs.Store.PutComment(PostID(r.Vars["post-id"]), &c)
 	if err != nil {
 		return pz.InternalServerError(e{err})

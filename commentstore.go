@@ -134,10 +134,6 @@ func (cs *CommentStore) GetComment(post PostID, comment CommentID) (Comment, err
 }
 
 func (cs *CommentStore) PostComments(post PostID, parent CommentID) ([]Comment, error) {
-	if err := cs.PostStore.Exists(post); err != nil {
-		return nil, err
-	}
-
 	if parent == "" {
 		parent = "__toplevel__"
 	}
