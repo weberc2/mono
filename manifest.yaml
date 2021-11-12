@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: auth
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: auth
+  name: auth
+  labels:
+    app: auth
+spec:
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      containers:
+        - name: auth
+          image: weberc2/auth
+          args: [/bin/auth]
+          ports:
+            - containerPort: 80
+          env:
+            - name: AUTH_ADDR
+              value: ":80"
+            - name: AUTH_HOST_NAME
+              value: "auth.weberc2.com"
+            - name: AUTH_ISSUER
+              value: "weberc2.com"
+            - name: AUTH_ACCESS_SIGNING_KEY
+              value: |
+                -----BEGIN PRIVATE KEY-----
+                MIHcAgEBBEIAZPFBLS7kA9XMSgJUNO1OiTiwa1dZoCEBZ6M3ioNWC53FdcvnYuW1
+                bk8aAMD/HI8sIgsXmZeucct84OziSJmh452gBwYFK4EEACOhgYkDgYYABAEZnAWh
+                i+fgr7z0pwjeyo7tqKR40Wo+EiZfn4X3FIgamqoowH+ERTyYrjDdB3QMU6iOSlDh
+                UL9IsM92+ZQbiV0sbwG2MVbDyO7CBHDvoBTa2raZlScjrJe6V4h2dsGmCi2xDOQt
+                UueLAXD4CKTdEgz8S0/pW4czm6OYPRgfvLqG7pGjxw==
+                -----END PRIVATE KEY-----
+            - name: AUTH_REFRESH_SIGNING_KEY
+              value: |
+                -----BEGIN PRIVATE KEY-----
+                MIHcAgEBBEIBX5gvx0ig29F7Om7iQEblxVCE4tq2uUY7Dtke0rEoKbg4LqKSAbES
+                GNMBpQT2mZn+eavkyqGXjw0bYEW7TYZp64+gBwYFK4EEACOhgYkDgYYABAHsWi7p
+                TGnIunsqjRfILPA7ni4d1dKH5U2pKSpSJzAUpQIP9qcf1LJBz2oeaaiXstogKLKd
+                BhmPaTs8IgNJC5ICnAAAdUYUlv3xqd0lRTM3M0Sk5i07D7aAz2Gzoi2PRsT3Ae2O
+                2dI7HpYTKsP8RqaZp46hoBgcw88rIwhep/L3u4UJhg==
+                -----END PRIVATE KEY-----
+            - name: AUTH_RESET_SIGNING_KEY
+              value: |
+                -----BEGIN PRIVATE KEY-----
+                MIHcAgEBBEIAJ49681/ZpFQvgMPiJRJn0z+rL9SEGSg+9BSzR1wCs4Eun1armRz1
+                wmhjshce1oexdJuQyw9CMNQ+sz0cddYUPRigBwYFK4EEACOhgYkDgYYABABzK8Sh
+                GR4aQLVY41cQgKEgkROy7pi0NMHRZQdFkD9H7QpztQdLbSVS1YVVHHkq5dao2LgZ
+                QUUyrBfxkzKNYfc4BQHAwYJ1B73r5ZvMwtcSVs/Nc+rVX3O/nw27VQ7lmAREseFH
+                Alsx4HqycEOu+23QmucQBeSdGFlsz5wgpLUBCjxKmw==
+                -----END PRIVATE KEY-----
+            - name: AUTH_NOTIFICATION_SENDER
+              value: auth@weberc2.com
+            - name: AUTH_DEFAULT_REDIRECT_LOCATION
+              value: https://blog.weberc2.com
+            - name: AUTH_REDIRECT_DOMAIN
+              value: weberc2.com

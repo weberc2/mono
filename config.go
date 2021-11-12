@@ -28,17 +28,17 @@ const (
 )
 
 type Config struct {
-	Addr                    string     `default:"127.0.0.1:8080" yaml:"addr"`
-	HostName                string     `yaml:"hostName"`
-	Issuer                  string     `yaml:"issuer"`
-	Audience                string     `yaml:"audience"`
-	AccessSigningKey        PrivateKey `yaml:"accessSigningKey"`
-	RefreshSigningKey       PrivateKey `yaml:"refreshSigningKey"`
-	ResetSigningKey         PrivateKey `yaml:"resetSigningKey"`
-	NotificationSender      string     `yaml:"notificationSender"`
-	DefaultRedirectLocation string     `yaml:"defaultRedirectLocation"`
-	RedirectDomain          string     `yaml:"redirectDomain"`
-	BaseURL                 BaseURL    `yaml:"baseURL"`
+	Addr                    string     `envconfig:"AUTH_ADDR" default:"127.0.0.1:8080" yaml:"addr"`
+	HostName                string     `envconfig:"AUTH_HOST_NAME" yaml:"hostName"`
+	Issuer                  string     `envconfig:"AUTH_ISSUER" yaml:"issuer"`
+	Audience                string     `envconfig:"AUTH_AUDIENCE" yaml:"audience"`
+	AccessSigningKey        PrivateKey `envconfig:"AUTH_ACCESS_SIGNING_KEY" yaml:"accessSigningKey"`
+	RefreshSigningKey       PrivateKey `envconfig:"AUTH_REFRESH_SIGNING_KEY" yaml:"refreshSigningKey"`
+	ResetSigningKey         PrivateKey `envconfig:"AUTH_RESET_SIGNING_KEY" yaml:"resetSigningKey"`
+	NotificationSender      string     `envconfig:"AUTH_NOTIFICATION_SENDER" yaml:"notificationSender"`
+	DefaultRedirectLocation string     `envconfig:"AUTH_DEFAULT_REDIRECT_LOCATION" yaml:"defaultRedirectLocation"`
+	RedirectDomain          string     `envconfig:"AUTH_REDIRECT_DOMAIN" yaml:"redirectDomain"`
+	BaseURL                 BaseURL    `envconfig:"AUTH_BASE_URL" yaml:"baseURL"`
 }
 
 func LoadConfig() (*Config, error) {
