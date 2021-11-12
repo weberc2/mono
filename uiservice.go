@@ -147,7 +147,7 @@ func (uis *UIService) LoginHandler(r pz.Request) pz.Response {
 		Domain:   uis.RedirectDomain,
 		HttpOnly: true,
 		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 	})
 }
 
