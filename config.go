@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -244,7 +245,11 @@ func (pk *PrivateKey) Decode(value string) error {
 
 	for {
 		block, rest := pem.Decode(data)
-		if block.Type != "PRIVATE KEY" {
+		// Ideally we would just match on PRIVATE KEY, but Terraform's
+		// tls_private_key[0] module uses "EC PRIVATE KEY" 🤦
+		//
+		// [0]: https://registry.terraform.io/providers/hashicorp/tls/latest/docs/resources/private_key#attributes-reference
+		if strings.Contains(block.Type, "PRIVATE KEY") {
 			if len(rest) > 0 {
 				data = rest
 				continue
