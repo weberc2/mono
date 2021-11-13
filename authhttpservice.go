@@ -12,7 +12,7 @@ type AuthHTTPService struct {
 
 func (ahs *AuthHTTPService) LoginRoute() pz.Route {
 	return pz.Route{
-		Path:   "/login",
+		Path:   "/api/login",
 		Method: "POST",
 		Handler: func(r pz.Request) pz.Response {
 			var creds Credentials
@@ -68,7 +68,7 @@ func (ahs *AuthHTTPService) LoginRoute() pz.Route {
 
 func (ahs *AuthHTTPService) RefreshRoute() pz.Route {
 	return pz.Route{
-		Path:   "/refresh",
+		Path:   "/api/refresh",
 		Method: "POST",
 		Handler: func(r pz.Request) pz.Response {
 			var payload struct {
@@ -98,11 +98,12 @@ func (ahs *AuthHTTPService) RefreshRoute() pz.Route {
 
 func (ahs *AuthHTTPService) RegisterRoute() pz.Route {
 	return pz.Route{
-		Path:   "/register",
+		Path:   "/api/register",
 		Method: "POST",
 		Handler: func(r pz.Request) pz.Response {
 			var payload struct {
-				User UserID `json:"user"`
+				User  UserID `json:"user"`
+				Email string `json:"email"`
 			}
 			if err := r.JSON(&payload); err != nil {
 				return pz.BadRequest(nil, struct{ Message, Error string }{
@@ -111,7 +112,17 @@ func (ahs *AuthHTTPService) RegisterRoute() pz.Route {
 				})
 			}
 
-			if err := ahs.Register(payload.User); err != nil {
+			if err := ahs.Register(payload.User, payload.Email); err != nil {
+				if errors.Is(err, ErrInvalidEmail) {
+					return pz.BadRequest(
+						pz.String("Invalid email address"),
+						struct {
+							Error string
+						}{
+							Error: err.Error(),
+						},
+					)
+				}
 				if errors.Is(err, ErrUserExists) {
 					return pz.Conflict(
 						pz.String("User already exists"),
@@ -125,6 +136,14 @@ func (ahs *AuthHTTPService) RegisterRoute() pz.Route {
 						},
 					)
 				}
+				return pz.InternalServerError(struct {
+					Message, Error string
+					User           UserID
+				}{
+					Message: "registering user",
+					Error:   err.Error(),
+					User:    payload.User,
+				})
 			}
 
 			return pz.Created(pz.String("Created user"), struct {
@@ -140,7 +159,7 @@ func (ahs *AuthHTTPService) RegisterRoute() pz.Route {
 
 func (ahs *AuthHTTPService) UpdatePasswordRoute() pz.Route {
 	return pz.Route{
-		Path:   "/password",
+		Path:   "/api/password",
 		Method: "PATCH",
 		Handler: func(r pz.Request) pz.Response {
 			var payload UpdatePassword
@@ -156,19 +175,21 @@ func (ahs *AuthHTTPService) UpdatePasswordRoute() pz.Route {
 			}
 
 			if err := ahs.UpdatePassword(&payload); err != nil {
-				if errors.Is(err, ErrResetTokenNotFound) {
+				l := struct {
+					Message, Error string
+					User           UserID
+				}{
+					Message: "updating password",
+					Error:   err.Error(),
+					User:    payload.User,
+				}
+				if errors.Is(err, ErrInvalidResetToken) {
 					return pz.NotFound(
-						pz.String(ErrResetTokenNotFound.Error()),
-						struct {
-							Message, Error string
-							User           UserID
-						}{
-							Message: "updating password",
-							Error:   err.Error(),
-							User:    payload.User,
-						},
+						pz.String(ErrInvalidResetToken.Error()),
+						l,
 					)
 				}
+				return pz.InternalServerError(l)
 			}
 
 			return pz.Ok(pz.String("Password updated"), struct {

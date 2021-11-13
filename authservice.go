@@ -2,45 +2,91 @@ package main
 
 import (
 	"crypto/ecdsa"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"net/mail"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/google/uuid"
 )
 
 type UserID string
 
-var ErrCredentials = errors.New("Invalid username or password")
-var ErrUserExists = errors.New("User already exists")
-var ErrUserNotFound = errors.New("User not found")
+var (
+	ErrCredentials       = errors.New("Invalid username or password")
+	ErrUserExists        = errors.New("User already exists")
+	ErrUserNotFound      = errors.New("User not found")
+	ErrInvalidResetToken = errors.New("Reset token invalid")
+	ErrInvalidEmail      = errors.New("Invalid email address")
+)
 
 type Credentials struct {
 	User     UserID `json:"user"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
+type NotificationType string
+
+const (
+	NotificationTypeRegister       NotificationType = "REGISTER"
+	NotificationTypeForgotPassword NotificationType = "FORGOT_PASSWORD"
+)
+
+type Notification struct {
+	Type  NotificationType
+	User  UserID
+	Email string
+	Token string
+}
+
 type NotificationService interface {
-	Notify(user UserID, resetToken uuid.UUID) error
+	Notify(*Notification) error
 }
 
-var ErrResetTokenNotFound = errors.New("Reset token not found or expired")
-
-type ResetToken struct {
-	User      UserID
-	Token     uuid.UUID
-	ExpiresAt time.Time
+type Claims struct {
+	User  UserID
+	Email string
+	jwt.StandardClaims
 }
 
-type ResetTokenStore interface {
-	// Creates or updates the ResetToken for a given user.
-	Create(*ResetToken) error
+type ResetTokenFactory TokenFactory
 
-	// Retrieves the ResetToken for a given user.
-	Get(UserID) (*ResetToken, error)
+func (rtf *ResetTokenFactory) Create(
+	now time.Time,
+	user UserID,
+	email string,
+) (string, error) {
+	token := jwt.NewWithClaims(
+		rtf.SigningMethod,
+		Claims{
+			User:  user,
+			Email: email,
+			StandardClaims: jwt.StandardClaims{
+				Subject:   string(user),
+				Audience:  rtf.WildcardAudience,
+				Issuer:    rtf.Issuer,
+				IssuedAt:  now.Unix(),
+				ExpiresAt: now.Add(rtf.TokenValidity).Unix(),
+				NotBefore: now.Unix(),
+			},
+		},
+	)
+	return token.SignedString(rtf.SigningKey)
+}
+
+func (rtf *ResetTokenFactory) Claims(token string) (*Claims, error) {
+	var claims Claims
+	if _, err := jwt.ParseWithClaims(
+		token,
+		&claims,
+		func(*jwt.Token) (interface{}, error) {
+			return &rtf.SigningKey.PublicKey, nil
+		},
+	); err != nil {
+		return nil, fmt.Errorf("parsing claims from token: %w", err)
+	}
+	return &claims, nil
 }
 
 type TokenFactory struct {
@@ -100,13 +146,11 @@ func (tdf *TokenDetailsFactory) AccessToken(subject string) (string, error) {
 }
 
 type AuthService struct {
-	Creds              CredStore
-	ResetTokens        ResetTokenStore
-	Notifications      NotificationService
-	Hostname           string
-	ResetTokenValidity time.Duration
-	TokenDetails       TokenDetailsFactory
-	TimeFunc           func() time.Time
+	Creds         CredStore
+	Notifications NotificationService
+	ResetTokens   ResetTokenFactory
+	TokenDetails  TokenDetailsFactory
+	TimeFunc      func() time.Time
 }
 
 func (as *AuthService) Login(c *Credentials) (*TokenDetails, error) {
@@ -141,82 +185,84 @@ func (as *AuthService) Refresh(refreshToken string) (string, error) {
 	return as.TokenDetails.AccessToken(claims.Subject)
 }
 
-func (as *AuthService) Register(user UserID) error {
-	if err := as.Creds.Create(&Credentials{
-		User:     user,
-		Password: uuid.NewString(),
-	}); err != nil {
-		if !errors.Is(err, ErrUserExists) {
-			return fmt.Errorf("Beginning registration: %w", err)
+func (as *AuthService) Register(user UserID, email string) error {
+	parser := mail.AddressParser{}
+	if _, err := parser.Parse(email); err != nil {
+		return fmt.Errorf("registering user: %w", ErrInvalidEmail)
+	}
+
+	if _, err := as.Creds.Users.Get(user); err != nil {
+		if !errors.Is(err, ErrUserNotFound) {
+			return fmt.Errorf("registering user: %w", err)
 		}
-		// If the user already exists, we'll continue.
+	} else {
+		// if the error is nil, it means the user was found--return
+		// `ErrUserExists`.
+		return fmt.Errorf("registering user: %w", ErrUserExists)
 	}
 
-	token := ResetToken{
-		User:      user,
-		Token:     uuid.New(),
-		ExpiresAt: as.TimeFunc().UTC().Add(as.ResetTokenValidity),
+	// TODO: Error if user or email already exists
+	token, err := as.ResetTokens.Create(as.TimeFunc(), user, email)
+	if err != nil {
+		return fmt.Errorf("registering user: %w", err)
 	}
 
-	// Create a new token, possibly overwriting an existing token if the user
-	// already existed.
-	if err := as.ResetTokens.Create(&token); err != nil {
-		return fmt.Errorf("Beginning registration: %w", err)
+	if err := as.Notifications.Notify(&Notification{
+		Type:  NotificationTypeRegister,
+		User:  user,
+		Email: email,
+		Token: token,
+	}); err != nil {
+		return fmt.Errorf("notifying registration reset token: %w", err)
 	}
 
-	if err := as.Notifications.Notify(
-		user,
-		token.Token,
-	); err != nil {
-		return fmt.Errorf("Beginning registration: %w", err)
+	return nil
+}
+
+func (as *AuthService) ForgotPassword(user UserID) error {
+	u, err := as.Creds.Users.Get(user)
+	if err != nil {
+		return fmt.Errorf("fetching user: %w", err)
+	}
+
+	token, err := as.ResetTokens.Create(as.TimeFunc(), user, u.Email)
+	if err != nil {
+		return fmt.Errorf("preparing forgot-password notification: %w", err)
+	}
+
+	if err := as.Notifications.Notify(&Notification{
+		Type:  NotificationTypeForgotPassword,
+		User:  user,
+		Email: u.Email,
+		Token: token,
+	}); err != nil {
+		return fmt.Errorf("notifying forgot-password reset token: %w", err)
 	}
 
 	return nil
 }
 
 type UpdatePassword struct {
-	User     UserID
-	Password string
-	Token    uuid.UUID
-}
-
-func (up *UpdatePassword) UnmarshalJSON(data []byte) error {
-	var payload struct {
-		User     UserID `json:"user"`
-		Password string `json:"password"`
-		Token    string `json:"token"`
-	}
-	if err := json.Unmarshal(data, &payload); err != nil {
-		return err
-	}
-	token, err := uuid.Parse(payload.Token)
-	if err != nil {
-		return fmt.Errorf("parsing token into UUID: %w", err)
-	}
-	up.User = payload.User
-	up.Password = payload.Password
-	up.Token = token
-	return nil
+	User     UserID `json:"user"`
+	Password string `json:"password"`
+	Token    string `json:"token"`
 }
 
 func (as *AuthService) UpdatePassword(up *UpdatePassword) error {
-	// https://cheatsheetseries.owasp.org/cheatsheets/Forgot_Password_Cheat_Sheet.html
-	now := as.TimeFunc()
-
-	resetToken, err := as.ResetTokens.Get(up.User)
+	claims, err := as.ResetTokens.Claims(up.Token)
 	if err != nil {
 		return fmt.Errorf("updating password: %w", err)
 	}
 
-	// We deliberately want to return `ErrResetTokenNotFound` in these cases so
-	// as to not give attackers unnecessary information. See owasp link above.
-	if resetToken.Token != up.Token || resetToken.ExpiresAt.Before(now) {
-		log.Printf("resetToken.ExpiresAt.Before(now): %v", resetToken.ExpiresAt.Before(now))
-		return fmt.Errorf("updating password: %w", ErrResetTokenNotFound)
+	// We deliberately want to return `ErrResetTokenNotFound` in this case so
+	// as not to give attackers unnecessary information. See OWASP link above.
+	if err := claims.Valid(); err != nil {
+		return fmt.Errorf("updating password: %w", ErrInvalidResetToken)
 	}
 
-	if err := as.Creds.Update(&Credentials{
+	if err := as.Creds.Upsert(&Credentials{
 		User:     up.User,
+		Email:    claims.Email,
 		Password: up.Password,
 	}); err != nil {
 		return fmt.Errorf("updating password: %w", err)
