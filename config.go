@@ -249,7 +249,7 @@ func (pk *PrivateKey) Decode(value string) error {
 		// tls_private_key[0] module uses "EC PRIVATE KEY" 🤦
 		//
 		// [0]: https://registry.terraform.io/providers/hashicorp/tls/latest/docs/resources/private_key#attributes-reference
-		if strings.Contains(block.Type, "PRIVATE KEY") {
+		if !strings.Contains(block.Type, "PRIVATE KEY") {
 			if len(rest) > 0 {
 				data = rest
 				continue
