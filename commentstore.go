@@ -28,11 +28,14 @@ type CommentStore struct {
 }
 
 func (cs *CommentStore) putObject(path string, data []byte) error {
-	return cs.ObjectStore.PutObject(
+	if err := cs.ObjectStore.PutObject(
 		cs.Bucket,
 		filepath.Join(cs.Prefix, path),
 		bytes.NewReader(data),
-	)
+	); err != nil {
+		return fmt.Errorf("putting object: %w", err)
+	}
+	return nil
 }
 
 func (cs *CommentStore) getObject(key string) ([]byte, error) {
@@ -41,31 +44,38 @@ func (cs *CommentStore) getObject(key string) ([]byte, error) {
 		filepath.Join(cs.Prefix, key),
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting object: %w", err)
 	}
 	defer body.Close()
-	return ioutil.ReadAll(body)
+	data, err := ioutil.ReadAll(body)
+	if err != nil {
+		return nil, fmt.Errorf("reading object body: %w", err)
+	}
+	return data, nil
 }
 
 func (cs *CommentStore) putComment(post PostID, c *Comment) error {
 	data, err := json.Marshal(&c)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshaling comment: %w", err)
 	}
 	if err := cs.PostStore.Exists(post); err != nil {
-		return err
+		return fmt.Errorf("checking post existence: %w", err)
 	}
 
 	// If a `parent` was provided, then make sure it exists
 	if c.Parent != "" {
 		if _, err := cs.GetComment(post, c.Parent); err != nil {
-			return err
+			return fmt.Errorf("getting parent comment: %w", err)
 		}
 	}
-	return cs.putObject(
+	if err := cs.putObject(
 		fmt.Sprintf("posts/%s/comments/%s/__comment__", post, c.ID),
 		data,
-	)
+	); err != nil {
+		return fmt.Errorf("putting comment object: %w", err)
+	}
+	return nil
 }
 
 func (cs *CommentStore) putParentLink(post PostID, c *Comment) error {
@@ -83,29 +93,35 @@ func (cs *CommentStore) PutComment(post PostID, c *Comment) (CommentID, error) {
 	cp := *c
 	cp.ID = CommentID(uuid.NewString())
 	if err := cs.putComment(post, &cp); err != nil {
-		return "", err
+		return "", fmt.Errorf("putting comment: %w", err)
 	}
 	if err := cs.putParentLink(post, &cp); err != nil {
-		return "", err
+		return "", fmt.Errorf("putting parent link: %w", err)
 	}
 	return cp.ID, nil
 }
 
 func (cs *CommentStore) listObjects(prefix string) ([]string, error) {
-	return cs.ObjectStore.ListObjects(
+	entries, err := cs.ObjectStore.ListObjects(
 		cs.Bucket,
 		filepath.Join(cs.Prefix, prefix),
 	)
+	if err != nil {
+		return nil, fmt.Errorf("listing objects: %w", err)
+	}
+	return entries, nil
 }
 
 func (cs *CommentStore) getComment(key string) (Comment, error) {
 	data, err := cs.getObject(key)
 	if err != nil {
-		return Comment{}, err
+		return Comment{}, fmt.Errorf("getting object: %w", err)
 	}
 	var c Comment
-	err = json.Unmarshal(data, &c)
-	return c, err
+	if err := json.Unmarshal(data, &c); err != nil {
+		return c, fmt.Errorf("marshaling comment: %w", err)
+	}
+	return c, nil
 }
 
 type CommentNotFoundErr struct {
@@ -126,9 +142,12 @@ func (cs *CommentStore) GetComment(post PostID, comment CommentID) (Comment, err
 	c, err := cs.getComment(key)
 	if err != nil {
 		if _, ok := err.(*ObjectNotFoundErr); ok {
-			return Comment{}, &CommentNotFoundErr{Post: post, Comment: comment}
+			return Comment{}, fmt.Errorf(
+				"getting comment: %w",
+				&CommentNotFoundErr{Post: post, Comment: comment},
+			)
 		}
-		return Comment{}, err
+		return Comment{}, fmt.Errorf("getting comment: %w", err)
 	}
 	return c, nil
 }
@@ -152,7 +171,7 @@ func (cs *CommentStore) PostComments(post PostID, parent CommentID) ([]Comment, 
 	for i, key := range keys {
 		comment, err := cs.GetComment(post, CommentID(filepath.Base(key)))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("getting comment: %w", err)
 		}
 		comments[i] = comment
 	}
