@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 
 	pz "github.com/weberc2/httpeasy"
 )
@@ -44,7 +45,8 @@ func (cs *CommentsService) PostComments(r pz.Request) pz.Response {
 	}
 	comments, err := cs.Store.PostComments(PostID(r.Vars["post-id"]), parent)
 	if err != nil {
-		if err, ok := err.(*CommentNotFoundErr); ok {
+		var c *CommentNotFoundErr
+		if errors.As(err, &c) {
 			return pz.NotFound(
 				pz.Stringf(
 					"comment '%s' not found with post '%s'",
@@ -71,7 +73,8 @@ func (cs *CommentsService) GetComment(r pz.Request) pz.Response {
 		CommentID(r.Vars["comment-id"]),
 	)
 	if err != nil {
-		if err, ok := err.(*CommentNotFoundErr); ok {
+		var c *CommentNotFoundErr
+		if errors.As(err, &c) {
 			return pz.NotFound(
 				pz.Stringf(
 					"comment '%s' not found with post '%s'",

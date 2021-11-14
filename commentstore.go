@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -44,7 +45,7 @@ func (cs *CommentStore) getObject(key string) ([]byte, error) {
 		filepath.Join(cs.Prefix, key),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("getting object: %w", err)
+		return nil, err
 	}
 	defer body.Close()
 	data, err := ioutil.ReadAll(body)
@@ -141,7 +142,8 @@ func (cs *CommentStore) GetComment(post PostID, comment CommentID) (Comment, err
 	key := fmt.Sprintf("posts/%s/comments/%s/__comment__", post, comment)
 	c, err := cs.getComment(key)
 	if err != nil {
-		if _, ok := err.(*ObjectNotFoundErr); ok {
+		var e *ObjectNotFoundErr
+		if errors.As(err, &e) {
 			return Comment{}, fmt.Errorf(
 				"getting comment: %w",
 				&CommentNotFoundErr{Post: post, Comment: comment},
