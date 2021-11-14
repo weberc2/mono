@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -12,12 +13,19 @@ type S3ObjectStore struct {
 }
 
 func (os *S3ObjectStore) PutObject(bucket, key string, data io.ReadSeeker) error {
-	_, err := os.Client.PutObject(&s3.PutObjectInput{
+	if _, err := os.Client.PutObject(&s3.PutObjectInput{
 		Bucket: &bucket,
 		Key:    &key,
 		Body:   data,
-	})
-	return err
+	}); err != nil {
+		return fmt.Errorf(
+			"putting object in bucket `%s` at key `%s`: %w",
+			bucket,
+			key,
+			err,
+		)
+	}
+	return nil
 }
 
 func (os *S3ObjectStore) GetObject(bucket, key string) (io.ReadCloser, error) {
@@ -31,14 +39,19 @@ func (os *S3ObjectStore) GetObject(bucket, key string) (io.ReadCloser, error) {
 				return nil, &ObjectNotFoundErr{bucket, key}
 			}
 		}
-		return nil, err
+		return nil, fmt.Errorf(
+			"getting object from bucket `%s` at key `%s`: %w",
+			bucket,
+			key,
+			err,
+		)
 	}
 	return rsp.Body, nil
 }
 
 func (os *S3ObjectStore) ListObjects(bucket, prefix string) ([]string, error) {
 	var keys []string
-	err := os.Client.ListObjectsPages(
+	if err := os.Client.ListObjectsPages(
 		&s3.ListObjectsInput{
 			Bucket: &bucket,
 			Prefix: &prefix,
@@ -49,6 +62,13 @@ func (os *S3ObjectStore) ListObjects(bucket, prefix string) ([]string, error) {
 			}
 			return true
 		},
-	)
-	return keys, err
+	); err != nil {
+		return keys, fmt.Errorf(
+			"listing objects in bucket `%s` with prefix `%s`: %w",
+			bucket,
+			prefix,
+			err,
+		)
+	}
+	return keys, nil
 }
