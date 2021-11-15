@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
-
-	"github.com/google/uuid"
 )
 
 type PostNotFoundErr struct{ Post PostID }
@@ -26,6 +24,7 @@ type CommentStore struct {
 	PostStore   PostStore
 	Bucket      string
 	Prefix      string
+	IDFunc      func() CommentID
 }
 
 func (cs *CommentStore) putObject(path string, data []byte) error {
@@ -92,7 +91,7 @@ func (cs *CommentStore) putParentLink(post PostID, c *Comment) error {
 
 func (cs *CommentStore) PutComment(post PostID, c *Comment) (CommentID, error) {
 	cp := *c
-	cp.ID = CommentID(uuid.NewString())
+	cp.ID = cs.IDFunc()
 	if err := cs.putComment(post, &cp); err != nil {
 		return "", fmt.Errorf("putting comment: %w", err)
 	}

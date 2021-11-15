@@ -3,12 +3,31 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"html"
+	"time"
 
 	pz "github.com/weberc2/httpeasy"
 )
 
+const (
+	bodySizeMin = 8
+	bodySizeMax = 2056
+)
+
+type HTTPError struct {
+	Status  int    `json:"status"`
+	Message string `json:"message"`
+}
+
+var (
+	ErrBodyTooShort = HTTPError{400, "Comment body too short"}
+	ErrBodyTooLong  = HTTPError{400, "Comment body too long"}
+)
+
 type CommentsService struct {
-	Store CommentStore
+	Store    CommentStore
+	TimeFunc func() time.Time
 }
 
 func (cs *CommentsService) PutComment(r pz.Request) pz.Response {
@@ -16,20 +35,41 @@ func (cs *CommentsService) PutComment(r pz.Request) pz.Response {
 	if err := r.JSON(&c); err != nil {
 		return pz.BadRequest(pz.String("Malformed `Comment` JSON"), e{err})
 	}
-	if user := UserID(r.Headers.Get("User")); user != c.Author {
-		pz.Unauthorized(nil, struct {
-			Message, Error string
-		}{
-			Message: "mismatch between 'User' header and 'Author' body field",
-			Error:   "user %s tried posting a comment from user %s",
-		})
+	const bodySizeMin = 8
+
+	type msg struct {
+		Message string
 	}
+	if len(c.Body) < bodySizeMin {
+		return pz.BadRequest(
+			pz.JSON(ErrBodyTooShort),
+			msg{fmt.Sprintf(
+				"wanted len(body) >= %d; found %d",
+				bodySizeMin,
+				len(c.Body),
+			)},
+		)
+	}
+	if len(c.Body) > bodySizeMax {
+		return pz.BadRequest(
+			pz.JSON(ErrBodyTooLong),
+			msg{fmt.Sprintf(
+				"wanted len(body) <= %d; found %d",
+				bodySizeMax,
+				len(c.Body),
+			)},
+		)
+	}
+	c.Body = html.EscapeString(c.Body)
+	c.Author = UserID(r.Headers.Get("User"))
+	c.Created = cs.TimeFunc().UTC()
+	c.Modified = c.Created
 	id, err := cs.Store.PutComment(PostID(r.Vars["post-id"]), &c)
 	if err != nil {
 		return pz.InternalServerError(e{err})
 	}
 	c.ID = id
-	return pz.Ok(pz.JSON(&c), struct {
+	return pz.Created(pz.JSON(&c), struct {
 		Message string
 		Comment CommentID
 	}{

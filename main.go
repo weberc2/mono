@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/google/uuid"
 	pz "github.com/weberc2/httpeasy"
 )
 
@@ -23,12 +24,12 @@ type CommentID string
 type UserID string
 
 type Comment struct {
-	ID       CommentID
-	Parent   CommentID
-	Author   UserID
-	Created  time.Time
-	Modified time.Time
-	Body     string
+	ID       CommentID `json:"id"`
+	Parent   CommentID `json:"parent"`
+	Author   UserID    `json:"author"`
+	Created  time.Time `json:"created"`
+	Modified time.Time `json:"modified"`
+	Body     string    `json:"body"`
 }
 
 type noopPostStore struct{}
@@ -61,24 +62,28 @@ func main() {
 			Prefix:      "",
 			ObjectStore: &S3ObjectStore{s3.New(session.New())},
 			PostStore:   noopPostStore{},
+			IDFunc: func() CommentID {
+				return CommentID(uuid.NewString())
+			},
 		},
+		TimeFunc: time.Now,
 	}
 
 	http.ListenAndServe(addr, pz.Register(
 		pz.JSONLog(os.Stderr),
 		pz.Route{
 			Method:  "GET",
-			Path:    "/posts/{post-id}/comments/{comment-id}/comments",
+			Path:    "/api/posts/{post-id}/comments/{comment-id}/replies",
 			Handler: commentsService.PostComments,
 		},
 		pz.Route{
 			Method:  "POST",
-			Path:    "/posts/{post-id}/comments",
+			Path:    "/api/posts/{post-id}/comments",
 			Handler: auth(key, commentsService.PutComment),
 		},
 		pz.Route{
 			Method:  "GET",
-			Path:    "/posts/{post-id}/comments/{comment-id}",
+			Path:    "/api/posts/{post-id}/comments/{comment-id}",
 			Handler: commentsService.GetComment,
 		},
 	))
