@@ -24,6 +24,8 @@ github.com/weberc2/httpeasy v0.0.5 h1:INvP4erwBwFNFy8IAxr450XPxrsTQBcszeXKzbsFUv
 github.com/weberc2/httpeasy v0.0.5/go.mod h1:katZaFKTvrU3Ks5tkfPzTfPlYK8FpsknOVfhe/6U8ow=
 github.com/weberc2/httpeasy v0.0.11 h1:7rCmKFKpLNjl7leIR5lFAtIe23cn2/jcAObDjQ8uKy4=
 github.com/weberc2/httpeasy v0.0.11/go.mod h1:katZaFKTvrU3Ks5tkfPzTfPlYK8FpsknOVfhe/6U8ow=
+github.com/weberc2/httpeasy v0.0.12 h1:ikbOq+U13dAU9xr42E4ZqEy8LvJ4TDQWnLLIMTH9+0g=
+github.com/weberc2/httpeasy v0.0.12/go.mod h1:katZaFKTvrU3Ks5tkfPzTfPlYK8FpsknOVfhe/6U8ow=
 golang.org/x/net v0.0.0-20210614182718-04defd469f4e h1:XpT3nA5TvE525Ne3hInMh6+GETgn27Zfm9dxsThnX2Q=
 golang.org/x/net v0.0.0-20210614182718-04defd469f4e/go.mod h1:9nx3DQGgdP8bBQD5qxJ1jj9UTztislL4KSBs9R2vV5Y=
 golang.org/x/sys v0.0.0-20201119102817-f84b799fce68/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=

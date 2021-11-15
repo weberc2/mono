@@ -7,5 +7,5 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/context v1.1.1 // indirect
-	github.com/weberc2/httpeasy v0.0.11 // indirect
+	github.com/weberc2/httpeasy v0.0.12 // indirect
 )
