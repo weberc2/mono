@@ -96,6 +96,49 @@ func (ahs *AuthHTTPService) RefreshRoute() pz.Route {
 	}
 }
 
+func (ahs *AuthHTTPService) ForgotPasswordRoute() pz.Route {
+	return pz.Route{
+		Path:   "/api/password/forgot",
+		Method: "POST",
+		Handler: func(r pz.Request) pz.Response {
+			var payload struct {
+				User UserID `json:"user"`
+			}
+			if err := r.JSON(&payload); err != nil {
+				return pz.BadRequest(nil, struct{ Message, Error string }{
+					Message: "failed to parse forgot-password JSON",
+					Error:   err.Error(),
+				})
+			}
+
+			if err := ahs.ForgotPassword(payload.User); err != nil {
+				// If the user doesn't exist, we still report success so as to
+				// not give away information to potential attackers.
+				if errors.Is(err, ErrUserNotFound) {
+					return pz.Ok(nil, struct{ Message, User, Error string }{
+						Message: "user not found; silently succeeding",
+						User:    string(payload.User),
+						Error:   err.Error(),
+					})
+				}
+
+				return pz.InternalServerError(struct {
+					Message, User, Error string
+				}{
+					Message: "triggering forget-password notification",
+					User:    string(payload.User),
+					Error:   err.Error(),
+				})
+			}
+
+			return pz.Ok(nil, struct{ Message, User string }{
+				Message: "password reset notification sent",
+				User:    string(payload.User),
+			})
+		},
+	}
+}
+
 func (ahs *AuthHTTPService) RegisterRoute() pz.Route {
 	return pz.Route{
 		Path:   "/api/register",
@@ -208,6 +251,7 @@ func (ahs *AuthHTTPService) Routes() []pz.Route {
 		ahs.LoginRoute(),
 		ahs.RefreshRoute(),
 		ahs.RegisterRoute(),
+		ahs.ForgotPasswordRoute(),
 		ahs.UpdatePasswordRoute(),
 	}
 }
