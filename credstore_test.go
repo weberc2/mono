@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/base64"
 	"testing"
 
 	"golang.org/x/crypto/bcrypt"
@@ -85,8 +84,4 @@ func TestUpsert(t *testing.T) {
 			password,
 		)
 	}
-}
-
-func b64(data []byte) string {
-	return base64.RawStdEncoding.EncodeToString(data)
 }

@@ -119,7 +119,10 @@ func (c *Config) Run() error {
 	if err := c.Validate(); err != nil {
 		return err
 	}
-	sess := session.New()
+	sess, err := session.NewSession()
+	if err != nil {
+		return fmt.Errorf("creating AWS session: %w", err)
+	}
 	authService := AuthHTTPService{
 		AuthService{
 			Creds: CredStore{Users: &DynamoDBUserStore{

@@ -21,7 +21,7 @@ type UserStore interface {
 	Upsert(*UserEntry) error
 }
 
-var ErrPasswordTooSimple = errors.New("Password is too simple")
+var ErrPasswordTooSimple = errors.New("password is too simple")
 
 type CredStore struct {
 	Users UserStore

@@ -13,11 +13,11 @@ import (
 type UserID string
 
 var (
-	ErrCredentials       = errors.New("Invalid username or password")
-	ErrUserExists        = errors.New("User already exists")
-	ErrUserNotFound      = errors.New("User not found")
-	ErrInvalidResetToken = errors.New("Reset token invalid")
-	ErrInvalidEmail      = errors.New("Invalid email address")
+	ErrCredentials       = errors.New("invalid username or password")
+	ErrUserExists        = errors.New("user already exists")
+	ErrUserNotFound      = errors.New("user not found")
+	ErrInvalidResetToken = errors.New("reset token invalid")
+	ErrInvalidEmail      = errors.New("invalid email address")
 )
 
 type Credentials struct {
@@ -42,51 +42,6 @@ type Notification struct {
 
 type NotificationService interface {
 	Notify(*Notification) error
-}
-
-type Claims struct {
-	User  UserID
-	Email string
-	jwt.StandardClaims
-}
-
-type ResetTokenFactory TokenFactory
-
-func (rtf *ResetTokenFactory) Create(
-	now time.Time,
-	user UserID,
-	email string,
-) (string, error) {
-	token := jwt.NewWithClaims(
-		rtf.SigningMethod,
-		Claims{
-			User:  user,
-			Email: email,
-			StandardClaims: jwt.StandardClaims{
-				Subject:   string(user),
-				Audience:  rtf.WildcardAudience,
-				Issuer:    rtf.Issuer,
-				IssuedAt:  now.Unix(),
-				ExpiresAt: now.Add(rtf.TokenValidity).Unix(),
-				NotBefore: now.Unix(),
-			},
-		},
-	)
-	return token.SignedString(rtf.SigningKey)
-}
-
-func (rtf *ResetTokenFactory) Claims(token string) (*Claims, error) {
-	var claims Claims
-	if _, err := jwt.ParseWithClaims(
-		token,
-		&claims,
-		func(*jwt.Token) (interface{}, error) {
-			return &rtf.SigningKey.PublicKey, nil
-		},
-	); err != nil {
-		return nil, fmt.Errorf("parsing claims from token: %w", err)
-	}
-	return &claims, nil
 }
 
 type TokenFactory struct {
