@@ -176,7 +176,7 @@ func (as *AuthService) UpdatePassword(up *UpdatePassword) error {
 		return fmt.Errorf("updating password: %w", err)
 	}
 
-	// We deliberately want to return `ErrResetTokenNotFound` in this case so
+	// We deliberately want to return `ErrInvalidResetToken` in this case so
 	// as not to give attackers unnecessary information. See OWASP link above.
 	if err := claims.Valid(); err != nil {
 		return fmt.Errorf("updating password: %w", ErrInvalidResetToken)
