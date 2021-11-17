@@ -67,39 +67,6 @@ func (tf *TokenFactory) Create(now time.Time, subject string) (string, error) {
 	return token.SignedString(tf.SigningKey)
 }
 
-type TokenDetails struct {
-	AccessToken  string
-	RefreshToken string
-}
-
-type TokenDetailsFactory struct {
-	AccessTokens  TokenFactory
-	RefreshTokens TokenFactory
-	TimeFunc      func() time.Time
-}
-
-func (tdf *TokenDetailsFactory) Create(subject string) (*TokenDetails, error) {
-	now := tdf.TimeFunc()
-	accessToken, err := tdf.AccessTokens.Create(now, subject)
-	if err != nil {
-		return nil, fmt.Errorf("creating access token: %w", err)
-	}
-
-	refreshToken, err := tdf.RefreshTokens.Create(now, subject)
-	if err != nil {
-		return nil, fmt.Errorf("creating refresh token: %w", err)
-	}
-
-	return &TokenDetails{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-	}, nil
-}
-
-func (tdf *TokenDetailsFactory) AccessToken(subject string) (string, error) {
-	return tdf.AccessTokens.Create(tdf.TimeFunc(), subject)
-}
-
 type AuthService struct {
 	Creds         CredStore
 	Notifications NotificationService
@@ -127,7 +94,7 @@ func (as *AuthService) Refresh(refreshToken string) (string, error) {
 		refreshToken,
 		&claims,
 		func(*jwt.Token) (interface{}, error) {
-			return as.TokenDetails.RefreshTokens.SigningKey, nil
+			return &as.TokenDetails.RefreshTokens.SigningKey.PublicKey, nil
 		},
 	); err != nil {
 		return "", fmt.Errorf("parsing refresh token: %w", err)
@@ -209,7 +176,7 @@ func (as *AuthService) UpdatePassword(up *UpdatePassword) error {
 		return fmt.Errorf("updating password: %w", err)
 	}
 
-	// We deliberately want to return `ErrResetTokenNotFound` in this case so
+	// We deliberately want to return `ErrInvalidResetToken` in this case so
 	// as not to give attackers unnecessary information. See OWASP link above.
 	if err := claims.Valid(); err != nil {
 		return fmt.Errorf("updating password: %w", ErrInvalidResetToken)
