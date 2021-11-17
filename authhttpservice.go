@@ -269,11 +269,29 @@ func (ahs *AuthHTTPService) UpdatePasswordRoute() pz.Route {
 }
 
 func (ahs *AuthHTTPService) Routes() []pz.Route {
-	return []pz.Route{
+	routes := []pz.Route{
 		ahs.LoginRoute(),
 		ahs.RefreshRoute(),
 		ahs.RegisterRoute(),
 		ahs.ForgotPasswordRoute(),
 		ahs.UpdatePasswordRoute(),
+	}
+	for i := range routes {
+		routes[i].Handler = accessControlAllowOrigin(
+			routes[i].Handler,
+			"localhost:8000",
+		)
+	}
+
+	return routes
+}
+
+func accessControlAllowOrigin(handler pz.Handler, origins ...string) pz.Handler {
+	return func(r pz.Request) pz.Response {
+		rsp := handler(r)
+		for _, origin := range origins {
+			rsp.Headers.Add("Access-Control-Allow-Origin", origin)
+		}
+		return rsp
 	}
 }
