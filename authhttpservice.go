@@ -3,7 +3,17 @@ package main
 import (
 	"errors"
 
+	"github.com/dgrijalva/jwt-go"
 	pz "github.com/weberc2/httpeasy"
+)
+
+type HTTPError struct {
+	Status int    `json:"status"`
+	Error  string `json:"error"`
+}
+
+var (
+	ErrInvalidRefreshToken = &HTTPError{Status: 400, Error: "invalid refresh token"}
 )
 
 type AuthHTTPService struct {
@@ -83,6 +93,18 @@ func (ahs *AuthHTTPService) RefreshRoute() pz.Route {
 
 			accessToken, err := ahs.Refresh(payload.RefreshToken)
 			if err != nil {
+				var verr *jwt.ValidationError
+				if errors.As(err, &verr) {
+					return pz.BadRequest(
+						pz.JSON(ErrInvalidRefreshToken),
+						struct {
+							Message, Error string
+						}{
+							Message: "invalid refresh token",
+							Error:   err.Error(),
+						},
+					)
+				}
 				return pz.InternalServerError(struct{ Message, Error string }{
 					Message: "refreshing access token",
 					Error:   err.Error(),
