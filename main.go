@@ -77,28 +77,19 @@ func main() {
 	http.ListenAndServe(addr, pz.Register(
 		pz.JSONLog(os.Stderr),
 		pz.Route{
-			Method: "GET",
-			Path:   "/api/posts/{post-id}/comments/{comment-id}/replies",
-			Handler: accessControlAllowOrigin(
-				commentsService.PostComments,
-				"localhost:8000",
-			),
+			Method:  "GET",
+			Path:    "/api/posts/{post-id}/comments/{comment-id}/replies",
+			Handler: commentsService.PostComments,
 		},
 		pz.Route{
-			Method: "POST",
-			Path:   "/api/posts/{post-id}/comments",
-			Handler: accessControlAllowOrigin(
-				auth(key, commentsService.PutComment),
-				"localhost:8000",
-			),
+			Method:  "POST",
+			Path:    "/api/posts/{post-id}/comments",
+			Handler: auth(key, commentsService.PutComment),
 		},
 		pz.Route{
-			Method: "GET",
-			Path:   "/api/posts/{post-id}/comments/{comment-id}",
-			Handler: accessControlAllowOrigin(
-				commentsService.GetComment,
-				"localhost:8000",
-			),
+			Method:  "GET",
+			Path:    "/api/posts/{post-id}/comments/{comment-id}",
+			Handler: commentsService.GetComment,
 		},
 	))
 }
@@ -124,16 +115,6 @@ func decodeKey(encoded string) (*ecdsa.PublicKey, error) {
 			return nil, io.EOF
 		}
 		data = rest
-	}
-}
-
-func accessControlAllowOrigin(handler pz.Handler, origins ...string) pz.Handler {
-	return func(r pz.Request) pz.Response {
-		rsp := handler(r)
-		for _, origin := range origins {
-			rsp.Headers.Add("Access-Control-Allow-Origin", origin)
-		}
-		return rsp
 	}
 }
 
