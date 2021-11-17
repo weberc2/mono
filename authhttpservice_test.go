@@ -59,12 +59,27 @@ func TestAuthHTTPService(t *testing.T) {
 			wantedPayload:  &refresh{AccessToken: accessToken},
 		},
 		{
-			// Expect an error when an invalid refresh token is provided.
-			name:           "refresh",
+			// Expect an error when an invalid refresh token is provided. The
+			// same generic `invalid token` error is used regardless of the
+			// nature of the error to avoid leaking information to potential
+			// attackers.
+			name:           "refresh: invalid token",
 			input:          `{"refreshToken": "foobar"}`,
 			route:          (*AuthHTTPService).RefreshRoute,
 			validationTime: now.Add(2 * time.Second),
-			wantedStatus:   400,
+			wantedStatus:   401,
+			wantedPayload:  ErrInvalidRefreshToken,
+		},
+		{
+			// Expect an error when an expired refresh token is provided. The
+			// same generic `invalid token` error is used regardless of the
+			// nature of the error to avoid leaking information to potential
+			// attackers.
+			name:           "refresh: expired token",
+			input:          fmt.Sprintf(`{"refreshToken": "%s"}`, refreshToken),
+			route:          (*AuthHTTPService).RefreshRoute,
+			validationTime: now.Add(30 * 24 * time.Hour),
+			wantedStatus:   401,
 			wantedPayload:  ErrInvalidRefreshToken,
 		},
 	} {

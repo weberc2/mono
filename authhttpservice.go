@@ -13,7 +13,7 @@ type HTTPError struct {
 }
 
 var (
-	ErrInvalidRefreshToken = &HTTPError{Status: 400, Error: "invalid refresh token"}
+	ErrInvalidRefreshToken = &HTTPError{Status: 401, Error: "invalid refresh token"}
 )
 
 type AuthHTTPService struct {
@@ -95,7 +95,7 @@ func (ahs *AuthHTTPService) RefreshRoute() pz.Route {
 			if err != nil {
 				var verr *jwt.ValidationError
 				if errors.As(err, &verr) {
-					return pz.BadRequest(
+					return pz.Unauthorized(
 						pz.JSON(ErrInvalidRefreshToken),
 						struct {
 							Message, Error string
