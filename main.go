@@ -44,23 +44,28 @@ func main() {
 
 	bucket := os.Getenv("BUCKET")
 	if bucket == "" {
-		log.Fatal("Missing required env var: BUCKET")
+		log.Fatal("missing required env var: BUCKET")
 	}
 
 	accessTokenPublicKey := os.Getenv("ACCESS_KEY")
 	if accessTokenPublicKey == "" {
-		log.Fatal("Missing required env var: ACCESS_KEY")
+		log.Fatal("missing required env var: ACCESS_KEY")
 	}
 	key, err := decodeKey(accessTokenPublicKey)
 	if err != nil {
 		log.Fatalf("decoding ACCESS_KEY: %v", err)
 	}
 
+	sess, err := session.NewSession()
+	if err != nil {
+		log.Fatalf("creating AWS session: %v", err)
+	}
+
 	commentsService := CommentsService{
 		Store: CommentStore{
 			Bucket:      bucket,
 			Prefix:      "",
-			ObjectStore: &S3ObjectStore{s3.New(session.New())},
+			ObjectStore: &S3ObjectStore{s3.New(sess)},
 			PostStore:   noopPostStore{},
 			IDFunc: func() CommentID {
 				return CommentID(uuid.NewString())
@@ -72,19 +77,28 @@ func main() {
 	http.ListenAndServe(addr, pz.Register(
 		pz.JSONLog(os.Stderr),
 		pz.Route{
-			Method:  "GET",
-			Path:    "/api/posts/{post-id}/comments/{comment-id}/replies",
-			Handler: commentsService.PostComments,
+			Method: "GET",
+			Path:   "/api/posts/{post-id}/comments/{comment-id}/replies",
+			Handler: accessControlAllowOrigin(
+				commentsService.PostComments,
+				"localhost:8000",
+			),
 		},
 		pz.Route{
-			Method:  "POST",
-			Path:    "/api/posts/{post-id}/comments",
-			Handler: auth(key, commentsService.PutComment),
+			Method: "POST",
+			Path:   "/api/posts/{post-id}/comments",
+			Handler: accessControlAllowOrigin(
+				auth(key, commentsService.PutComment),
+				"localhost:8000",
+			),
 		},
 		pz.Route{
-			Method:  "GET",
-			Path:    "/api/posts/{post-id}/comments/{comment-id}",
-			Handler: commentsService.GetComment,
+			Method: "GET",
+			Path:   "/api/posts/{post-id}/comments/{comment-id}",
+			Handler: accessControlAllowOrigin(
+				commentsService.GetComment,
+				"localhost:8000",
+			),
 		},
 	))
 }
@@ -110,6 +124,16 @@ func decodeKey(encoded string) (*ecdsa.PublicKey, error) {
 			return nil, io.EOF
 		}
 		data = rest
+	}
+}
+
+func accessControlAllowOrigin(handler pz.Handler, origins ...string) pz.Handler {
+	return func(r pz.Request) pz.Response {
+		rsp := handler(r)
+		for _, origin := range origins {
+			rsp.Headers.Add("Access-Control-Allow-Origin", origin)
+		}
+		return rsp
 	}
 }
 
