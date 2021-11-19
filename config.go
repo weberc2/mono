@@ -186,7 +186,7 @@ func (c *Config) Run() error {
 		return fmt.Errorf("parsing login form template: %w", err)
 	}
 
-	uiService := WebServer{
+	webServer := WebServer{
 		AuthService:             authService.AuthService,
 		BaseURL:                 c.BaseURL.Std(),
 		RedirectDomain:          c.RedirectDomain,
@@ -204,12 +204,12 @@ func (c *Config) Run() error {
 				pz.Route{
 					Path:    "/login",
 					Method:  "GET",
-					Handler: uiService.LoginFormPage,
+					Handler: webServer.LoginFormPage,
 				},
 				pz.Route{
 					Path:    "/login",
 					Method:  "POST",
-					Handler: uiService.LoginHandler,
+					Handler: webServer.LoginHandler,
 				},
 			)...,
 		),
