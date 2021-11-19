@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	html "html/template"
 	"io"
 	"log"
 	"net/http"
@@ -42,6 +43,16 @@ func main() {
 		addr = ":8080"
 	}
 
+	loginURL := os.Getenv("LOGIN_URL")
+	if loginURL == "" {
+		log.Fatal("missing required env var: LOGIN_URL")
+	}
+
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		log.Fatal("missing required env var: BASE_URL")
+	}
+
 	bucket := os.Getenv("BUCKET")
 	if bucket == "" {
 		log.Fatal("missing required env var: BUCKET")
@@ -62,7 +73,7 @@ func main() {
 	}
 
 	commentsService := CommentsService{
-		Store: CommentStore{
+		Comments: CommentStore{
 			Bucket:      bucket,
 			Prefix:      "",
 			ObjectStore: &S3ObjectStore{s3.New(sess)},
@@ -72,6 +83,18 @@ func main() {
 			},
 		},
 		TimeFunc: time.Now,
+	}
+
+	repliesTemplate, err := html.New("").Parse(repliesTemplate)
+	if err != nil {
+		log.Fatalf("parsing replies template: %v", err)
+	}
+
+	webServer := WebServer{
+		LoginURL:        loginURL,
+		BaseURL:         baseURL,
+		Comments:        commentsService.Comments,
+		RepliesTemplate: repliesTemplate,
 	}
 
 	http.ListenAndServe(addr, pz.Register(
@@ -84,12 +107,17 @@ func main() {
 		pz.Route{
 			Method:  "POST",
 			Path:    "/api/posts/{post-id}/comments",
-			Handler: auth(key, commentsService.PutComment),
+			Handler: auth(key, authHeaderToken, commentsService.PutComment),
 		},
 		pz.Route{
 			Method:  "GET",
 			Path:    "/api/posts/{post-id}/comments/{comment-id}",
 			Handler: commentsService.GetComment,
+		},
+		pz.Route{
+			Method:  "GET",
+			Path:    "/posts/{post-id}/comments/{parent-id}/replies",
+			Handler: authenticate(key, cookieToken, webServer.Replies),
 		},
 	))
 }
@@ -118,44 +146,134 @@ func decodeKey(encoded string) (*ecdsa.PublicKey, error) {
 	}
 }
 
-func auth(key *ecdsa.PublicKey, handler pz.Handler) pz.Handler {
+type authErr struct {
+	Message string `json:"message"`
+	Error   string `json:"error"`
+}
+
+type tokenLocation func(pz.Request) (string, *authErr)
+
+func authHeaderToken(r pz.Request) (string, *authErr) {
+	authorization := r.Headers.Get("Authorization")
+	if !strings.HasPrefix(authorization, "Bearer ") {
+		return "", &authErr{
+			Message: "invalid 'Authorization' header",
+			Error:   "missing 'Bearer' prefix",
+		}
+	}
+	return authorization[len("Bearer "):], nil
+}
+
+func cookieToken(r pz.Request) (string, *authErr) {
+	c, err := r.Cookie("Access-Token")
+	if err != nil {
+		return "", &authErr{
+			Message: "missing cookie `Access-Token`",
+			Error:   err.Error(),
+		}
+	}
+
+	return c.Value, nil
+}
+
+func authenticateHelper(
+	key *ecdsa.PublicKey,
+	tl tokenLocation,
+	r pz.Request,
+) *authErr {
+	tok, err := tl(r)
+	if err != nil {
+		return err
+	}
+
+	var claims jwt.StandardClaims
+	if _, err := jwt.ParseWithClaims(
+		tok,
+		&claims,
+		func(*jwt.Token) (interface{}, error) { return key, nil },
+	); err != nil {
+		return &authErr{
+			Message: "invalid 'Authorization' header",
+			Error:   err.Error(),
+		}
+	}
+
+	if err := claims.Valid(); err != nil {
+		return &authErr{
+			Message: "invalid access token claim(s)",
+			Error:   err.Error(),
+		}
+	}
+
+	r.Headers.Set("User", claims.Subject)
+	return nil
+}
+
+func authenticate(
+	key *ecdsa.PublicKey,
+	tl tokenLocation,
+	handler pz.Handler,
+) pz.Handler {
 	return func(r pz.Request) pz.Response {
-		authorization := r.Headers.Get("Authorization")
-		if !strings.HasPrefix(authorization, "Bearer ") {
-			return pz.Unauthorized(nil, struct {
-				Message, Error string
-			}{
-				Message: "invalid 'Authorization' header",
-				Error:   "missing 'Bearer' prefix",
-			})
+		if err := authenticateHelper(key, tl, r); err != nil {
+			// TODO: Add httpeasy.Response.WithLogging() method
+			return handler(r).WithLogging(err)
 		}
-
-		var claims jwt.StandardClaims
-		if _, err := jwt.ParseWithClaims(
-			authorization[len("Bearer "):],
-			&claims,
-			func(*jwt.Token) (interface{}, error) {
-				return key, nil
-			},
-		); err != nil {
-			return pz.Unauthorized(nil, struct {
-				Message, Error string
-			}{
-				Message: "invalid 'Authorization' header",
-				Error:   err.Error(),
-			})
-		}
-
-		if err := claims.Valid(); err != nil {
-			return pz.Unauthorized(nil, struct {
-				Message, Error string
-			}{
-				Message: "invalid access token claim(s)",
-				Error:   err.Error(),
-			})
-		}
-
-		r.Headers.Set("User", claims.Subject)
-		return handler(r)
+		return handler(r).WithLogging(struct {
+			Message string `json:"message"`
+			User    string `json:"user"`
+		}{
+			Message: "authenticated successfully",
+			User:    r.Headers.Get("User"),
+		})
 	}
 }
+
+func auth(
+	key *ecdsa.PublicKey,
+	tl tokenLocation,
+	handler pz.Handler,
+) pz.Handler {
+	return authenticate(key, tl, func(r pz.Request) pz.Response {
+		if r.Headers.Get("User") == "" {
+			return pz.Unauthorized(nil)
+		}
+		return handler(r)
+	})
+}
+
+const repliesTemplate = `<html>
+<head></head>
+<body>
+<h1>Replies</h1>
+<div id=replies>
+{{if .User}}{{.User}}{{else}}<a href="{{.LoginURL}}">login</a>{{end}}
+{{$baseURL := .BaseURL}}
+{{$post := .Post}}
+{{$user := .User}}
+{{range .Replies}}
+	<div id="{{.ID}}">
+		<div class="comment-header">
+			<span class="author">{{.Author}}</p>
+			<span class="date">{{.Created}}</p>
+			{{if eq .Author $user}}
+			<a href="{{$baseURL}}/posts/{{$post}}/comments/{{.ID}}/delete-confirm">
+				delete
+			</a>
+			<a href="{{$baseURL}}/posts/{{$post}}/comments/{{.ID}}/edit">
+				edit
+			</a>
+			{{end}}
+			{{/* if the user is logged in they can reply */}}
+			{{if $user}}
+			<a href="{{$baseURL}}/posts/{{$post}}/comments/{{.ID}}/reply">
+				reply
+			</a>
+			{{end}}
+			<p class="body">{{.Body}}</p>
+		</div>
+	</div>
+{{end}}
+</div>
+</body>
+</html>`
