@@ -9,6 +9,7 @@ import (
 
 type WebServer struct {
 	LoginURL        string
+	LogoutURL       string
 	BaseURL         string
 	Comments        CommentStore
 	RepliesTemplate *html.Template
@@ -18,7 +19,7 @@ func (ws *WebServer) Replies(r pz.Request) pz.Response {
 	post := PostID(r.Vars["post-id"])
 	parent := CommentID(r.Vars["parent-id"])
 	if parent == "toplevel" {
-		parent = "__toplevel__"
+		parent = "" // this tells the CommentStore to fetch toplevel replies.
 	}
 	replies, err := ws.Comments.Replies(post, parent)
 	if err != nil {
@@ -48,19 +49,21 @@ func (ws *WebServer) Replies(r pz.Request) pz.Response {
 
 	return pz.Ok(
 		pz.HTMLTemplate(ws.RepliesTemplate, struct {
-			LoginURL string
-			BaseURL  string
-			Post     PostID
-			Parent   CommentID
-			Replies  []Comment
-			User     UserID
+			LoginURL  string
+			LogoutURL string
+			BaseURL   string
+			Post      PostID
+			Parent    CommentID
+			Replies   []Comment
+			User      UserID
 		}{
-			LoginURL: ws.LoginURL,
-			BaseURL:  ws.BaseURL,
-			Post:     post,
-			Parent:   parent,
-			Replies:  replies,
-			User:     UserID(r.Headers.Get("User")), // empty if unauthorized
+			LoginURL:  ws.LoginURL,
+			LogoutURL: ws.LogoutURL,
+			BaseURL:   ws.BaseURL,
+			Post:      post,
+			Parent:    parent,
+			Replies:   replies,
+			User:      UserID(r.Headers.Get("User")), // empty if unauthorized
 		}),
 		struct {
 			Post   PostID

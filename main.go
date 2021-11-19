@@ -48,6 +48,11 @@ func main() {
 		log.Fatal("missing required env var: LOGIN_URL")
 	}
 
+	logoutURL := os.Getenv("LOGOUT_URL")
+	if logoutURL == "" {
+		log.Fatal("missing required env var: LOGOUT_URL")
+	}
+
 	baseURL := os.Getenv("BASE_URL")
 	if baseURL == "" {
 		log.Fatal("missing required env var: BASE_URL")
@@ -96,6 +101,7 @@ func main() {
 
 	webServer := WebServer{
 		LoginURL:        loginURL,
+		LogoutURL:       logoutURL,
 		BaseURL:         baseURL,
 		Comments:        commentsService.Comments,
 		RepliesTemplate: repliesTemplate,
