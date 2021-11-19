@@ -39,40 +39,6 @@ type UIService struct {
 func (uis *UIService) LoginFormPage(r pz.Request) pz.Response {
 	values := r.URL.Query()
 	location := values.Get("location")
-	if location != "" {
-		u, err := url.Parse(location)
-		if err != nil {
-			return pz.BadRequest(
-				pz.String("Invalid redirect value"),
-				struct {
-					Message, Location, Error string
-				}{
-					Message: "'location' query string parameter " +
-						"is not a valid URL",
-					Location: location,
-					Error:    err.Error(),
-				},
-			)
-		}
-
-		// Make sure the `Host` is either an exact match for the
-		// `RedirectDomain` or a valid subdomain. If it's not, then redirect to
-		// the default redirect domain.
-		if u.Host != uis.RedirectDomain || !strings.HasSuffix(
-			u.Host,
-			// Note that we have to prepend a `.` onto the `RedirectDomain`
-			// before checking if it is a suffix match to be sure we're only
-			// matching subdomains. For example, if `RedirectDomain` is
-			// `google.com`, an attacker could register `evilgoogle.com` which
-			// would match if we didn't prepend the `.` (causing us to send the
-			// attacker our tokens).
-			fmt.Sprintf(".%s", uis.RedirectDomain),
-		) {
-			location = uis.DefaultRedirectLocation
-		}
-	} else {
-		location = uis.DefaultRedirectLocation
-	}
 	return pz.Ok(pz.HTMLTemplate(uis.LoginForm, struct {
 		Location     html.HTML
 		FormAction   string
@@ -80,7 +46,11 @@ func (uis *UIService) LoginFormPage(r pz.Request) pz.Response {
 	}{
 		FormAction: uis.BaseURL + "login",
 		Location:   html.HTML(location),
-	}))
+	}), struct {
+		Location string `json:"location"`
+	}{
+		Location: location,
+	})
 }
 
 func (uis *UIService) LoginHandler(r pz.Request) pz.Response {
@@ -89,7 +59,8 @@ func (uis *UIService) LoginHandler(r pz.Request) pz.Response {
 		return pz.BadRequest(
 			pz.Stringf("parsing credentials: %v", err),
 			struct {
-				Message, Error string
+				Message string `json:"message"`
+				Error   string `json:"error"`
 			}{
 				Message: "parsing credentials from multi-part form",
 				Error:   err.Error(),
@@ -112,24 +83,77 @@ func (uis *UIService) LoginHandler(r pz.Request) pz.Response {
 					ErrorMessage: "Invalid credentials",
 				}),
 				struct {
-					User    UserID
-					Message string
+					User    string `json:"user"`
+					Message string `json:"message"`
 				}{
-					User:    UserID(username),
+					User:    username,
 					Message: "login failed",
 				},
 			)
 		}
 		return pz.InternalServerError(struct {
-			Message, Error string
+			User    string `json:"user"`
+			Message string `json:"message"`
+			Error   string `json:"error"`
 		}{
+			User:    username,
 			Message: "logging in",
 			Error:   err.Error(),
 		})
 	}
 
+	type parameter struct {
+		Value           string `json:"value"`
+		ParseError      string `json:"parseError"`
+		ValidationError string `json:"validationError"`
+	}
+
 	location := r.URL.Query().Get("location")
-	if location == "" {
+	logging := struct {
+		Message                      string    `json:"message,omitempty"`
+		LocationQueryStringParameter parameter `json:"locationQueryStringParameter"`
+		Location                     string    `json:"location,omitempty"`
+	}{
+		LocationQueryStringParameter: parameter{Value: location},
+	}
+
+	if location != "" {
+		u, err := url.Parse(location)
+		if err != nil {
+			logging.LocationQueryStringParameter.ParseError = err.Error()
+			logging.Message = "`location` query string parameter is not a " +
+				"valid URL"
+			return pz.BadRequest(
+				pz.String("Invalid redirect value"),
+				&logging,
+			)
+		}
+
+		// Make sure the `Host` is either an exact match for the
+		// `RedirectDomain` or a valid subdomain. If it's not, then redirect to
+		// the default redirect domain.
+		if u.Host != uis.RedirectDomain || !strings.HasSuffix(
+			u.Host,
+			// Note that we have to prepend a `.` onto the `RedirectDomain`
+			// before checking if it is a suffix match to be sure we're only
+			// matching subdomains. For example, if `RedirectDomain` is
+			// `google.com`, an attacker could register `evilgoogle.com` which
+			// would match if we didn't prepend the `.` (causing us to send the
+			// attacker our tokens).
+			fmt.Sprintf(".%s", uis.RedirectDomain),
+		) {
+			logging.LocationQueryStringParameter.ValidationError = "" +
+				"`location` query string parameter host is neither the " +
+				"redirect domain itself nor a subdomain thereof. Falling " +
+				"back to default URL."
+			logging.Location = uis.DefaultRedirectLocation
+			location = uis.DefaultRedirectLocation
+		}
+	} else {
+		logging.LocationQueryStringParameter.ValidationError = "`location` " +
+			"query string parameter is empty or unset. Falling back to " +
+			"default URL."
+		logging.Location = uis.DefaultRedirectLocation
 		location = uis.DefaultRedirectLocation
 	}
 
@@ -139,13 +163,7 @@ func (uis *UIService) LoginHandler(r pz.Request) pz.Response {
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections#temporary_redirections
 	return pz.SeeOther(
 		location,
-		struct {
-			Status        string
-			RedirectingTo string
-		}{
-			Status:        "successful",
-			RedirectingTo: location,
-		},
+		&logging,
 	).WithCookies(&http.Cookie{
 		Name:     "Access-Token",
 		Value:    tokenDetails.AccessToken,
