@@ -13,9 +13,9 @@ import (
 	pz "github.com/weberc2/httpeasy"
 )
 
-// UIService serves the authentication pages for websites (as opposed to
+// WebServer serves the authentication pages for websites (as opposed to
 // single-page apps). It passes tokens to the client via cookies.
-type UIService struct {
+type WebServer struct {
 	// AuthService is the authentication service backend.
 	AuthService AuthService
 
@@ -36,20 +36,20 @@ type UIService struct {
 	LoginForm *html.Template
 }
 
-func (uis *UIService) LoginFormPage(r pz.Request) pz.Response {
+func (ws *WebServer) LoginFormPage(r pz.Request) pz.Response {
 	// create a struct for templating and logging
 	x := struct {
 		FormAction string `json:"formAction"`
 	}{
-		FormAction: uis.BaseURL + "login?" + url.Values{
+		FormAction: ws.BaseURL + "login?" + url.Values{
 			"location": []string{r.URL.Query().Get("location")},
 		}.Encode(),
 	}
 
-	return pz.Ok(pz.HTMLTemplate(uis.LoginForm, &x), &x)
+	return pz.Ok(pz.HTMLTemplate(ws.LoginForm, &x), &x)
 }
 
-func (uis *UIService) LoginHandler(r pz.Request) pz.Response {
+func (ws *WebServer) LoginHandler(r pz.Request) pz.Response {
 	username, password, err := parseMultiPartForm(r)
 	if err != nil {
 		return pz.BadRequest(
@@ -63,19 +63,19 @@ func (uis *UIService) LoginHandler(r pz.Request) pz.Response {
 			},
 		)
 	}
-	tokenDetails, err := uis.AuthService.Login(&Credentials{
+	tokenDetails, err := ws.AuthService.Login(&Credentials{
 		User:     UserID(username),
 		Password: password,
 	})
 	if err != nil {
 		if errors.Is(err, ErrCredentials) {
 			return pz.Unauthorized(
-				pz.HTMLTemplate(uis.LoginForm, struct {
+				pz.HTMLTemplate(ws.LoginForm, struct {
 					Location     html.HTML
 					FormAction   string
 					ErrorMessage string
 				}{
-					FormAction:   uis.BaseURL + "login",
+					FormAction:   ws.BaseURL + "login",
 					ErrorMessage: "Invalid credentials",
 				}),
 				struct {
@@ -128,7 +128,7 @@ func (uis *UIService) LoginHandler(r pz.Request) pz.Response {
 		// Make sure the `Host` is either an exact match for the
 		// `RedirectDomain` or a valid subdomain. If it's not, then redirect to
 		// the default redirect domain.
-		if u.Host != uis.RedirectDomain || !strings.HasSuffix(
+		if u.Host != ws.RedirectDomain || !strings.HasSuffix(
 			u.Host,
 			// Note that we have to prepend a `.` onto the `RedirectDomain`
 			// before checking if it is a suffix match to be sure we're only
@@ -136,21 +136,21 @@ func (uis *UIService) LoginHandler(r pz.Request) pz.Response {
 			// `google.com`, an attacker could register `evilgoogle.com` which
 			// would match if we didn't prepend the `.` (causing us to send the
 			// attacker our tokens).
-			fmt.Sprintf(".%s", uis.RedirectDomain),
+			fmt.Sprintf(".%s", ws.RedirectDomain),
 		) {
 			logging.LocationQueryStringParameter.ValidationError = "" +
 				"`location` query string parameter host is neither the " +
 				"redirect domain itself nor a subdomain thereof. Falling " +
 				"back to default URL."
-			logging.Location = uis.DefaultRedirectLocation
-			location = uis.DefaultRedirectLocation
+			logging.Location = ws.DefaultRedirectLocation
+			location = ws.DefaultRedirectLocation
 		}
 	} else {
 		logging.LocationQueryStringParameter.ValidationError = "`location` " +
 			"query string parameter is empty or unset. Falling back to " +
 			"default URL."
-		logging.Location = uis.DefaultRedirectLocation
-		location = uis.DefaultRedirectLocation
+		logging.Location = ws.DefaultRedirectLocation
+		location = ws.DefaultRedirectLocation
 	}
 
 	// Previously we used 307 Temporary Redirect, but since we're handling a
@@ -160,7 +160,7 @@ func (uis *UIService) LoginHandler(r pz.Request) pz.Response {
 	return pz.SeeOther(location, &logging).WithCookies(&http.Cookie{
 		Name:     "Access-Token",
 		Value:    tokenDetails.AccessToken,
-		Domain:   uis.RedirectDomain,
+		Domain:   ws.RedirectDomain,
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
