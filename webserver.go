@@ -102,9 +102,11 @@ func (ws *WebServer) LoginHandler(r pz.Request) pz.Response {
 	}
 
 	type parameter struct {
-		Value           string `json:"value"`
-		ParseError      string `json:"parseError"`
-		ValidationError string `json:"validationError"`
+		Value           string   `json:"value"`
+		ParseError      string   `json:"parseError,omitempty"`
+		ValidationError string   `json:"validationError,omitempty"`
+		RedirectDomain  string   `json:"redirectDomain"`
+		Parsed          *url.URL `json:"parsed,omitempty"`
 	}
 
 	location := r.URL.Query().Get("location")
@@ -113,7 +115,10 @@ func (ws *WebServer) LoginHandler(r pz.Request) pz.Response {
 		LocationQueryStringParameter parameter `json:"locationQueryStringParameter"`
 		Location                     string    `json:"location,omitempty"`
 	}{
-		LocationQueryStringParameter: parameter{Value: location},
+		LocationQueryStringParameter: parameter{
+			Value:          location,
+			RedirectDomain: ws.RedirectDomain,
+		},
 	}
 
 	if location != "" {
@@ -127,6 +132,7 @@ func (ws *WebServer) LoginHandler(r pz.Request) pz.Response {
 				&logging,
 			)
 		}
+		logging.LocationQueryStringParameter.Parsed = u
 
 		// Make sure the `Host` is either an exact match for the
 		// `RedirectDomain` or a valid subdomain. If it's not, then redirect to
