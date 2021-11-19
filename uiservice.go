@@ -37,20 +37,16 @@ type UIService struct {
 }
 
 func (uis *UIService) LoginFormPage(r pz.Request) pz.Response {
-	values := r.URL.Query()
-	location := values.Get("location")
-	return pz.Ok(pz.HTMLTemplate(uis.LoginForm, struct {
-		Location     html.HTML
-		FormAction   string
-		ErrorMessage string
+	// create a struct for templating and logging
+	x := struct {
+		FormAction string `json:"formAction"`
 	}{
-		FormAction: uis.BaseURL + "login",
-		Location:   html.HTML(location),
-	}), struct {
-		Location string `json:"location"`
-	}{
-		Location: location,
-	})
+		FormAction: uis.BaseURL + "login?" + url.Values{
+			"location": []string{r.URL.Query().Get("location")},
+		}.Encode(),
+	}
+
+	return pz.Ok(pz.HTMLTemplate(uis.LoginForm, &x), &x)
 }
 
 func (uis *UIService) LoginHandler(r pz.Request) pz.Response {
@@ -161,10 +157,7 @@ func (uis *UIService) LoginHandler(r pz.Request) pz.Response {
 	// POST request, the redirect also issued a POST request instead of a GET
 	// request. It seems like 303 See Other does what we want.
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections#temporary_redirections
-	return pz.SeeOther(
-		location,
-		&logging,
-	).WithCookies(&http.Cookie{
+	return pz.SeeOther(location, &logging).WithCookies(&http.Cookie{
 		Name:     "Access-Token",
 		Value:    tokenDetails.AccessToken,
 		Domain:   uis.RedirectDomain,
