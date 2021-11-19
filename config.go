@@ -186,7 +186,7 @@ func (c *Config) Run() error {
 		return fmt.Errorf("parsing login form template: %w", err)
 	}
 
-	uiService := UIService{
+	uiService := WebServer{
 		AuthService:             authService.AuthService,
 		BaseURL:                 c.BaseURL.Std(),
 		RedirectDomain:          c.RedirectDomain,
