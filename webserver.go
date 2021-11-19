@@ -39,7 +39,10 @@ type WebServer struct {
 func (ws *WebServer) LoginFormPage(r pz.Request) pz.Response {
 	// create a struct for templating and logging
 	x := struct {
-		FormAction string `json:"formAction"`
+		// This is intended to be a user-facing message shown in the templated
+		// UI.
+		ErrorMessage string `json:"errorMessage"`
+		FormAction   string `json:"formAction"`
 	}{
 		FormAction: ws.BaseURL + "login?" + url.Values{
 			"location": []string{r.URL.Query().Get("location")},
