@@ -119,6 +119,7 @@ func (ws *WebServer) LoginHandler(r pz.Request) pz.Response {
 			Value:          location,
 			RedirectDomain: ws.RedirectDomain,
 		},
+		Location: location,
 	}
 
 	if location != "" {
@@ -137,7 +138,7 @@ func (ws *WebServer) LoginHandler(r pz.Request) pz.Response {
 		// Make sure the `Host` is either an exact match for the
 		// `RedirectDomain` or a valid subdomain. If it's not, then redirect to
 		// the default redirect domain.
-		if u.Host != ws.RedirectDomain || !strings.HasSuffix(
+		if u.Host != ws.RedirectDomain && !strings.HasSuffix(
 			u.Host,
 			// Note that we have to prepend a `.` onto the `RedirectDomain`
 			// before checking if it is a suffix match to be sure we're only
