@@ -67,6 +67,15 @@ func main() {
 		log.Fatalf("decoding ACCESS_KEY: %v", err)
 	}
 
+	repliesTemplateString := os.Getenv("REPLIES_TEMPLATE")
+	if err != nil {
+		log.Fatal("missing required env var: REPLIES_TEMPLATE")
+	}
+	repliesTemplate, err := html.New("").Parse(repliesTemplateString)
+	if err != nil {
+		log.Fatalf("parsing REPLIES_TEMPLATE: %v", err)
+	}
+
 	sess, err := session.NewSession()
 	if err != nil {
 		log.Fatalf("creating AWS session: %v", err)
@@ -83,11 +92,6 @@ func main() {
 			},
 		},
 		TimeFunc: time.Now,
-	}
-
-	repliesTemplate, err := html.New("").Parse(repliesTemplate)
-	if err != nil {
-		log.Fatalf("parsing replies template: %v", err)
 	}
 
 	webServer := WebServer{
@@ -241,39 +245,3 @@ func auth(
 		return handler(r)
 	})
 }
-
-const repliesTemplate = `<html>
-<head></head>
-<body>
-<h1>Replies</h1>
-<div id=replies>
-{{if .User}}{{.User}}{{else}}<a href="{{.LoginURL}}">login</a>{{end}}
-{{$baseURL := .BaseURL}}
-{{$post := .Post}}
-{{$user := .User}}
-{{range .Replies}}
-	<div id="{{.ID}}">
-		<div class="comment-header">
-			<span class="author">{{.Author}}</p>
-			<span class="date">{{.Created}}</p>
-			{{if eq .Author $user}}
-			<a href="{{$baseURL}}/posts/{{$post}}/comments/{{.ID}}/delete-confirm">
-				delete
-			</a>
-			<a href="{{$baseURL}}/posts/{{$post}}/comments/{{.ID}}/edit">
-				edit
-			</a>
-			{{end}}
-			{{/* if the user is logged in they can reply */}}
-			{{if $user}}
-			<a href="{{$baseURL}}/posts/{{$post}}/comments/{{.ID}}/reply">
-				reply
-			</a>
-			{{end}}
-			<p class="body">{{.Body}}</p>
-		</div>
-	</div>
-{{end}}
-</div>
-</body>
-</html>`
