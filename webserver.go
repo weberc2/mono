@@ -174,6 +174,13 @@ func (ws *WebServer) LoginHandler(r pz.Request) pz.Response {
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
+	}, &http.Cookie{
+		Name:     "Refresh-Token",
+		Value:    tokenDetails.RefreshToken,
+		Domain:   ws.RedirectDomain,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
 	})
 }
 
