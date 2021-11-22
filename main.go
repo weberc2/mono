@@ -10,13 +10,12 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
+	"github.com/weberc2/auth/pkg/client"
 	pz "github.com/weberc2/httpeasy"
 )
 
@@ -51,6 +50,11 @@ func main() {
 	logoutURL := os.Getenv("LOGOUT_URL")
 	if logoutURL == "" {
 		log.Fatal("missing required env var: LOGOUT_URL")
+	}
+
+	authBaseURL := os.Getenv("AUTH_BASE_URL")
+	if authBaseURL == "" {
+		log.Fatal("missing required env var: AUTH_BASE_URL")
 	}
 
 	baseURL := os.Getenv("BASE_URL")
@@ -121,6 +125,10 @@ func main() {
 		DeleteConfirmationTemplate: deleteConfirmationTemplate,
 	}
 
+	webServerAuth := AuthTypeWebServer{Auth: client.DefaultClient(authBaseURL)}
+	apiAuth := AuthTypeClientProgram{}
+	auth := Authenticator{Key: key}
+
 	http.ListenAndServe(addr, pz.Register(
 		pz.JSONLog(os.Stderr),
 		pz.Route{
@@ -131,7 +139,7 @@ func main() {
 		pz.Route{
 			Method:  "POST",
 			Path:    "/api/posts/{post-id}/comments",
-			Handler: auth(key, authHeaderToken, commentsService.PutComment),
+			Handler: auth.AuthN(apiAuth, commentsService.PutComment),
 		},
 		pz.Route{
 			Method:  "GET",
@@ -141,12 +149,12 @@ func main() {
 		pz.Route{
 			Method:  "GET",
 			Path:    "/posts/{post-id}/comments/{parent-id}/replies",
-			Handler: authenticate(key, cookieToken, webServer.Replies),
+			Handler: auth.AuthN(&webServerAuth, webServer.Replies),
 		},
 		pz.Route{
 			Method:  "GET",
 			Path:    "/posts/{post-id}/comments/{comment-id}/delete-confirm",
-			Handler: authenticate(key, cookieToken, webServer.DeleteConfirm),
+			Handler: auth.AuthN(&webServerAuth, webServer.DeleteConfirm),
 		},
 	))
 }
@@ -173,100 +181,4 @@ func decodeKey(encoded string) (*ecdsa.PublicKey, error) {
 		}
 		data = rest
 	}
-}
-
-type authErr struct {
-	Message string `json:"message"`
-	Error   string `json:"error"`
-}
-
-type tokenLocation func(pz.Request) (string, *authErr)
-
-func authHeaderToken(r pz.Request) (string, *authErr) {
-	authorization := r.Headers.Get("Authorization")
-	if !strings.HasPrefix(authorization, "Bearer ") {
-		return "", &authErr{
-			Message: "invalid 'Authorization' header",
-			Error:   "missing 'Bearer' prefix",
-		}
-	}
-	return authorization[len("Bearer "):], nil
-}
-
-func cookieToken(r pz.Request) (string, *authErr) {
-	c, err := r.Cookie("Access-Token")
-	if err != nil {
-		return "", &authErr{
-			Message: "missing cookie `Access-Token`",
-			Error:   err.Error(),
-		}
-	}
-
-	return c.Value, nil
-}
-
-func authenticateHelper(
-	key *ecdsa.PublicKey,
-	tl tokenLocation,
-	r pz.Request,
-) *authErr {
-	tok, err := tl(r)
-	if err != nil {
-		return err
-	}
-
-	var claims jwt.StandardClaims
-	if _, err := jwt.ParseWithClaims(
-		tok,
-		&claims,
-		func(*jwt.Token) (interface{}, error) { return key, nil },
-	); err != nil {
-		return &authErr{
-			Message: "invalid 'Authorization' header",
-			Error:   err.Error(),
-		}
-	}
-
-	if err := claims.Valid(); err != nil {
-		return &authErr{
-			Message: "invalid access token claim(s)",
-			Error:   err.Error(),
-		}
-	}
-
-	r.Headers.Set("User", claims.Subject)
-	return nil
-}
-
-func authenticate(
-	key *ecdsa.PublicKey,
-	tl tokenLocation,
-	handler pz.Handler,
-) pz.Handler {
-	return func(r pz.Request) pz.Response {
-		if err := authenticateHelper(key, tl, r); err != nil {
-			// TODO: Add httpeasy.Response.WithLogging() method
-			return handler(r).WithLogging(err)
-		}
-		return handler(r).WithLogging(struct {
-			Message string `json:"message"`
-			User    string `json:"user"`
-		}{
-			Message: "authenticated successfully",
-			User:    r.Headers.Get("User"),
-		})
-	}
-}
-
-func auth(
-	key *ecdsa.PublicKey,
-	tl tokenLocation,
-	handler pz.Handler,
-) pz.Handler {
-	return authenticate(key, tl, func(r pz.Request) pz.Response {
-		if r.Headers.Get("User") == "" {
-			return pz.Unauthorized(nil)
-		}
-		return handler(r)
-	})
 }
