@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -93,6 +94,16 @@ func validateAccessToken(token string, key *ecdsa.PublicKey) (string, error) {
 type AuthErr struct {
 	Message string `json:"message"`
 	Error   error  `json:"error"`
+}
+
+func (err *AuthErr) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		Message string `json:"message"`
+		Error   string `json:"error"`
+	}{
+		err.Message,
+		err.Error.Error(),
+	})
 }
 
 type Authenticator struct {
