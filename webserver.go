@@ -74,16 +74,28 @@ func (ws *WebServer) Replies(r pz.Request) pz.Response {
 
 func (ws *WebServer) DeleteConfirm(r pz.Request) pz.Response {
 	params := struct {
-		BaseURL string    `json:"baseURL"`
-		Post    PostID    `json:"post"`
-		Comment CommentID `json:"comment"`
-		User    UserID    `json:"user"`
+		BaseURL string  `json:"baseURL"`
+		User    UserID  `json:"user"`
+		Post    PostID  `json:"post"`
+		Comment Comment `json:"comment"`
+		Error   string  `json:"error,omitempty"`
 	}{
 		BaseURL: ws.BaseURL,
 		Post:    PostID(r.Vars["post-id"]),
-		Comment: CommentID(r.Vars["comment-id"]),
+		Comment: Comment{ID: CommentID(r.Vars["comment-id"])},
 		User:    UserID(r.Headers.Get("User")), // empty if unauthorized
 	}
+
+	comment, err := ws.Comments.Comment(params.Post, params.Comment.ID)
+	if err != nil {
+		var e *CommentNotFoundErr
+		if errors.As(err, &e) {
+			params.Error = err.Error()
+			return pz.NotFound(nil, params)
+		}
+	}
+
+	params.Comment = comment
 
 	return pz.Ok(
 		pz.HTMLTemplate(ws.DeleteConfirmationTemplate, params),
