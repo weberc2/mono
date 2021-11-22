@@ -4,7 +4,6 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
@@ -58,10 +57,6 @@ func (atws *AuthTypeWebServer) Validate(
 	}
 
 	subject, err := validateAccessToken(accessCookie.Value, key)
-	log.Printf("accessToken: %s", accessCookie.Value)
-	log.Printf("refreshToken: %s", refreshCookie.Value)
-	log.Printf("subject: %s", subject)
-	log.Printf("error: %v", err)
 	if err != nil {
 		if err, ok := err.(*jwt.ValidationError); ok {
 			masked := err.Errors & jwt.ValidationErrorExpired
@@ -70,8 +65,16 @@ func (atws *AuthTypeWebServer) Validate(
 				if err != nil {
 					return "", &AuthErr{"refreshing access token", err}
 				}
+
+				// We can probably trust that the token itself is good since
+				// it's coming directly from the auth service, but we need its
+				// subject. If we got here, the previous access token's subject
+				// failed to parse because the token was expired.
+				subject, err := validateAccessToken(tokens.AccessToken, key)
+				if err != nil {
+					return "", &AuthErr{"parsing `sub` (subject) claim", err}
+				}
 				accessCookie.Value = tokens.AccessToken
-				log.Printf("returning \"%s\", nil", subject)
 				return subject, nil
 			}
 			return "", &AuthErr{"validating access token", err}
