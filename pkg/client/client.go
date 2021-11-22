@@ -34,7 +34,7 @@ func (c *Client) Refresh(refreshToken string) (*Tokens, error) {
 		return nil, fmt.Errorf("marshaling refresh token: %w", err)
 	}
 	rsp, err := c.HTTP.Post(
-		c.BaseURL+"/refresh",
+		c.BaseURL+"/api/refresh",
 		"application/json",
 		bytes.NewReader(data),
 	)
