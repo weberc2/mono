@@ -103,8 +103,6 @@ type Authenticator struct {
 func (a *Authenticator) AuthN(authType AuthType, h pz.Handler) pz.Handler {
 	return func(r pz.Request) pz.Response {
 		subject, err := authType.Validate(a.Key, r)
-		rsp := h(r).WithHeaders(http.Header{"User": []string{subject}})
-
 		var message string
 		if err != nil {
 			message = "authentication error"
@@ -112,7 +110,8 @@ func (a *Authenticator) AuthN(authType AuthType, h pz.Handler) pz.Handler {
 			message = "authentication successful"
 		}
 
-		return rsp.WithLogging(struct {
+		r.Headers.Add("User", subject)
+		return h(r).WithLogging(struct {
 			Message string   `json:"message"`
 			User    string   `json:"user,omitempty"`
 			Error   *AuthErr `json:"error,omitempty"`
