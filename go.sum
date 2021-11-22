@@ -21,11 +21,9 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.1.4/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
-github.com/weberc2/auth v0.0.1 h1:MHnxS2urxP8tdcbvGq6p5evj9DcfTmVhMozWymuWrTY=
-github.com/weberc2/auth v0.0.1/go.mod h1:4VsiG+egl3Frbcu49qXV+2hl8cPJ04BD42e4dTMtgic=
+github.com/weberc2/auth v0.0.2 h1:5uNl5amqtg7IZ6c3zh7V7mNWPx1DUbXYrGOt8FkJaWg=
+github.com/weberc2/auth v0.0.2/go.mod h1:4VsiG+egl3Frbcu49qXV+2hl8cPJ04BD42e4dTMtgic=
 github.com/weberc2/httpeasy v0.0.14/go.mod h1:katZaFKTvrU3Ks5tkfPzTfPlYK8FpsknOVfhe/6U8ow=
-github.com/weberc2/httpeasy v0.0.15 h1:0s0CVbzPdYfe7AdGnLoRZrTfgRtNr5YZP7A5SF7WEjo=
-github.com/weberc2/httpeasy v0.0.15/go.mod h1:vjZmTmHJEPKRm2tITDQyIneHOAJvyk3KhFox6MvT/2Y=
 github.com/weberc2/httpeasy v0.0.16 h1:k/bGFyChxQk34BGoeyEQWazMO5UIoTCVP07l5ml+wsY=
 github.com/weberc2/httpeasy v0.0.16/go.mod h1:vjZmTmHJEPKRm2tITDQyIneHOAJvyk3KhFox6MvT/2Y=
 golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
