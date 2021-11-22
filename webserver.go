@@ -10,7 +10,8 @@ import (
 type logging struct {
 	Post   PostID    `json:"post"`
 	Parent CommentID `json:"parent"`
-	Error  string    `json:"error"`
+	User   UserID    `json:"user,omitempty"`
+	Error  string    `json:"error,omitempty"`
 }
 
 type WebServer struct {
@@ -25,6 +26,7 @@ type WebServer struct {
 func (ws *WebServer) Replies(r pz.Request) pz.Response {
 	post := PostID(r.Vars["post-id"])
 	parent := CommentID(r.Vars["parent-id"])
+	user := UserID(r.Headers.Get("User"))
 	if parent == "toplevel" {
 		parent = "" // this tells the CommentStore to fetch toplevel replies.
 	}
@@ -35,6 +37,7 @@ func (ws *WebServer) Replies(r pz.Request) pz.Response {
 			pz.NotFound(nil, &logging{
 				Post:   post,
 				Parent: parent,
+				User:   user,
 				Error:  err.Error(),
 			})
 		}
@@ -42,19 +45,20 @@ func (ws *WebServer) Replies(r pz.Request) pz.Response {
 		return pz.InternalServerError(&logging{
 			Post:   post,
 			Parent: parent,
+			User:   user,
 			Error:  err.Error(),
 		})
 	}
 
 	return pz.Ok(
 		pz.HTMLTemplate(ws.RepliesTemplate, struct {
-			LoginURL  string
-			LogoutURL string
-			BaseURL   string
-			Post      PostID
-			Parent    CommentID
-			Replies   []Comment
-			User      UserID
+			LoginURL  string    `json:"loginURL"`
+			LogoutURL string    `json:"logoutURL"`
+			BaseURL   string    `json:"baseURL"`
+			Post      PostID    `json:"post"`
+			Parent    CommentID `json:"parent"`
+			Replies   []Comment `json:"replies"`
+			User      UserID    `json:"user"`
 		}{
 			LoginURL:  ws.LoginURL,
 			LogoutURL: ws.LogoutURL,
@@ -62,18 +66,18 @@ func (ws *WebServer) Replies(r pz.Request) pz.Response {
 			Post:      post,
 			Parent:    parent,
 			Replies:   replies,
-			User:      UserID(r.Headers.Get("User")), // empty if unauthorized
+			User:      user, // empty if unauthorized
 		}),
-		&logging{Post: post, Parent: parent},
+		&logging{Post: post, Parent: parent, User: user},
 	)
 }
 
 func (ws *WebServer) DeleteConfirm(r pz.Request) pz.Response {
 	params := struct {
-		BaseURL string
-		Post    PostID
-		Comment CommentID
-		User    UserID
+		BaseURL string    `json:"baseURL"`
+		Post    PostID    `json:"post"`
+		Comment CommentID `json:"comment"`
+		User    UserID    `json:"user"`
 	}{
 		BaseURL: ws.BaseURL,
 		Post:    PostID(r.Vars["post-id"]),
