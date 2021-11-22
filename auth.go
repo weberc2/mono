@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -57,6 +58,10 @@ func (atws *AuthTypeWebServer) Validate(
 	}
 
 	subject, err := validateAccessToken(accessCookie.Value, key)
+	log.Printf("accessToken: %s", accessCookie.Value)
+	log.Printf("refreshToken: %s", refreshCookie.Value)
+	log.Printf("subject: %s", subject)
+	log.Printf("error: %v", err)
 	if err != nil {
 		if err, ok := err.(*jwt.ValidationError); ok {
 			masked := err.Errors & jwt.ValidationErrorExpired
@@ -66,7 +71,7 @@ func (atws *AuthTypeWebServer) Validate(
 					return "", &AuthErr{"refreshing access token", err}
 				}
 				accessCookie.Value = tokens.AccessToken
-				refreshCookie.Value = tokens.RefreshToken
+				log.Printf("returning \"%s\", nil", subject)
 				return subject, nil
 			}
 			return "", &AuthErr{"validating access token", err}
