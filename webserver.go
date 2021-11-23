@@ -15,12 +15,10 @@ type logging struct {
 }
 
 type WebServer struct {
-	LoginURL                   string
-	LogoutURL                  string
-	BaseURL                    string
-	Comments                   CommentStore
-	RepliesTemplate            *html.Template
-	DeleteConfirmationTemplate *html.Template
+	LoginURL  string
+	LogoutURL string
+	BaseURL   string
+	Comments  CommentStore
 }
 
 func (ws *WebServer) Replies(r pz.Request) pz.Response {
@@ -51,7 +49,7 @@ func (ws *WebServer) Replies(r pz.Request) pz.Response {
 	}
 
 	return pz.Ok(
-		pz.HTMLTemplate(ws.RepliesTemplate, struct {
+		pz.HTMLTemplate(repliesTemplate, struct {
 			LoginURL  string    `json:"loginURL"`
 			LogoutURL string    `json:"logoutURL"`
 			BaseURL   string    `json:"baseURL"`
@@ -96,9 +94,72 @@ func (ws *WebServer) DeleteConfirm(r pz.Request) pz.Response {
 	}
 
 	params.Comment = comment
-
-	return pz.Ok(
-		pz.HTMLTemplate(ws.DeleteConfirmationTemplate, params),
-		params,
-	)
+	return pz.Ok(pz.HTMLTemplate(deleteConfirmationTemplate, params), params)
 }
+
+var (
+	repliesTemplate = html.Must(html.New("").Parse(`<html>
+<head></head>
+<body>
+<h1>Replies</h1>
+<div id=replies>
+{{if .User}}
+    {{.User}} - <a href="{{.LogoutURL}}">logout</a>
+{{else}}
+    <a href="{{.LoginURL}}">login</a>
+{{end}}
+
+{{$baseURL := .BaseURL}}
+{{$post := .Post}}
+{{$user := .User}}
+{{range .Replies}}
+	<div id="{{.ID}}">
+		<div class="comment-header">
+			<span class="author">{{.Author}}</p>
+			<span class="date">{{.Created}}</p>
+			{{if eq .Author $user}}
+			<a href="{{$baseURL}}/posts/{{$post}}/comments/{{.ID}}/delete-confirm">
+				delete
+			</a>
+			<a href="{{$baseURL}}/posts/{{$post}}/comments/{{.ID}}/edit">
+				edit
+			</a>
+			{{end}}
+			{{/* if the user is logged in they can reply */}}
+			{{if $user}}
+			<a href="{{$baseURL}}/posts/{{$post}}/comments/{{.ID}}/reply">
+				reply
+			</a>
+			{{end}}
+			<p class="body">{{.Body}}</p>
+		</div>
+	</div>
+{{end}}
+</div>
+</body>
+</html>`))
+
+	deleteConfirmationTemplate = html.Must(html.New("").Parse(`<html>
+<head></head>
+<body>
+<h1>Confirm Comment Deletion</h1>
+<div id="comment">
+    {{.Comment.Body}}
+</div>
+<div id="cancel">
+    {{/*
+       * For now, return to the comment itself. In the future we may pass a
+       * return location through in case we have multiple delete comment
+       * buttons.
+    */}}
+    <a href="{{.BaseURL}}/posts/{{.Post}}/comments/{{.Comment.ID}}">Cancel</a>
+</div>
+<div id="delete">
+    <a href="{{.BaseURL}}/posts/{{.Post}}/comments/{{.Comment.ID}}/delete">
+        Delete
+    </a>
+</div>
+</div>
+</body>
+</html>`))
+)
