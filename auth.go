@@ -2,9 +2,7 @@ package main
 
 import (
 	"crypto/ecdsa"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/dgrijalva/jwt-go"
@@ -12,80 +10,117 @@ import (
 	pz "github.com/weberc2/httpeasy"
 )
 
+type Authenticator struct {
+	Auth client.Client
+	Key  *ecdsa.PublicKey
+}
+
+func (a *Authenticator) AuthN(authType AuthType, h pz.Handler) pz.Handler {
+	return func(r pz.Request) pz.Response {
+		result := authType.validate(a.Key, r)
+		r.Headers.Add("User", string(result.User))
+		return h(r).WithLogging(result)
+	}
+}
+
+func (a *Authenticator) AuthZ(authType AuthType, h pz.Handler) pz.Handler {
+	return func(r pz.Request) pz.Response {
+		result := authType.validate(a.Key, r)
+		if result.User == "" {
+			return pz.Unauthorized(nil, result)
+		}
+		return h(r).WithLogging(result)
+	}
+}
+
 type AuthType interface {
-	Validate(key *ecdsa.PublicKey, r pz.Request) (string, *AuthErr)
+	validate(key *ecdsa.PublicKey, r pz.Request) *result
 }
 
 type AuthTypeClientProgram struct{}
 
-func (atcp AuthTypeClientProgram) Validate(
+func (atcp AuthTypeClientProgram) validate(
 	key *ecdsa.PublicKey,
 	r pz.Request,
-) (string, *AuthErr) {
+) *result {
 	authorization := r.Headers.Get("Authorization")
 	if !strings.HasPrefix(authorization, "Bearer ") {
-		return "", &AuthErr{
+		return resultErr(
 			"invalid access token",
 			fmt.Errorf("missing `Bearer` prefix"),
-		}
+		)
 	}
 
-	subject, err := validateAccessToken(authorization[len("Bearer "):], key)
+	user, err := validateAccessToken(authorization[len("Bearer "):], key)
 	if err != nil {
-		return "", &AuthErr{"invalid access token", err}
+		return resultErr("invalid access token", err)
 	}
 
-	return subject, nil
+	return resultOK("successfully validated access token", user)
+}
+
+type result struct {
+	Message string `json:"message"`
+	Error   string `json:"error,omitempty"`
+	User    UserID `json:"user,omitempty"`
+}
+
+func resultErr(message string, err error) *result {
+	return &result{Message: message, Error: err.Error()}
+}
+
+func resultOK(message string, user UserID) *result {
+	return &result{Message: message, User: user}
 }
 
 type AuthTypeWebServer struct {
 	Auth client.Client
 }
 
-func (atws *AuthTypeWebServer) Validate(
+func (atws *AuthTypeWebServer) validate(
 	key *ecdsa.PublicKey,
 	r pz.Request,
-) (string, *AuthErr) {
+) *result {
 	accessCookie, err := r.Cookie("Access-Token")
 	if err != nil {
-		return "", &AuthErr{"missing `Access-Token` cookie", err}
+		return resultErr("missing `Access-Token` cookie", err)
 	}
 
 	refreshCookie, err := r.Cookie("Refresh-Token")
 	if err != nil {
-		return "", &AuthErr{"missing `Refresh-Token` cookie", err}
+		return resultErr("missing `Refresh-Token` cookie", err)
 	}
 
-	subject, err := validateAccessToken(accessCookie.Value, key)
+	user, err := validateAccessToken(accessCookie.Value, key)
 	if err != nil {
 		if err, ok := err.(*jwt.ValidationError); ok {
 			masked := err.Errors & jwt.ValidationErrorExpired
 			if masked == jwt.ValidationErrorExpired {
 				tokens, err := atws.Auth.Refresh(refreshCookie.Value)
 				if err != nil {
-					return "", &AuthErr{"refreshing access token", err}
+					return resultErr("refreshing access token", err)
 				}
 
 				// We can probably trust that the token itself is good since
 				// it's coming directly from the auth service, but we need its
-				// subject. If we got here, the previous access token's subject
+				// user. If we got here, the previous access token's user
 				// failed to parse because the token was expired.
-				subject, err := validateAccessToken(tokens.AccessToken, key)
+				user, err := validateAccessToken(tokens.AccessToken, key)
 				if err != nil {
-					return "", &AuthErr{"parsing `sub` (subject) claim", err}
+					return resultErr("parsing `sub` (user) claim", err)
 				}
 				accessCookie.Value = tokens.AccessToken
-				return subject, nil
+				return resultOK("successfully refreshed access token", user)
 			}
-			return "", &AuthErr{"validating access token", err}
+			return resultErr("validating access token", err)
 		}
-		return "", &AuthErr{"parsing access token", err}
+		return resultErr("parsing access token", err)
 	}
 
-	return subject, nil
+	return resultOK("successfully validated access token", user)
 }
 
-func validateAccessToken(token string, key *ecdsa.PublicKey) (string, error) {
+func validateAccessToken(token string, key *ecdsa.PublicKey) (UserID, error) {
 	var claims jwt.StandardClaims
 	if _, err := jwt.ParseWithClaims(
 		token,
@@ -96,66 +131,5 @@ func validateAccessToken(token string, key *ecdsa.PublicKey) (string, error) {
 	); err != nil {
 		return "", err
 	}
-	return claims.Subject, nil
-}
-
-type AuthErr struct {
-	Message string `json:"message"`
-	Error   error  `json:"error"`
-}
-
-func (err *AuthErr) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&struct {
-		Message string `json:"message"`
-		Error   string `json:"error"`
-	}{
-		err.Message,
-		err.Error.Error(),
-	})
-}
-
-type Authenticator struct {
-	Auth client.Client
-	Key  *ecdsa.PublicKey
-}
-
-func (a *Authenticator) AuthN(authType AuthType, h pz.Handler) pz.Handler {
-	return func(r pz.Request) pz.Response {
-		subject, err := authType.Validate(a.Key, r)
-		var message string
-		if err != nil {
-			message = "authentication error"
-		} else {
-			message = "authentication successful"
-		}
-
-		r.Headers.Add("User", subject)
-		return h(r).WithLogging(struct {
-			Message string   `json:"message"`
-			User    string   `json:"user,omitempty"`
-			Error   *AuthErr `json:"error,omitempty"`
-		}{
-			Message: message,
-			User:    subject,
-			Error:   err,
-		})
-	}
-}
-
-func (a *Authenticator) AuthZ(authType AuthType, h pz.Handler) pz.Handler {
-	return func(r pz.Request) pz.Response {
-		subject, err := authType.Validate(a.Key, r)
-		if err != nil {
-			return pz.Unauthorized(nil, err)
-		}
-		return h(r).
-			WithHeaders(http.Header{"User": []string{subject}}).
-			WithLogging(struct {
-				Message string `json:"message"`
-				User    string `json:"user"`
-			}{
-				Message: "authentication successful",
-				User:    subject,
-			})
-	}
+	return UserID(claims.Subject), nil
 }
