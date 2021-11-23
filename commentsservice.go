@@ -60,11 +60,12 @@ func (cs *CommentsService) PutComment(r pz.Request) pz.Response {
 			)},
 		)
 	}
+	c.Post = PostID(r.Vars["post-id"])
 	c.Body = html.EscapeString(c.Body)
 	c.Author = UserID(r.Headers.Get("User"))
 	c.Created = cs.TimeFunc().UTC()
 	c.Modified = c.Created
-	id, err := cs.Comments.PutComment(PostID(r.Vars["post-id"]), &c)
+	id, err := cs.Comments.PutComment(&c)
 	if err != nil {
 		return pz.InternalServerError(e{err})
 	}

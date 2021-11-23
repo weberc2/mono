@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	html "html/template"
 	"io"
 	"log"
 	"net/http"
@@ -25,6 +24,7 @@ type UserID string
 
 type Comment struct {
 	ID       CommentID `json:"id"`
+	Post     PostID    `json:"post"`
 	Parent   CommentID `json:"parent"`
 	Author   UserID    `json:"author"`
 	Created  time.Time `json:"created"`

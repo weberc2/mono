@@ -25,7 +25,10 @@ func TestCommentStore_PutComment_ParentNotFound(t *testing.T) {
 	}
 
 	// When a comment is added to "my-post" with a `Parent` that doesn't exist
-	_, err := commentStore.PutComment("my-post", &Comment{Parent: "doesnt-exist"})
+	_, err := commentStore.PutComment(&Comment{
+		Post:   "my-post",
+		Parent: "doesnt-exist",
+	})
 
 	// Then expect a `CommentNotFoundErr` is returned
 	var cnfe *CommentNotFoundErr
@@ -50,7 +53,7 @@ func TestCommentStore_PutComment_PostNotFound(t *testing.T) {
 	}
 
 	// When a comment is added on an unknown post
-	_, err := commentStore.PutComment("my-post", &Comment{})
+	_, err := commentStore.PutComment(&Comment{Post: "my-post"})
 
 	// Then expect a `PostNotFoundErr` is returned
 	var pnfe *PostNotFoundErr

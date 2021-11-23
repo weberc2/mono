@@ -55,23 +55,23 @@ func (cs *CommentStore) getObject(key string) ([]byte, error) {
 	return data, nil
 }
 
-func (cs *CommentStore) putComment(post PostID, c *Comment) error {
+func (cs *CommentStore) putComment(c *Comment) error {
 	data, err := json.Marshal(&c)
 	if err != nil {
 		return fmt.Errorf("marshaling comment: %w", err)
 	}
-	if err := cs.PostStore.Exists(post); err != nil {
+	if err := cs.PostStore.Exists(c.Post); err != nil {
 		return fmt.Errorf("checking post existence: %w", err)
 	}
 
 	// If a `parent` was provided, then make sure it exists
 	if c.Parent != "" {
-		if _, err := cs.Comment(post, c.Parent); err != nil {
+		if _, err := cs.Comment(c.Post, c.Parent); err != nil {
 			return fmt.Errorf("getting parent comment: %w", err)
 		}
 	}
 	if err := cs.putObject(
-		fmt.Sprintf("posts/%s/comments/%s/__comment__", post, c.ID),
+		fmt.Sprintf("posts/%s/comments/%s/__comment__", c.Post, c.ID),
 		data,
 	); err != nil {
 		return fmt.Errorf("putting comment object: %w", err)
@@ -79,24 +79,24 @@ func (cs *CommentStore) putComment(post PostID, c *Comment) error {
 	return nil
 }
 
-func (cs *CommentStore) putParentLink(post PostID, c *Comment) error {
+func (cs *CommentStore) putParentLink(c *Comment) error {
 	parent := c.Parent
 	if c.Parent == "" {
 		parent = "__toplevel__"
 	}
 	return cs.putObject(
-		fmt.Sprintf("posts/%s/comments/%s/comments/%s", post, parent, c.ID),
+		fmt.Sprintf("posts/%s/comments/%s/comments/%s", c.Post, parent, c.ID),
 		nil,
 	)
 }
 
-func (cs *CommentStore) PutComment(post PostID, c *Comment) (CommentID, error) {
+func (cs *CommentStore) PutComment(c *Comment) (CommentID, error) {
 	cp := *c
 	cp.ID = cs.IDFunc()
-	if err := cs.putComment(post, &cp); err != nil {
+	if err := cs.putComment(&cp); err != nil {
 		return "", fmt.Errorf("putting comment: %w", err)
 	}
-	if err := cs.putParentLink(post, &cp); err != nil {
+	if err := cs.putParentLink(&cp); err != nil {
 		return "", fmt.Errorf("putting parent link: %w", err)
 	}
 	return cp.ID, nil
