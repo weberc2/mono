@@ -104,7 +104,7 @@ func main() {
 		pz.Route{
 			Method:  "GET",
 			Path:    "/api/posts/{post-id}/comments/{comment-id}/replies",
-			Handler: commentsService.PostComments,
+			Handler: commentsService.Replies,
 		},
 		pz.Route{
 			Method:  "POST",

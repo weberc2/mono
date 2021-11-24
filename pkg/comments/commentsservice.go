@@ -46,7 +46,7 @@ func (cs *CommentsService) PutComment(r pz.Request) pz.Response {
 	})
 }
 
-func (cs *CommentsService) PostComments(r pz.Request) pz.Response {
+func (cs *CommentsService) Replies(r pz.Request) pz.Response {
 	var parent types.CommentID
 	if commentID := r.Vars["comment-id"]; commentID != "toplevel" {
 		parent = types.CommentID(commentID)
