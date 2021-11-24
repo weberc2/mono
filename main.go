@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/google/uuid"
 	"github.com/weberc2/auth/pkg/client"
+	"github.com/weberc2/comments/pkg/auth"
 	"github.com/weberc2/comments/pkg/comments"
 	"github.com/weberc2/comments/pkg/objectstore"
 	"github.com/weberc2/comments/pkg/types"
@@ -92,11 +93,11 @@ func main() {
 		Comments:  commentsService.Comments,
 	}
 
-	webServerAuth := comments.AuthTypeWebServer{
+	webServerAuth := auth.AuthTypeWebServer{
 		Auth: client.DefaultClient(authBaseURL),
 	}
-	apiAuth := comments.AuthTypeClientProgram{}
-	auth := comments.Authenticator{Key: key}
+	apiAuth := auth.AuthTypeClientProgram{}
+	auth := auth.Authenticator{Key: key}
 
 	http.ListenAndServe(addr, pz.Register(
 		pz.JSONLog(os.Stderr),

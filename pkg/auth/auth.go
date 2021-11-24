@@ -1,4 +1,4 @@
-package comments
+package auth
 
 import (
 	"crypto/ecdsa"
