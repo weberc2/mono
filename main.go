@@ -15,26 +15,15 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/google/uuid"
 	"github.com/weberc2/auth/pkg/client"
+	"github.com/weberc2/comments/pkg/comments"
+	"github.com/weberc2/comments/pkg/objectstore"
+	"github.com/weberc2/comments/pkg/types"
 	pz "github.com/weberc2/httpeasy"
 )
 
-type PostID string
-type CommentID string
-type UserID string
-
-type Comment struct {
-	ID       CommentID `json:"id"`
-	Post     PostID    `json:"post"`
-	Parent   CommentID `json:"parent"`
-	Author   UserID    `json:"author"`
-	Created  time.Time `json:"created"`
-	Modified time.Time `json:"modified"`
-	Body     string    `json:"body"`
-}
-
 type noopPostStore struct{}
 
-func (nps noopPostStore) Exists(PostID) error { return nil }
+func (nps noopPostStore) Exists(types.PostID) error { return nil }
 
 func main() {
 	addr := os.Getenv("ADDR")
@@ -81,29 +70,33 @@ func main() {
 		log.Fatalf("creating AWS session: %v", err)
 	}
 
-	commentsService := CommentsService{
-		Comments: CommentStore{
-			Bucket:      bucket,
-			Prefix:      "",
-			ObjectStore: &S3ObjectStore{s3.New(sess)},
-			PostStore:   noopPostStore{},
-			IDFunc: func() CommentID {
-				return CommentID(uuid.NewString())
+	commentsService := comments.CommentsService{
+		Comments: comments.CommentsModel{
+			CommentsStore: &comments.ObjectCommentsStore{
+				Bucket:      bucket,
+				Prefix:      "",
+				ObjectStore: &objectstore.S3ObjectStore{Client: s3.New(sess)},
+				PostStore:   noopPostStore{},
 			},
+			IDFunc: func() types.CommentID {
+				return types.CommentID(uuid.NewString())
+			},
+			TimeFunc: time.Now,
 		},
-		TimeFunc: time.Now,
 	}
 
-	webServer := WebServer{
+	webServer := comments.WebServer{
 		LoginURL:  loginURL,
 		LogoutURL: logoutURL,
 		BaseURL:   baseURL,
 		Comments:  commentsService.Comments,
 	}
 
-	webServerAuth := AuthTypeWebServer{Auth: client.DefaultClient(authBaseURL)}
-	apiAuth := AuthTypeClientProgram{}
-	auth := Authenticator{Key: key}
+	webServerAuth := comments.AuthTypeWebServer{
+		Auth: client.DefaultClient(authBaseURL),
+	}
+	apiAuth := comments.AuthTypeClientProgram{}
+	auth := comments.Authenticator{Key: key}
 
 	http.ListenAndServe(addr, pz.Register(
 		pz.JSONLog(os.Stderr),
@@ -131,6 +124,11 @@ func main() {
 			Method:  "GET",
 			Path:    "/posts/{post-id}/comments/{comment-id}/delete-confirm",
 			Handler: auth.AuthN(&webServerAuth, webServer.DeleteConfirm),
+		},
+		pz.Route{
+			Method:  "GET",
+			Path:    "/posts/{post-id}/comments/{comment-id}/delete",
+			Handler: auth.AuthN(&webServerAuth, webServer.Delete),
 		},
 	))
 }
