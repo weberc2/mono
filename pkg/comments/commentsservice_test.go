@@ -71,10 +71,8 @@ func TestPutComment(t *testing.T) {
 				Comments: CommentsModel{
 					CommentsStore: &ObjectCommentsStore{
 						ObjectStore: testsupport.ObjectStoreFake{},
-						PostStore:   &postStoreFake{"post"},
 						Bucket:      "bucket",
 						Prefix:      "prefix",
-						IDFunc:      func() types.CommentID { return "comment" },
 					},
 					TimeFunc: func() time.Time { return now },
 					IDFunc:   func() types.CommentID { return "comment" },
