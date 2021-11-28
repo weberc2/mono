@@ -8,13 +8,11 @@ import (
 	pz "github.com/weberc2/httpeasy"
 )
 
-type HTTPError struct {
-	Status int    `json:"status"`
-	Error  string `json:"error"`
-}
-
 var (
-	ErrInvalidRefreshToken = &HTTPError{Status: 401, Error: "invalid refresh token"}
+	ErrInvalidRefreshToken = &pz.HTTPError{
+		Status:  401,
+		Message: "invalid refresh token",
+	}
 )
 
 type AuthHTTPService struct {

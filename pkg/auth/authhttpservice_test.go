@@ -8,13 +8,11 @@ import (
 	"encoding/pem"
 	"fmt"
 	"log"
-	"net/http"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/weberc2/auth/pkg/testsupport"
 	"github.com/weberc2/auth/pkg/types"
 	pz "github.com/weberc2/httpeasy"
 	pztest "github.com/weberc2/httpeasy/testsupport"
@@ -28,7 +26,7 @@ func TestAuthHTTPService(t *testing.T) {
 		validationTime time.Time
 		existingUsers  []types.UserEntry
 		wantedStatus   int
-		wantedPayload  Wanted
+		wantedPayload  pztest.WantedData
 	}{
 		{
 			name:  "forgot password",
@@ -86,6 +84,18 @@ func TestAuthHTTPService(t *testing.T) {
 			wantedStatus:   401,
 			wantedPayload:  ErrInvalidRefreshToken,
 		},
+		{
+			// Expect tokens returned in exchange for a valid auth code.
+			name:           "exchange auth code",
+			input:          fmt.Sprintf(`{"code": "%s"}`, authCode),
+			route:          (*AuthHTTPService).ExchangeRoute,
+			validationTime: now,
+			wantedStatus:   200,
+			wantedPayload: &TokenDetails{
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			vtime := now
@@ -117,6 +127,7 @@ func TestAuthHTTPService(t *testing.T) {
 							return nil
 						},
 					},
+					Codes:       codesTokenFactory,
 					ResetTokens: resetTokenFactory,
 					TokenDetails: TokenDetailsFactory{
 						AccessTokens:  accessTokenFactory,
@@ -144,95 +155,13 @@ func TestAuthHTTPService(t *testing.T) {
 				)
 			}
 
-			data, err := readAll(rsp.Data)
-			if err != nil {
-				t.Fatalf("Unexpected err: %v", err)
-			}
-
-			if err := testCase.wantedPayload.Compare(data); err != nil {
-				t.Logf("DATA: %s", data)
-				t.Fatal(err)
-			}
-		})
-	}
-}
-
-func TestAuthHTTPService_ExchangeRoute(t *testing.T) {
-	jwt.TimeFunc = nowTimeFunc
-	defer func() { jwt.TimeFunc = time.Now }()
-	codes := TokenFactory{
-		Issuer:        "issuer",
-		Audience:      "audience",
-		TokenValidity: time.Minute,
-		ParseKey:      []byte("signing-key"),  // symmetric
-		SigningKey:    []byte("signing-key"),  // symmetric
-		SigningMethod: jwt.SigningMethodHS512, // symmetric, deterministic
-	}
-
-	for _, testCase := range []struct {
-		name         string
-		username     string
-		code         string
-		wantedStatus int
-		wantedBody   pztest.WantedData
-	}{{
-		name:         "good code",
-		username:     "adam",
-		code:         mustString(codes.Create(now, "adam")),
-		wantedStatus: http.StatusOK,
-		wantedBody:   AnyTokens{}, // good enough
-	}} {
-		t.Run(testCase.name, func(t *testing.T) {
-
-			httpService := AuthHTTPService{
-				AuthService: AuthService{
-					Notifications: testsupport.NotificationServiceFake{},
-					TokenDetails: TokenDetailsFactory{
-						AccessTokens:  accessTokenFactory,
-						RefreshTokens: refreshTokenFactory,
-						TimeFunc:      nowTimeFunc,
-					},
-					Codes:    codes,
-					TimeFunc: nowTimeFunc,
-				},
-			}
-
-			data, err := json.Marshal(struct {
-				Code string `json:"code"`
-			}{
-				testCase.code,
-			})
-			if err != nil {
-				t.Fatalf("unexpected error marshaling auth code: %v", err)
-			}
-
-			rsp := httpService.ExchangeRoute().Handler(
-				pz.Request{Body: bytes.NewReader(data)},
-			)
-
-			if rsp.Status != testCase.wantedStatus {
-				data, err := readAll(rsp.Data)
-				if err != nil {
-					t.Logf("reading response body: %v", err)
-				}
-				t.Logf("response body: %s", data)
-
-				data, err = json.Marshal(rsp.Logging)
-				if err != nil {
-					t.Logf("marshaling response logging: %v", err)
-				}
-				t.Logf("response logging: %s", data)
-				t.Fatalf(
-					"Response.Status: wanted `%d`; found `%d`",
-					testCase.wantedStatus,
-					rsp.Status,
-				)
-			}
-
 			if err := pztest.CompareSerializer(
-				testCase.wantedBody,
+				testCase.wantedPayload,
 				rsp.Data,
 			); err != nil {
+				if err, ok := err.(*pztest.CompareSerializerError); ok {
+					t.Logf("response data: %s", err.Data)
+				}
 				t.Fatal(err)
 			}
 		})
@@ -271,6 +200,7 @@ var (
 	accessSigningKey   = mustParseKey(accessSigningKeyString)
 	refreshSigningKey  = mustParseKey(refreshSigningKeyString)
 	resetSigningKey    = mustParseKey(resetSigningKeyString)
+	codesSigningKey    = []byte("codes-signing-key")
 	accessTokenFactory = TokenFactory{
 		Issuer:        "issuer",
 		Audience:      "audience",
@@ -295,8 +225,17 @@ var (
 		SigningKey:    resetSigningKey,
 		SigningMethod: jwt.SigningMethodES512,
 	}
+	codesTokenFactory = TokenFactory{
+		Issuer:        "issuer",
+		Audience:      "audience",
+		TokenValidity: time.Minute,
+		ParseKey:      codesSigningKey,
+		SigningKey:    codesSigningKey,
+		SigningMethod: jwt.SigningMethodHS512,
+	}
 	accessToken  = must(accessTokenFactory.Create(now, string(user)))
 	refreshToken = must(refreshTokenFactory.Create(now, string(user)))
+	authCode     = must(codesTokenFactory.Create(now, string(user)))
 )
 
 func mustParseKey(keyString string) *ecdsa.PrivateKey {
@@ -359,7 +298,7 @@ type refresh struct {
 	AccessToken string `json:"accessToken"`
 }
 
-func (wanted *refresh) Compare(data []byte) error {
+func (wanted *refresh) CompareData(data []byte) error {
 	var found refresh
 	if err := json.Unmarshal(data, &found); err != nil {
 		return fmt.Errorf("unmarshaling `refresh`: %w", err)
@@ -376,7 +315,7 @@ func (wanted *refresh) Compare(data []byte) error {
 	return nil
 }
 
-func (wanted *TokenDetails) Compare(data []byte) error {
+func (wanted *TokenDetails) CompareData(data []byte) error {
 	var found TokenDetails
 	if err := json.Unmarshal(data, &found); err != nil {
 		return fmt.Errorf(
@@ -415,49 +354,7 @@ func (wanted *TokenDetails) Compare(data []byte) error {
 
 type Any struct{}
 
-func (Any) Compare(data []byte) error { return nil }
-
-func (wanted *HTTPError) Compare(data []byte) error {
-	var found HTTPError
-	if err := json.Unmarshal(data, &found); err != nil {
-		return fmt.Errorf("unmarshaling `HTTPError`: %w", err)
-	}
-	if wanted.Status != found.Status {
-		return fmt.Errorf(
-			"HTTPError.Status: wanted `%d`; found `%d`",
-			wanted.Status,
-			found.Status,
-		)
-	}
-	if wanted.Error != found.Error {
-		return fmt.Errorf(
-			"HTTPError.Error: wanted `%s`; found `%s`",
-			wanted.Error,
-			found.Error,
-		)
-	}
-	return nil
-}
-
-type AnyTokens struct{}
-
-func (AnyTokens) CompareData(data []byte) error {
-	var details TokenDetails
-
-	if err := json.Unmarshal(data, &details); err != nil {
-		return fmt.Errorf("unmarshaling `TokenDetails`: %w", err)
-	}
-
-	if details.AccessToken == "" {
-		return fmt.Errorf("missing access token")
-	}
-
-	if details.RefreshToken == "" {
-		return fmt.Errorf("missing refresh token")
-	}
-
-	return nil
-}
+func (Any) CompareData(data []byte) error { return nil }
 
 func readAll(s pz.Serializer) ([]byte, error) {
 	writerTo, err := s()
