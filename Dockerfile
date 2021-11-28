@@ -1,4 +1,4 @@
-FROM golang
+FROM golang:1.17.3
 
 RUN apt-get update && apt-get install -y ca-certificates
 
@@ -9,6 +9,8 @@ COPY go.* ./
 RUN go mod download
 
 COPY *.go ./
+
+COPY ./pkg ./pkg
 
 RUN CGO_ENABLED=0 go build -ldflags '-s' -o /bin/auth
 
