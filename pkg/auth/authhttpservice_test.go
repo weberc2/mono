@@ -1,4 +1,4 @@
-package main
+package auth
 
 import (
 	"bytes"
@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/weberc2/auth/pkg/types"
 	pz "github.com/weberc2/httpeasy"
 )
 
@@ -22,7 +23,7 @@ func TestAuthHTTPService(t *testing.T) {
 		input          string
 		route          func(*AuthHTTPService) pz.Route
 		validationTime time.Time
-		existingUsers  []UserEntry
+		existingUsers  []types.UserEntry
 		wantedStatus   int
 		wantedPayload  Wanted
 	}{
@@ -30,7 +31,7 @@ func TestAuthHTTPService(t *testing.T) {
 			name:  "forgot password",
 			input: `{"user": "user"}`,
 			route: (*AuthHTTPService).ForgotPasswordRoute,
-			existingUsers: []UserEntry{{
+			existingUsers: []types.UserEntry{{
 				User:         "user",
 				Email:        "user@example.org",
 				PasswordHash: hashBcrypt("password"),
@@ -89,23 +90,23 @@ func TestAuthHTTPService(t *testing.T) {
 				vtime = testCase.validationTime
 			}
 			jwt.TimeFunc = func() time.Time { return vtime }
-			var notifications []*Notification
+			var notifications []*types.Notification
 			service := AuthHTTPService{
 				AuthService: AuthService{
 					Creds: CredStore{
 						Users: &userStoreMock{
-							get: func(user UserID) (*UserEntry, error) {
+							get: func(user types.UserID) (*types.UserEntry, error) {
 								for i, entry := range testCase.existingUsers {
 									if entry.User == user {
 										return &testCase.existingUsers[i], nil
 									}
 								}
-								return nil, ErrUserNotFound
+								return nil, types.ErrUserNotFound
 							},
 						},
 					},
 					Notifications: &notificationServiceMock{
-						notify: func(n *Notification) error {
+						notify: func(n *types.Notification) error {
 							notifications = append(notifications, n)
 							return nil
 						},
@@ -176,28 +177,31 @@ i5q05kD3gwd3T6OmOv0gCoVYvDhHwZLNuVOUHYVUjg==
 
 var (
 	now                = time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
-	user               = UserID("user")
+	user               = types.UserID("user")
 	accessSigningKey   = mustParseKey(accessSigningKeyString)
 	refreshSigningKey  = mustParseKey(refreshSigningKeyString)
 	resetSigningKey    = mustParseKey(resetSigningKeyString)
 	accessTokenFactory = TokenFactory{
 		Issuer:           "issuer",
-		WildcardAudience: "audience",
+		Audience: "audience",
 		TokenValidity:    15 * time.Minute,
+		ParseKey:         &accessSigningKey.PublicKey,
 		SigningKey:       accessSigningKey,
 		SigningMethod:    jwt.SigningMethodES512,
 	}
 	refreshTokenFactory = TokenFactory{
 		Issuer:           "issuer",
-		WildcardAudience: "audience",
+		Audience: "audience",
 		TokenValidity:    7 * 24 * time.Hour,
+		ParseKey:         &refreshSigningKey.PublicKey,
 		SigningKey:       refreshSigningKey,
 		SigningMethod:    jwt.SigningMethodES512,
 	}
 	resetTokenFactory = ResetTokenFactory{
 		Issuer:           "issuer",
-		WildcardAudience: "audience",
+		Audience: "audience",
 		TokenValidity:    1 * time.Hour,
+		ParseKey:         &resetSigningKey.PublicKey,
 		SigningKey:       resetSigningKey,
 		SigningMethod:    jwt.SigningMethodES512,
 	}

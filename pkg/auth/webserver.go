@@ -1,4 +1,4 @@
-package main
+package auth
 
 import (
 	"errors"
@@ -6,12 +6,16 @@ import (
 	html "html/template"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"strings"
 
+	"github.com/weberc2/auth/pkg/types"
 	pz "github.com/weberc2/httpeasy"
 )
+
+type Code struct {
+	Code string `json:"code"`
+}
 
 // WebServer serves the authentication pages for websites (as opposed to
 // single-page apps). It passes tokens to the client via cookies.
@@ -66,8 +70,9 @@ func (ws *WebServer) LoginHandler(r pz.Request) pz.Response {
 			},
 		)
 	}
-	tokenDetails, err := ws.AuthService.Login(&Credentials{
-		User:     UserID(username),
+
+	code, err := ws.AuthService.LoginAuthCode(&types.Credentials{
+		User:     types.UserID(username),
 		Password: password,
 	})
 	if err != nil {
@@ -163,25 +168,15 @@ func (ws *WebServer) LoginHandler(r pz.Request) pz.Response {
 		location = ws.DefaultRedirectLocation
 	}
 
+	qstr := "?" + url.Values{"code": []string{code}}.Encode()
+	logging.Location += qstr
+	location += qstr
+
 	// Previously we used 307 Temporary Redirect, but since we're handling a
 	// POST request, the redirect also issued a POST request instead of a GET
 	// request. It seems like 303 See Other does what we want.
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections#temporary_redirections
-	return pz.SeeOther(location, &logging).WithCookies(&http.Cookie{
-		Name:     "Access-Token",
-		Value:    tokenDetails.AccessToken,
-		Domain:   ws.RedirectDomain,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-	}, &http.Cookie{
-		Name:     "Refresh-Token",
-		Value:    tokenDetails.RefreshToken,
-		Domain:   ws.RedirectDomain,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-	})
+	return pz.SeeOther(location, &logging)
 }
 
 func parseMultiPartForm(r pz.Request) (string, string, error) {

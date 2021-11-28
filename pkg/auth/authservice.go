@@ -1,55 +1,35 @@
-package main
+package auth
 
 import (
-	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"log"
 	"net/mail"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/weberc2/auth/pkg/types"
+	pz "github.com/weberc2/httpeasy"
 )
 
-type UserID string
-
 var (
-	ErrCredentials       = errors.New("invalid username or password")
+	ErrCredentials = &pz.HTTPError{
+		Status:  401,
+		Message: "invalid username or password",
+	}
+	ErrUnauthorized      = &pz.HTTPError{Status: 401, Message: "Unauthorized"}
 	ErrUserExists        = errors.New("user already exists")
-	ErrUserNotFound      = errors.New("user not found")
 	ErrInvalidResetToken = errors.New("reset token invalid")
 	ErrInvalidEmail      = errors.New("invalid email address")
 )
 
-type Credentials struct {
-	User     UserID `json:"user"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type NotificationType string
-
-const (
-	NotificationTypeRegister       NotificationType = "REGISTER"
-	NotificationTypeForgotPassword NotificationType = "FORGOT_PASSWORD"
-)
-
-type Notification struct {
-	Type  NotificationType
-	User  UserID
-	Email string
-	Token string
-}
-
-type NotificationService interface {
-	Notify(*Notification) error
-}
-
 type TokenFactory struct {
-	Issuer           string
-	WildcardAudience string
-	TokenValidity    time.Duration
-	SigningKey       *ecdsa.PrivateKey
-	SigningMethod    jwt.SigningMethod
+	Issuer        string
+	Audience      string
+	TokenValidity time.Duration
+	ParseKey      interface{}
+	SigningKey    interface{}
+	SigningMethod jwt.SigningMethod
 }
 
 func (tf *TokenFactory) Create(now time.Time, subject string) (string, error) {
@@ -57,7 +37,7 @@ func (tf *TokenFactory) Create(now time.Time, subject string) (string, error) {
 		tf.SigningMethod,
 		jwt.StandardClaims{
 			Subject:   subject,
-			Audience:  tf.WildcardAudience,
+			Audience:  tf.Audience,
 			Issuer:    tf.Issuer,
 			IssuedAt:  now.Unix(),
 			ExpiresAt: now.Add(tf.TokenValidity).Unix(),
@@ -69,13 +49,14 @@ func (tf *TokenFactory) Create(now time.Time, subject string) (string, error) {
 
 type AuthService struct {
 	Creds         CredStore
-	Notifications NotificationService
+	Notifications types.NotificationService
 	ResetTokens   ResetTokenFactory
 	TokenDetails  TokenDetailsFactory
+	Codes         TokenFactory
 	TimeFunc      func() time.Time
 }
 
-func (as *AuthService) Login(c *Credentials) (*TokenDetails, error) {
+func (as *AuthService) Login(c *types.Credentials) (*TokenDetails, error) {
 	if err := as.Creds.Validate(c); err != nil {
 		return nil, fmt.Errorf("validating credentials: %w", err)
 	}
@@ -88,13 +69,26 @@ func (as *AuthService) Login(c *Credentials) (*TokenDetails, error) {
 	return tokenDetails, nil
 }
 
+func (as *AuthService) LoginAuthCode(c *types.Credentials) (string, error) {
+	if err := as.Creds.Validate(c); err != nil {
+		return "", fmt.Errorf("validating credentials: %w", err)
+	}
+
+	code, err := as.Codes.Create(as.TimeFunc(), string(c.User))
+	if err != nil {
+		return "", fmt.Errorf("creating auth code: %w", err)
+	}
+
+	return code, nil
+}
+
 func (as *AuthService) Refresh(refreshToken string) (string, error) {
 	var claims jwt.StandardClaims
 	if _, err := jwt.ParseWithClaims(
 		refreshToken,
 		&claims,
 		func(*jwt.Token) (interface{}, error) {
-			return &as.TokenDetails.RefreshTokens.SigningKey.PublicKey, nil
+			return as.TokenDetails.RefreshTokens.ParseKey, nil
 		},
 	); err != nil {
 		return "", fmt.Errorf("parsing refresh token: %w", err)
@@ -107,14 +101,14 @@ func (as *AuthService) Refresh(refreshToken string) (string, error) {
 	return as.TokenDetails.AccessToken(claims.Subject)
 }
 
-func (as *AuthService) Register(user UserID, email string) error {
+func (as *AuthService) Register(user types.UserID, email string) error {
 	parser := mail.AddressParser{}
 	if _, err := parser.Parse(email); err != nil {
 		return fmt.Errorf("registering user: %w", ErrInvalidEmail)
 	}
 
 	if _, err := as.Creds.Users.Get(user); err != nil {
-		if !errors.Is(err, ErrUserNotFound) {
+		if !errors.Is(err, types.ErrUserNotFound) {
 			return fmt.Errorf("registering user: %w", err)
 		}
 	} else {
@@ -129,8 +123,8 @@ func (as *AuthService) Register(user UserID, email string) error {
 		return fmt.Errorf("registering user: %w", err)
 	}
 
-	if err := as.Notifications.Notify(&Notification{
-		Type:  NotificationTypeRegister,
+	if err := as.Notifications.Notify(&types.Notification{
+		Type:  types.NotificationTypeRegister,
 		User:  user,
 		Email: email,
 		Token: token,
@@ -141,7 +135,7 @@ func (as *AuthService) Register(user UserID, email string) error {
 	return nil
 }
 
-func (as *AuthService) ForgotPassword(user UserID) error {
+func (as *AuthService) ForgotPassword(user types.UserID) error {
 	u, err := as.Creds.Users.Get(user)
 	if err != nil {
 		return fmt.Errorf("fetching user: %w", err)
@@ -152,8 +146,8 @@ func (as *AuthService) ForgotPassword(user UserID) error {
 		return fmt.Errorf("preparing forgot-password notification: %w", err)
 	}
 
-	if err := as.Notifications.Notify(&Notification{
-		Type:  NotificationTypeForgotPassword,
+	if err := as.Notifications.Notify(&types.Notification{
+		Type:  types.NotificationTypeForgotPassword,
 		User:  user,
 		Email: u.Email,
 		Token: token,
@@ -165,9 +159,9 @@ func (as *AuthService) ForgotPassword(user UserID) error {
 }
 
 type UpdatePassword struct {
-	User     UserID `json:"user"`
-	Password string `json:"password"`
-	Token    string `json:"token"`
+	User     types.UserID `json:"user"`
+	Password string       `json:"password"`
+	Token    string       `json:"token"`
 }
 
 func (as *AuthService) UpdatePassword(up *UpdatePassword) error {
@@ -182,7 +176,7 @@ func (as *AuthService) UpdatePassword(up *UpdatePassword) error {
 		return fmt.Errorf("updating password: %w", ErrInvalidResetToken)
 	}
 
-	if err := as.Creds.Upsert(&Credentials{
+	if err := as.Creds.Upsert(&types.Credentials{
 		User:     up.User,
 		Email:    claims.Email,
 		Password: up.Password,
@@ -191,4 +185,30 @@ func (as *AuthService) UpdatePassword(up *UpdatePassword) error {
 	}
 
 	return nil
+}
+
+func (as *AuthService) Exchange(code string) (*TokenDetails, error) {
+	var claims Claims
+	if _, err := jwt.ParseWithClaims(
+		code,
+		&claims,
+		func(*jwt.Token) (interface{}, error) {
+			return as.Codes.ParseKey, nil
+		},
+	); err != nil {
+		log.Printf("jwt.ParseWithClaims(): %v", err)
+		return nil, ErrUnauthorized
+	}
+
+	if err := claims.Valid(); err != nil {
+		log.Printf("Claims.Valid(): %v", err)
+		return nil, ErrUnauthorized
+	}
+
+	tokens, err := as.TokenDetails.Create(claims.Subject)
+	if err != nil {
+		return nil, fmt.Errorf("creating access and refresh tokens: %w", err)
+	}
+
+	return tokens, nil
 }

@@ -1,18 +1,19 @@
-package main
+package auth
 
 import (
 	"testing"
 
+	"github.com/weberc2/auth/pkg/types"
 	"golang.org/x/crypto/bcrypt"
 )
 
 func TestCreate(t *testing.T) {
 	const password = "oiusdpafohwerkljsfkljads;fweqr"
 
-	var entry *UserEntry
+	var entry *types.UserEntry
 	if err := (&CredStore{&userStoreMock{
-		create: func(e *UserEntry) error { entry = e; return nil },
-	}}).Create(&Credentials{
+		create: func(e *types.UserEntry) error { entry = e; return nil },
+	}}).Create(&types.Credentials{
 		User:     "user",
 		Email:    "user@example.org",
 		Password: password,
@@ -49,10 +50,10 @@ func TestCreate(t *testing.T) {
 func TestUpsert(t *testing.T) {
 	const password = "oiusdpafohwerkljsfkljads;fweqr"
 
-	var entry *UserEntry
+	var entry *types.UserEntry
 	if err := (&CredStore{&userStoreMock{
-		upsert: func(e *UserEntry) error { entry = e; return nil },
-	}}).Upsert(&Credentials{
+		upsert: func(e *types.UserEntry) error { entry = e; return nil },
+	}}).Upsert(&types.Credentials{
 		User:     "user",
 		Email:    "user@example.org",
 		Password: password,

@@ -1,4 +1,4 @@
-package main
+package auth
 
 import (
 	"encoding/base64"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/weberc2/auth/pkg/types"
 )
 
 type DynamoDBUserStore struct {
@@ -13,7 +14,7 @@ type DynamoDBUserStore struct {
 	Table  string
 }
 
-func (ddbus *DynamoDBUserStore) Create(entry *UserEntry) error {
+func (ddbus *DynamoDBUserStore) Create(entry *types.UserEntry) error {
 	if _, err := ddbus.Client.PutItem(&dynamodb.PutItemInput{
 		TableName:           aws.String(ddbus.Table),
 		Item:                userToAttributes(entry),
@@ -30,7 +31,7 @@ func (ddbus *DynamoDBUserStore) Create(entry *UserEntry) error {
 	return nil
 }
 
-func (ddbus *DynamoDBUserStore) Upsert(entry *UserEntry) error {
+func (ddbus *DynamoDBUserStore) Upsert(entry *types.UserEntry) error {
 	if _, err := ddbus.Client.PutItem(&dynamodb.PutItemInput{
 		TableName: aws.String(ddbus.Table),
 		Item:      userToAttributes(entry),
@@ -40,7 +41,7 @@ func (ddbus *DynamoDBUserStore) Upsert(entry *UserEntry) error {
 	return nil
 }
 
-func (ddbus *DynamoDBUserStore) Get(user UserID) (*UserEntry, error) {
+func (ddbus *DynamoDBUserStore) Get(user types.UserID) (*types.UserEntry, error) {
 	rsp, err := ddbus.Client.GetItem(&dynamodb.GetItemInput{
 		TableName: aws.String(ddbus.Table),
 		Key: map[string]*dynamodb.AttributeValue{
@@ -51,13 +52,13 @@ func (ddbus *DynamoDBUserStore) Get(user UserID) (*UserEntry, error) {
 		return nil, fmt.Errorf("getting user: %w", err)
 	}
 	if rsp.Item == nil {
-		return nil, ErrUserNotFound
+		return nil, types.ErrUserNotFound
 	}
 
 	return attributesToUser(rsp.Item), nil
 }
 
-func userToAttributes(entry *UserEntry) map[string]*dynamodb.AttributeValue {
+func userToAttributes(entry *types.UserEntry) map[string]*dynamodb.AttributeValue {
 	return map[string]*dynamodb.AttributeValue{
 		"User":  {S: aws.String(string(entry.User))},
 		"Email": {S: aws.String(entry.Email)},
@@ -69,8 +70,8 @@ func userToAttributes(entry *UserEntry) map[string]*dynamodb.AttributeValue {
 	}
 }
 
-func attributesToUser(attrs map[string]*dynamodb.AttributeValue) *UserEntry {
-	user := UserID(*attrs["User"].S)
+func attributesToUser(attrs map[string]*dynamodb.AttributeValue) *types.UserEntry {
+	user := types.UserID(*attrs["User"].S)
 	email := *attrs["Email"].S
 	data, err := base64.RawStdEncoding.DecodeString(*attrs["PasswordHash"].S)
 	if err != nil {
@@ -80,5 +81,5 @@ func attributesToUser(attrs map[string]*dynamodb.AttributeValue) *UserEntry {
 			err,
 		))
 	}
-	return &UserEntry{User: user, Email: email, PasswordHash: data}
+	return &types.UserEntry{User: user, Email: email, PasswordHash: data}
 }
