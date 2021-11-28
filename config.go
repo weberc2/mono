@@ -19,6 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ses"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/weberc2/auth/pkg/auth"
 	pz "github.com/weberc2/httpeasy"
 	"gopkg.in/yaml.v2"
 )
@@ -123,39 +124,39 @@ func (c *Config) Run() error {
 	if err != nil {
 		return fmt.Errorf("creating AWS session: %w", err)
 	}
-	authService := AuthHTTPService{
-		AuthService{
-			Creds: CredStore{Users: &DynamoDBUserStore{
+	authService := auth.AuthHTTPService{
+		AuthService: auth.AuthService{
+			Creds: auth.CredStore{Users: &auth.DynamoDBUserStore{
 				Client: dynamodb.New(sess),
 				Table:  "Users",
 			}},
-			ResetTokens: ResetTokenFactory{
+			ResetTokens: auth.ResetTokenFactory{
 				Issuer:           c.Issuer,
-				WildcardAudience: c.Audience,
+				Audience: c.Audience,
 				TokenValidity:    1 * time.Hour,
 				SigningKey:       c.ResetSigningKey.Std(),
 				SigningMethod:    jwt.SigningMethodES512,
 			},
-			Notifications: &SESNotificationService{
+			Notifications: &auth.SESNotificationService{
 				Client: ses.New(sess),
 				Sender: c.NotificationSender,
 				TokenURL: func(tok string) string {
 					return fmt.Sprintf("https://%s/password?t=%s", c.HostName, tok)
 				},
-				RegistrationSettings:   DefaultRegistrationSettings,
-				ForgotPasswordSettings: DefaultForgotPasswordSettings,
+				RegistrationSettings:   auth.DefaultRegistrationSettings,
+				ForgotPasswordSettings: auth.DefaultForgotPasswordSettings,
 			},
-			TokenDetails: TokenDetailsFactory{
-				AccessTokens: TokenFactory{
+			TokenDetails: auth.TokenDetailsFactory{
+				AccessTokens: auth.TokenFactory{
 					Issuer:           c.Issuer,
-					WildcardAudience: c.Audience,
+					Audience: c.Audience,
 					TokenValidity:    15 * time.Minute,
 					SigningKey:       c.AccessSigningKey.Std(),
 					SigningMethod:    jwt.SigningMethodES512,
 				},
-				RefreshTokens: TokenFactory{
+				RefreshTokens: auth.TokenFactory{
 					Issuer:           c.Issuer,
-					WildcardAudience: c.Audience,
+					Audience: c.Audience,
 					TokenValidity:    7 * 24 * time.Hour,
 					SigningKey:       c.RefreshSigningKey.Std(),
 					SigningMethod:    jwt.SigningMethodES512,
@@ -186,7 +187,7 @@ func (c *Config) Run() error {
 		return fmt.Errorf("parsing login form template: %w", err)
 	}
 
-	webServer := WebServer{
+	webServer := auth.WebServer{
 		AuthService:             authService.AuthService,
 		BaseURL:                 c.BaseURL.Std(),
 		RedirectDomain:          c.RedirectDomain,

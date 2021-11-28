@@ -1,19 +1,18 @@
-package main
+package auth
 
 import (
 	"errors"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/weberc2/auth/pkg/types"
 	pz "github.com/weberc2/httpeasy"
 )
 
-type HTTPError struct {
-	Status int    `json:"status"`
-	Error  string `json:"error"`
-}
-
 var (
-	ErrInvalidRefreshToken = &HTTPError{Status: 401, Error: "invalid refresh token"}
+	ErrInvalidRefreshToken = &pz.HTTPError{
+		Status:  401,
+		Message: "invalid refresh token",
+	}
 )
 
 type AuthHTTPService struct {
@@ -25,11 +24,9 @@ func (ahs *AuthHTTPService) LoginRoute() pz.Route {
 		Path:   "/api/login",
 		Method: "POST",
 		Handler: func(r pz.Request) pz.Response {
-			var creds Credentials
+			var creds types.Credentials
 			if err := r.JSON(&creds); err != nil {
-				return pz.BadRequest(nil, struct {
-					Message, Error string
-				}{
+				return pz.BadRequest(nil, &logging{
 					Message: "failed to parse login JSON",
 					Error:   err.Error(),
 				})
@@ -40,21 +37,16 @@ func (ahs *AuthHTTPService) LoginRoute() pz.Route {
 				if errors.Is(err, ErrCredentials) {
 					return pz.Unauthorized(
 						pz.String("Invalid username or password"),
-						struct {
-							Message string
-							User    UserID
-						}{
+						&logging{
 							Message: "invalid username or password",
 							User:    creds.User,
+							Error:   err.Error(),
 						},
 					)
 				}
 
 				return pz.InternalServerError(
-					struct {
-						Message, Error string
-						User           UserID
-					}{
+					&logging{
 						Message: "logging in",
 						Error:   err.Error(),
 						User:    creds.User,
@@ -64,10 +56,7 @@ func (ahs *AuthHTTPService) LoginRoute() pz.Route {
 
 			return pz.Ok(
 				pz.JSON(tokens),
-				struct {
-					Message string
-					User    UserID
-				}{
+				&logging{
 					Message: "authentication succeeded",
 					User:    creds.User,
 				},
@@ -85,7 +74,7 @@ func (ahs *AuthHTTPService) RefreshRoute() pz.Route {
 				RefreshToken string `json:"refreshToken"`
 			}
 			if err := r.JSON(&payload); err != nil {
-				return pz.BadRequest(nil, struct{ Message, Error string }{
+				return pz.BadRequest(nil, &logging{
 					Message: "failed to parse refresh JSON",
 					Error:   err.Error(),
 				})
@@ -97,23 +86,19 @@ func (ahs *AuthHTTPService) RefreshRoute() pz.Route {
 				if errors.As(err, &verr) {
 					return pz.Unauthorized(
 						pz.JSON(ErrInvalidRefreshToken),
-						struct {
-							Message, Error string
-						}{
+						&logging{
 							Message: "invalid refresh token",
 							Error:   err.Error(),
 						},
 					)
 				}
-				return pz.InternalServerError(struct{ Message, Error string }{
+				return pz.InternalServerError(&logging{
 					Message: "refreshing access token",
 					Error:   err.Error(),
 				})
 			}
 
-			return pz.Ok(pz.JSON(struct {
-				AccessToken string `json:"accessToken"`
-			}{accessToken}))
+			return pz.Ok(pz.JSON(&refresh{accessToken}))
 		},
 	}
 }
@@ -124,7 +109,7 @@ func (ahs *AuthHTTPService) ForgotPasswordRoute() pz.Route {
 		Method: "POST",
 		Handler: func(r pz.Request) pz.Response {
 			var payload struct {
-				User UserID `json:"user"`
+				User types.UserID `json:"user"`
 			}
 			if err := r.JSON(&payload); err != nil {
 				return pz.BadRequest(nil, struct{ Message, Error string }{
@@ -136,7 +121,7 @@ func (ahs *AuthHTTPService) ForgotPasswordRoute() pz.Route {
 			if err := ahs.ForgotPassword(payload.User); err != nil {
 				// If the user doesn't exist, we still report success so as to
 				// not give away information to potential attackers.
-				if errors.Is(err, ErrUserNotFound) {
+				if errors.Is(err, types.ErrUserNotFound) {
 					return pz.Ok(nil, struct{ Message, User, Error string }{
 						Message: "user not found; silently succeeding",
 						User:    string(payload.User),
@@ -167,8 +152,8 @@ func (ahs *AuthHTTPService) RegisterRoute() pz.Route {
 		Method: "POST",
 		Handler: func(r pz.Request) pz.Response {
 			var payload struct {
-				User  UserID `json:"user"`
-				Email string `json:"email"`
+				User  types.UserID `json:"user"`
+				Email string       `json:"email"`
 			}
 			if err := r.JSON(&payload); err != nil {
 				return pz.BadRequest(nil, struct{ Message, Error string }{
@@ -193,7 +178,7 @@ func (ahs *AuthHTTPService) RegisterRoute() pz.Route {
 						pz.String("User already exists"),
 						struct {
 							Message, Error string
-							User           UserID
+							User           types.UserID
 						}{
 							Message: "registering user",
 							Error:   err.Error(),
@@ -203,7 +188,7 @@ func (ahs *AuthHTTPService) RegisterRoute() pz.Route {
 				}
 				return pz.InternalServerError(struct {
 					Message, Error string
-					User           UserID
+					User           types.UserID
 				}{
 					Message: "registering user",
 					Error:   err.Error(),
@@ -213,7 +198,7 @@ func (ahs *AuthHTTPService) RegisterRoute() pz.Route {
 
 			return pz.Created(pz.String("Created user"), struct {
 				Message string
-				User    UserID
+				User    types.UserID
 			}{
 				Message: "created user",
 				User:    payload.User,
@@ -229,10 +214,7 @@ func (ahs *AuthHTTPService) UpdatePasswordRoute() pz.Route {
 		Handler: func(r pz.Request) pz.Response {
 			var payload UpdatePassword
 			if err := r.JSON(&payload); err != nil {
-				return pz.BadRequest(nil, struct {
-					Message, Error string
-					User           UserID
-				}{
+				return pz.BadRequest(nil, &logging{
 					Message: "updating password",
 					Error:   err.Error(),
 					User:    payload.User,
@@ -240,10 +222,7 @@ func (ahs *AuthHTTPService) UpdatePasswordRoute() pz.Route {
 			}
 
 			if err := ahs.UpdatePassword(&payload); err != nil {
-				l := struct {
-					Message, Error string
-					User           UserID
-				}{
+				l := logging{
 					Message: "updating password",
 					Error:   err.Error(),
 					User:    payload.User,
@@ -251,19 +230,42 @@ func (ahs *AuthHTTPService) UpdatePasswordRoute() pz.Route {
 				if errors.Is(err, ErrInvalidResetToken) {
 					return pz.NotFound(
 						pz.String(ErrInvalidResetToken.Error()),
-						l,
+						&l,
 					)
 				}
-				return pz.InternalServerError(l)
+				return pz.InternalServerError(&l)
 			}
 
-			return pz.Ok(pz.String("Password updated"), struct {
-				Message string
-				User    UserID
-			}{
+			return pz.Ok(pz.String("Password updated"), &logging{
 				Message: "updated password",
 				User:    payload.User,
 			})
+		},
+	}
+}
+
+func (ahs *AuthHTTPService) ExchangeRoute() pz.Route {
+	return pz.Route{
+		Path:   "/api/exchange",
+		Method: "POST",
+		Handler: func(r pz.Request) pz.Response {
+			var code Code
+			if err := r.JSON(&code); err != nil {
+				return pz.BadRequest(nil, &logging{
+					Message: "parsing auth code token payload",
+					Error:   err.Error(),
+				})
+			}
+
+			tokens, err := ahs.Exchange(code.Code)
+			if err != nil {
+				return pz.HandleError("processing auth code exchange", err)
+			}
+
+			return pz.Ok(
+				pz.JSON(tokens),
+				&logging{Message: "auth code valid; returning tokens"},
+			)
 		},
 	}
 }
@@ -275,5 +277,16 @@ func (ahs *AuthHTTPService) Routes() []pz.Route {
 		ahs.RegisterRoute(),
 		ahs.ForgotPasswordRoute(),
 		ahs.UpdatePasswordRoute(),
+		ahs.ExchangeRoute(),
 	}
+}
+
+type logging struct {
+	Message string       `json:"message"`
+	User    types.UserID `json:"user,omitempty"`
+	Error   string       `json:"error,omitempty"`
+}
+
+type refresh struct {
+	AccessToken string `json:"accessToken"`
 }

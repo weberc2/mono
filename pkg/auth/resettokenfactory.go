@@ -1,14 +1,15 @@
-package main
+package auth
 
 import (
 	"fmt"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/weberc2/auth/pkg/types"
 )
 
 type Claims struct {
-	User  UserID
+	User  types.UserID
 	Email string
 	jwt.StandardClaims
 }
@@ -17,7 +18,7 @@ type ResetTokenFactory TokenFactory
 
 func (rtf *ResetTokenFactory) Create(
 	now time.Time,
-	user UserID,
+	user types.UserID,
 	email string,
 ) (string, error) {
 	token := jwt.NewWithClaims(
@@ -27,7 +28,7 @@ func (rtf *ResetTokenFactory) Create(
 			Email: email,
 			StandardClaims: jwt.StandardClaims{
 				Subject:   string(user),
-				Audience:  rtf.WildcardAudience,
+				Audience:  rtf.Audience,
 				Issuer:    rtf.Issuer,
 				IssuedAt:  now.Unix(),
 				ExpiresAt: now.Add(rtf.TokenValidity).Unix(),
@@ -43,9 +44,7 @@ func (rtf *ResetTokenFactory) Claims(token string) (*Claims, error) {
 	if _, err := jwt.ParseWithClaims(
 		token,
 		&claims,
-		func(*jwt.Token) (interface{}, error) {
-			return &rtf.SigningKey.PublicKey, nil
-		},
+		func(*jwt.Token) (interface{}, error) { return rtf.ParseKey, nil },
 	); err != nil {
 		return nil, fmt.Errorf("parsing claims from token: %w", err)
 	}

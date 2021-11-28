@@ -1,38 +1,29 @@
-package main
+package auth
 
 import (
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/nbutton23/zxcvbn-go"
+	"github.com/weberc2/auth/pkg/types"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
-type UserEntry struct {
-	User         UserID
-	Email        string
-	PasswordHash []byte
-}
-
-type UserStore interface {
-	Get(UserID) (*UserEntry, error)
-	Create(*UserEntry) error
-	Upsert(*UserEntry) error
-}
-
 var ErrPasswordTooSimple = errors.New("password is too simple")
 
 type CredStore struct {
-	Users UserStore
+	Users types.UserStore
 }
 
-func (cs *CredStore) Validate(creds *Credentials) error {
+func (cs *CredStore) Validate(creds *types.Credentials) error {
 	entry, err := cs.Users.Get(creds.User)
 	if err != nil {
+		log.Printf("error fetching user `%s`: %v", creds.User, err)
 		// If the user doesn't exist, we want to return ErrCredentials in order
 		// to minimize the information we give to potential attackers.
-		if errors.Is(err, ErrUserNotFound) {
+		if errors.Is(err, types.ErrUserNotFound) {
 			return ErrCredentials
 		}
 		return fmt.Errorf("validating credentials: %w", err)
@@ -47,7 +38,7 @@ func (cs *CredStore) Validate(creds *Credentials) error {
 	return nil
 }
 
-func validatePassword(creds *Credentials) error {
+func validatePassword(creds *types.Credentials) error {
 	minEntropyMatch := zxcvbn.PasswordStrength(
 		creds.Password,
 		[]string{string(creds.User), creds.Email},
@@ -58,7 +49,7 @@ func validatePassword(creds *Credentials) error {
 	return nil
 }
 
-func makeUserEntry(creds *Credentials) (*UserEntry, error) {
+func makeUserEntry(creds *types.Credentials) (*types.UserEntry, error) {
 	if err := validatePassword(creds); err != nil {
 		return nil, err
 	}
@@ -69,14 +60,14 @@ func makeUserEntry(creds *Credentials) (*UserEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &UserEntry{
+	return &types.UserEntry{
 		User:         creds.User,
 		Email:        creds.Email,
 		PasswordHash: hashedPassword,
 	}, nil
 }
 
-func (cs *CredStore) Create(creds *Credentials) error {
+func (cs *CredStore) Create(creds *types.Credentials) error {
 	entry, err := makeUserEntry(creds)
 	if err != nil {
 		return fmt.Errorf("creating credentials: %w", err)
@@ -88,7 +79,7 @@ func (cs *CredStore) Create(creds *Credentials) error {
 	return nil
 }
 
-func (cs *CredStore) Upsert(creds *Credentials) error {
+func (cs *CredStore) Upsert(creds *types.Credentials) error {
 	entry, err := makeUserEntry(creds)
 	if err != nil {
 		return fmt.Errorf("creating user entry: %w", err)

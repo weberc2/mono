@@ -1,18 +1,19 @@
-package main
+package auth
 
 import (
 	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/weberc2/auth/pkg/types"
 )
 
 type ConsoleNotificationService struct{}
 
-func (cns ConsoleNotificationService) Notify(u UserID, t uuid.UUID) error {
+func (cns ConsoleNotificationService) Notify(u types.UserID, t uuid.UUID) error {
 	data, err := json.Marshal(struct {
-		User  UserID `json:"user"`
-		Token string `json:"token"`
+		User  types.UserID `json:"user"`
+		Token string       `json:"token"`
 	}{
 		User:  u,
 		Token: t.String(),

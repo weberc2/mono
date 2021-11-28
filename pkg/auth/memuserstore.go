@@ -1,10 +1,12 @@
-package main
+package auth
+
+import "github.com/weberc2/auth/pkg/types"
 
 type MemUserStore struct {
-	Entries []*UserEntry
+	Entries []*types.UserEntry
 }
 
-func (mus *MemUserStore) Create(entry *UserEntry) error {
+func (mus *MemUserStore) Create(entry *types.UserEntry) error {
 	for _, e := range mus.Entries {
 		if e.User == entry.User {
 			return ErrUserExists
@@ -14,21 +16,21 @@ func (mus *MemUserStore) Create(entry *UserEntry) error {
 	return nil
 }
 
-func (mus *MemUserStore) Update(entry *UserEntry) error {
+func (mus *MemUserStore) Update(entry *types.UserEntry) error {
 	for i, e := range mus.Entries {
 		if e.User == entry.User {
 			mus.Entries[i] = entry
 			return nil
 		}
 	}
-	return ErrUserNotFound
+	return types.ErrUserNotFound
 }
 
-func (mus *MemUserStore) Get(user UserID) (*UserEntry, error) {
+func (mus *MemUserStore) Get(user types.UserID) (*types.UserEntry, error) {
 	for _, e := range mus.Entries {
 		if e.User == user {
 			return e, nil
 		}
 	}
-	return nil, ErrUserNotFound
+	return nil, types.ErrUserNotFound
 }

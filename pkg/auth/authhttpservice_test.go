@@ -1,4 +1,4 @@
-package main
+package auth
 
 import (
 	"bytes"
@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/weberc2/auth/pkg/types"
 	pz "github.com/weberc2/httpeasy"
+	pztest "github.com/weberc2/httpeasy/testsupport"
 )
 
 func TestAuthHTTPService(t *testing.T) {
@@ -22,15 +24,15 @@ func TestAuthHTTPService(t *testing.T) {
 		input          string
 		route          func(*AuthHTTPService) pz.Route
 		validationTime time.Time
-		existingUsers  []UserEntry
+		existingUsers  []types.UserEntry
 		wantedStatus   int
-		wantedPayload  Wanted
+		wantedPayload  pztest.WantedData
 	}{
 		{
 			name:  "forgot password",
 			input: `{"user": "user"}`,
 			route: (*AuthHTTPService).ForgotPasswordRoute,
-			existingUsers: []UserEntry{{
+			existingUsers: []types.UserEntry{{
 				User:         "user",
 				Email:        "user@example.org",
 				PasswordHash: hashBcrypt("password"),
@@ -82,6 +84,18 @@ func TestAuthHTTPService(t *testing.T) {
 			wantedStatus:   401,
 			wantedPayload:  ErrInvalidRefreshToken,
 		},
+		{
+			// Expect tokens returned in exchange for a valid auth code.
+			name:           "exchange auth code",
+			input:          fmt.Sprintf(`{"code": "%s"}`, authCode),
+			route:          (*AuthHTTPService).ExchangeRoute,
+			validationTime: now,
+			wantedStatus:   200,
+			wantedPayload: &TokenDetails{
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			vtime := now
@@ -89,34 +103,38 @@ func TestAuthHTTPService(t *testing.T) {
 				vtime = testCase.validationTime
 			}
 			jwt.TimeFunc = func() time.Time { return vtime }
-			var notifications []*Notification
+			defer func() { jwt.TimeFunc = time.Now }()
+			var notifications []*types.Notification
 			service := AuthHTTPService{
 				AuthService: AuthService{
 					Creds: CredStore{
 						Users: &userStoreMock{
-							get: func(user UserID) (*UserEntry, error) {
+							get: func(
+								user types.UserID,
+							) (*types.UserEntry, error) {
 								for i, entry := range testCase.existingUsers {
 									if entry.User == user {
 										return &testCase.existingUsers[i], nil
 									}
 								}
-								return nil, ErrUserNotFound
+								return nil, types.ErrUserNotFound
 							},
 						},
 					},
 					Notifications: &notificationServiceMock{
-						notify: func(n *Notification) error {
+						notify: func(n *types.Notification) error {
 							notifications = append(notifications, n)
 							return nil
 						},
 					},
+					Codes:       codesTokenFactory,
 					ResetTokens: resetTokenFactory,
 					TokenDetails: TokenDetailsFactory{
 						AccessTokens:  accessTokenFactory,
 						RefreshTokens: refreshTokenFactory,
-						TimeFunc:      func() time.Time { return now },
+						TimeFunc:      nowTimeFunc,
 					},
-					TimeFunc: func() time.Time { return now },
+					TimeFunc: nowTimeFunc,
 				},
 			}
 
@@ -137,13 +155,13 @@ func TestAuthHTTPService(t *testing.T) {
 				)
 			}
 
-			data, err := readAll(rsp.Data)
-			if err != nil {
-				t.Fatalf("Unexpected err: %v", err)
-			}
-
-			if err := testCase.wantedPayload.Compare(data); err != nil {
-				t.Logf("DATA: %s", data)
+			if err := pztest.CompareSerializer(
+				testCase.wantedPayload,
+				rsp.Data,
+			); err != nil {
+				if err, ok := err.(*pztest.CompareSerializerError); ok {
+					t.Logf("response data: %s", err.Data)
+				}
 				t.Fatal(err)
 			}
 		})
@@ -174,35 +192,50 @@ i5q05kD3gwd3T6OmOv0gCoVYvDhHwZLNuVOUHYVUjg==
 -----END PRIVATE KEY-----`
 )
 
+func nowTimeFunc() time.Time { return now }
+
 var (
 	now                = time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
-	user               = UserID("user")
+	user               = types.UserID("user")
 	accessSigningKey   = mustParseKey(accessSigningKeyString)
 	refreshSigningKey  = mustParseKey(refreshSigningKeyString)
 	resetSigningKey    = mustParseKey(resetSigningKeyString)
+	codesSigningKey    = []byte("codes-signing-key")
 	accessTokenFactory = TokenFactory{
-		Issuer:           "issuer",
-		WildcardAudience: "audience",
-		TokenValidity:    15 * time.Minute,
-		SigningKey:       accessSigningKey,
-		SigningMethod:    jwt.SigningMethodES512,
+		Issuer:        "issuer",
+		Audience:      "audience",
+		TokenValidity: 15 * time.Minute,
+		ParseKey:      &accessSigningKey.PublicKey,
+		SigningKey:    accessSigningKey,
+		SigningMethod: jwt.SigningMethodES512,
 	}
 	refreshTokenFactory = TokenFactory{
-		Issuer:           "issuer",
-		WildcardAudience: "audience",
-		TokenValidity:    7 * 24 * time.Hour,
-		SigningKey:       refreshSigningKey,
-		SigningMethod:    jwt.SigningMethodES512,
+		Issuer:        "issuer",
+		Audience:      "audience",
+		TokenValidity: 7 * 24 * time.Hour,
+		ParseKey:      &refreshSigningKey.PublicKey,
+		SigningKey:    refreshSigningKey,
+		SigningMethod: jwt.SigningMethodES512,
 	}
 	resetTokenFactory = ResetTokenFactory{
-		Issuer:           "issuer",
-		WildcardAudience: "audience",
-		TokenValidity:    1 * time.Hour,
-		SigningKey:       resetSigningKey,
-		SigningMethod:    jwt.SigningMethodES512,
+		Issuer:        "issuer",
+		Audience:      "audience",
+		TokenValidity: 1 * time.Hour,
+		ParseKey:      &resetSigningKey.PublicKey,
+		SigningKey:    resetSigningKey,
+		SigningMethod: jwt.SigningMethodES512,
+	}
+	codesTokenFactory = TokenFactory{
+		Issuer:        "issuer",
+		Audience:      "audience",
+		TokenValidity: time.Minute,
+		ParseKey:      codesSigningKey,
+		SigningKey:    codesSigningKey,
+		SigningMethod: jwt.SigningMethodHS512,
 	}
 	accessToken  = must(accessTokenFactory.Create(now, string(user)))
 	refreshToken = must(refreshTokenFactory.Create(now, string(user)))
+	authCode     = must(codesTokenFactory.Create(now, string(user)))
 )
 
 func mustParseKey(keyString string) *ecdsa.PrivateKey {
@@ -261,11 +294,7 @@ func compareTokens(key *ecdsa.PublicKey, wanted, found string) error {
 	return nil
 }
 
-type refresh struct {
-	AccessToken string `json:"accessToken"`
-}
-
-func (wanted *refresh) Compare(data []byte) error {
+func (wanted *refresh) CompareData(data []byte) error {
 	var found refresh
 	if err := json.Unmarshal(data, &found); err != nil {
 		return fmt.Errorf("unmarshaling `refresh`: %w", err)
@@ -282,7 +311,7 @@ func (wanted *refresh) Compare(data []byte) error {
 	return nil
 }
 
-func (wanted *TokenDetails) Compare(data []byte) error {
+func (wanted *TokenDetails) CompareData(data []byte) error {
 	var found TokenDetails
 	if err := json.Unmarshal(data, &found); err != nil {
 		return fmt.Errorf(
@@ -321,29 +350,7 @@ func (wanted *TokenDetails) Compare(data []byte) error {
 
 type Any struct{}
 
-func (Any) Compare(data []byte) error { return nil }
-
-func (wanted *HTTPError) Compare(data []byte) error {
-	var found HTTPError
-	if err := json.Unmarshal(data, &found); err != nil {
-		return fmt.Errorf("unmarshaling `HTTPError`: %w", err)
-	}
-	if wanted.Status != found.Status {
-		return fmt.Errorf(
-			"HTTPError.Status: wanted `%d`; found `%d`",
-			wanted.Status,
-			found.Status,
-		)
-	}
-	if wanted.Error != found.Error {
-		return fmt.Errorf(
-			"HTTPError.Error: wanted `%s`; found `%s`",
-			wanted.Error,
-			found.Error,
-		)
-	}
-	return nil
-}
+func (Any) CompareData(data []byte) error { return nil }
 
 func readAll(s pz.Serializer) ([]byte, error) {
 	writerTo, err := s()

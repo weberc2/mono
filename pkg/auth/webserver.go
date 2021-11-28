@@ -1,4 +1,4 @@
-package main
+package auth
 
 import (
 	"errors"
@@ -6,12 +6,16 @@ import (
 	html "html/template"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"strings"
 
+	"github.com/weberc2/auth/pkg/types"
 	pz "github.com/weberc2/httpeasy"
 )
+
+type Code struct {
+	Code string `json:"code"`
+}
 
 // WebServer serves the authentication pages for websites (as opposed to
 // single-page apps). It passes tokens to the client via cookies.
@@ -57,23 +61,21 @@ func (ws *WebServer) LoginHandler(r pz.Request) pz.Response {
 	if err != nil {
 		return pz.BadRequest(
 			pz.Stringf("parsing credentials: %v", err),
-			struct {
-				Message string `json:"message"`
-				Error   string `json:"error"`
-			}{
+			&logging{
 				Message: "parsing credentials from multi-part form",
 				Error:   err.Error(),
 			},
 		)
 	}
-	tokenDetails, err := ws.AuthService.Login(&Credentials{
-		User:     UserID(username),
+
+	code, err := ws.AuthService.LoginAuthCode(&types.Credentials{
+		User:     types.UserID(username),
 		Password: password,
 	})
 	if err != nil {
 		if errors.Is(err, ErrCredentials) {
 			return pz.Unauthorized(
-				pz.HTMLTemplate(ws.LoginForm, struct {
+				pz.HTMLTemplate(ws.LoginForm, &struct {
 					Location     html.HTML
 					FormAction   string
 					ErrorMessage string
@@ -81,21 +83,15 @@ func (ws *WebServer) LoginHandler(r pz.Request) pz.Response {
 					FormAction:   ws.BaseURL + "login",
 					ErrorMessage: "Invalid credentials",
 				}),
-				struct {
-					User    string `json:"user"`
-					Message string `json:"message"`
-				}{
-					User:    username,
+				&logging{
+					User:    types.UserID(username),
 					Message: "login failed",
+					Error:   err.Error(),
 				},
 			)
 		}
-		return pz.InternalServerError(struct {
-			User    string `json:"user"`
-			Message string `json:"message"`
-			Error   string `json:"error"`
-		}{
-			User:    username,
+		return pz.InternalServerError(&logging{
+			User:    types.UserID(username),
 			Message: "logging in",
 			Error:   err.Error(),
 		})
@@ -163,25 +159,15 @@ func (ws *WebServer) LoginHandler(r pz.Request) pz.Response {
 		location = ws.DefaultRedirectLocation
 	}
 
+	qstr := "?" + url.Values{"code": []string{code}}.Encode()
+	logging.Location += qstr
+	location += qstr
+
 	// Previously we used 307 Temporary Redirect, but since we're handling a
 	// POST request, the redirect also issued a POST request instead of a GET
 	// request. It seems like 303 See Other does what we want.
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections#temporary_redirections
-	return pz.SeeOther(location, &logging).WithCookies(&http.Cookie{
-		Name:     "Access-Token",
-		Value:    tokenDetails.AccessToken,
-		Domain:   ws.RedirectDomain,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-	}, &http.Cookie{
-		Name:     "Refresh-Token",
-		Value:    tokenDetails.RefreshToken,
-		Domain:   ws.RedirectDomain,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-	})
+	return pz.SeeOther(location, &logging)
 }
 
 func parseMultiPartForm(r pz.Request) (string, string, error) {
