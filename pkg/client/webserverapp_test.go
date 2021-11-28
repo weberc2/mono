@@ -5,13 +5,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/weberc2/auth/pkg/auth"
 	pz "github.com/weberc2/httpeasy"
+	pztest "github.com/weberc2/httpeasy/testsupport"
 )
 
 func TestAuthCodeCallback(t *testing.T) {
@@ -25,25 +25,23 @@ func TestAuthCodeCallback(t *testing.T) {
 	}
 
 	authSrv := httptest.NewServer(pz.Register(
-		pz.JSONLog(os.Stderr),
+		pztest.TestLog(t),
 		(&auth.AuthHTTPService{AuthService: authService}).ExchangeRoute(),
 	))
 
-	app := App{
-		Client:          Client{HTTP: *authSrv.Client(), BaseURL: authSrv.URL},
-		DefaultRedirect: fmt.Sprintf("%s/default", authSrv.URL),
+	app := WebServerApp{
+		Client:          testClient(authSrv),
+		BaseURL:         authSrv.URL,
+		DefaultRedirect: "default",
 		Key:             "cookie-encryption-key",
 	}
 
 	appSrv := httptest.NewServer(pz.Register(
-		pz.JSONLog(os.Stderr),
+		pztest.TestLog(t),
 		app.AuthCodeCallbackRoute("/api/auth/code"),
 	))
 
 	appClient := appSrv.Client()
-	appClient.CheckRedirect = func(*http.Request, []*http.Request) error {
-		return http.ErrUseLastResponse
-	}
 
 	code, err := authService.Codes.Create(now, "adam")
 	if err != nil {
@@ -56,7 +54,7 @@ func TestAuthCodeCallback(t *testing.T) {
 			appSrv.URL,
 			url.Values{
 				"code":     []string{code},
-				"redirect": []string{"https://app.example.org/intended"},
+				"redirect": []string{"intended"},
 			}.Encode(),
 		),
 	)

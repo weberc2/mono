@@ -10,26 +10,31 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/weberc2/auth/pkg/auth"
 	pz "github.com/weberc2/httpeasy"
 )
 
-type App struct {
+type WebServerApp struct {
 	Client          Client
+	BaseURL         string
 	DefaultRedirect string
 	Key             string
 }
 
-func (app *App) DecryptAccessToken(r pz.Request) (string, error) {
+func (app *WebServerApp) DecryptAccessToken(r pz.Request) (string, error) {
 	return app.DecryptCookie(r, "Access-Token")
 }
 
-func (app *App) DecryptRefreshToken(r pz.Request) (string, error) {
+func (app *WebServerApp) DecryptRefreshToken(r pz.Request) (string, error) {
 	return app.DecryptCookie(r, "Refresh-Token")
 }
 
-func (app *App) DecryptCookie(r pz.Request, cookie string) (string, error) {
+func (app *WebServerApp) DecryptCookie(
+	r pz.Request,
+	cookie string,
+) (string, error) {
 	c, err := r.Cookie(cookie)
 	if err != nil {
 		return "", fmt.Errorf("finding cookie `%s`: %w", cookie, err)
@@ -41,7 +46,7 @@ func (app *App) DecryptCookie(r pz.Request, cookie string) (string, error) {
 	return plaintext, nil
 }
 
-func (app *App) decryptCookie(cookie *http.Cookie) (string, error) {
+func (app *WebServerApp) decryptCookie(cookie *http.Cookie) (string, error) {
 	plaintext, err := decrypt(cookie.Value, app.Key)
 	if err != nil {
 		return "", fmt.Errorf("decrypting cookie: %w", err)
@@ -49,7 +54,19 @@ func (app *App) decryptCookie(cookie *http.Cookie) (string, error) {
 	return plaintext, nil
 }
 
-func (app *App) AuthCodeCallbackRoute(path string) pz.Route {
+func (app *WebServerApp) Encrypt(data string) (string, error) {
+	return encrypt(data, app.Key)
+}
+
+func join(base, path string) string {
+	return fmt.Sprintf(
+		"%s/%s",
+		strings.TrimRight(base, "/"),
+		strings.TrimLeft(path, "/"),
+	)
+}
+
+func (app *WebServerApp) AuthCodeCallbackRoute(path string) pz.Route {
 	return pz.Route{
 		Path:   path,
 		Method: "GET",
@@ -62,7 +79,7 @@ func (app *App) AuthCodeCallbackRoute(path string) pz.Route {
 				CodeParseError     string `json:"codeParseError,omitempty"`
 				EncryptionError    string `json:"encryptionError,omitempty"`
 			}{
-				RedirectSpecified: query.Get("redirect"),
+				RedirectSpecified: join(app.BaseURL, query.Get("redirect")),
 			}
 			if context.RedirectSpecified == "" {
 				context.RedirectParseError = "`redirect` query param " +
@@ -72,7 +89,7 @@ func (app *App) AuthCodeCallbackRoute(path string) pz.Route {
 				context.RedirectSpecified,
 			); err != nil {
 				context.RedirectParseError = err.Error()
-				context.RedirectActual = app.DefaultRedirect
+				context.RedirectActual = join(app.BaseURL, app.DefaultRedirect)
 			} else {
 				context.RedirectActual = context.RedirectSpecified
 			}

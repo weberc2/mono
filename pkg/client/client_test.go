@@ -5,8 +5,8 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
@@ -14,7 +14,16 @@ import (
 	"github.com/weberc2/auth/pkg/auth"
 	"github.com/weberc2/auth/pkg/testsupport"
 	pz "github.com/weberc2/httpeasy"
+	pztest "github.com/weberc2/httpeasy/testsupport"
 )
+
+func testClient(srv *httptest.Server) Client {
+	httpClient := srv.Client()
+	httpClient.CheckRedirect = func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	return Client{HTTP: *httpClient, BaseURL: srv.URL}
+}
 
 func testAuthService(now time.Time) (auth.AuthService, error) {
 	authCodeKey := []byte("auth-code-key")
@@ -82,14 +91,14 @@ func TestExchangeRoute(t *testing.T) {
 
 	api := auth.AuthHTTPService{AuthService: authService}
 	srv := httptest.NewServer(pz.Register(
-		pz.JSONLog(os.Stderr),
+		pztest.TestLog(t),
 		api.ExchangeRoute(),
 	))
 	defer srv.Close()
 
 	t.Logf("URL: %s", srv.URL)
 
-	client := Client{HTTP: *srv.Client(), BaseURL: srv.URL}
+	client := testClient(srv)
 
 	code, err := authService.Codes.Create(now, "adam")
 	if err != nil {

@@ -16,7 +16,7 @@ type Authenticator struct {
 func (a *Authenticator) AuthN(authType AuthType, h pz.Handler) pz.Handler {
 	return func(r pz.Request) pz.Response {
 		result := authType.validate(a.Key, r)
-		r.Headers.Add("User", result.Subject)
+		r.Headers.Add("User", result.User)
 		return h(r).WithLogging(result)
 	}
 }
@@ -24,7 +24,7 @@ func (a *Authenticator) AuthN(authType AuthType, h pz.Handler) pz.Handler {
 func (a *Authenticator) AuthZ(authType AuthType, h pz.Handler) pz.Handler {
 	return func(r pz.Request) pz.Response {
 		result := authType.validate(a.Key, r)
-		if result.Subject == "" {
+		if result.User == "" {
 			return pz.Unauthorized(nil, result)
 		}
 		return h(r).WithLogging(result)
@@ -49,30 +49,30 @@ func (atcp AuthTypeClientProgram) validate(
 		)
 	}
 
-	subject, err := validateAccessToken(authorization[len("Bearer "):], key)
+	user, err := validateAccessToken(authorization[len("Bearer "):], key)
 	if err != nil {
 		return resultErr("invalid access token", err)
 	}
 
-	return resultOK("successfully validated access token", subject)
+	return resultOK("successfully validated access token", user)
 }
 
 type result struct {
 	Message string `json:"message"`
 	Error   string `json:"error,omitempty"`
-	Subject string `json:"subject,omitempty"`
+	User    string `json:"user,omitempty"`
 }
 
 func resultErr(message string, err error) *result {
 	return &result{Message: message, Error: err.Error()}
 }
 
-func resultOK(message string, subject string) *result {
-	return &result{Message: message, Subject: subject}
+func resultOK(message string, user string) *result {
+	return &result{Message: message, User: user}
 }
 
 type AuthTypeWebServer struct {
-	Auth Client
+	App WebServerApp
 }
 
 func (atws *AuthTypeWebServer) validate(
@@ -89,33 +89,48 @@ func (atws *AuthTypeWebServer) validate(
 		return resultErr("missing `Refresh-Token` cookie", err)
 	}
 
-	subject, err := validateAccessToken(accessCookie.Value, key)
+	accessToken, err := atws.App.decryptCookie(accessCookie)
+	if err != nil {
+		return resultErr("decrypting `Access-Token` cookie", err)
+	}
+
+	refreshToken, err := atws.App.decryptCookie(refreshCookie)
+	if err != nil {
+		return resultErr("decrypting `Refresh-Token` cookie", err)
+	}
+
+	user, err := validateAccessToken(accessToken, key)
 	if err != nil {
 		if err, ok := err.(*jwt.ValidationError); ok {
 			masked := err.Errors & jwt.ValidationErrorExpired
 			if masked == jwt.ValidationErrorExpired {
-				tokens, err := atws.Auth.Refresh(refreshCookie.Value)
+				tokens, err := atws.App.Client.Refresh(refreshToken)
 				if err != nil {
 					return resultErr("refreshing access token", err)
 				}
 
 				// We can probably trust that the token itself is good since
 				// it's coming directly from the auth service, but we need its
-				// subject. If we got here, the previous access token's subject
+				// user. If we got here, the previous access token's user
 				// failed to parse because the token was expired.
-				subject, err := validateAccessToken(tokens.AccessToken, key)
+				user, err := validateAccessToken(tokens.AccessToken, key)
 				if err != nil {
-					return resultErr("parsing `sub` (subject) claim", err)
+					return resultErr("parsing `sub` (user) claim", err)
 				}
-				accessCookie.Value = tokens.AccessToken
-				return resultOK("successfully refreshed access token", subject)
+
+				encrypted, err := atws.App.Encrypt(tokens.AccessToken)
+				if err != nil {
+					return resultErr("encrypting access token", err)
+				}
+				accessCookie.Value = encrypted
+				return resultOK("successfully refreshed access token", user)
 			}
 			return resultErr("validating access token", err)
 		}
 		return resultErr("parsing access token", err)
 	}
 
-	return resultOK("successfully validated access token", subject)
+	return resultOK("successfully validated access token", user)
 }
 
 func validateAccessToken(token string, key *ecdsa.PublicKey) (string, error) {
@@ -129,5 +144,5 @@ func validateAccessToken(token string, key *ecdsa.PublicKey) (string, error) {
 	); err != nil {
 		return "", err
 	}
-	return string(claims.Subject), nil
+	return claims.Subject, nil
 }

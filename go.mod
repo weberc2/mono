@@ -10,7 +10,7 @@ require (
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/nbutton23/zxcvbn-go v0.0.0-20210217022336-fa2cb2858354
-	github.com/weberc2/httpeasy v0.0.20
+	github.com/weberc2/httpeasy v0.0.21
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	gopkg.in/yaml.v2 v2.4.0
 )
