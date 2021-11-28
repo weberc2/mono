@@ -8,13 +8,16 @@ import (
 	"encoding/pem"
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/weberc2/auth/pkg/testsupport"
 	"github.com/weberc2/auth/pkg/types"
 	pz "github.com/weberc2/httpeasy"
+	pztest "github.com/weberc2/httpeasy/testsupport"
 )
 
 func TestAuthHTTPService(t *testing.T) {
@@ -90,12 +93,15 @@ func TestAuthHTTPService(t *testing.T) {
 				vtime = testCase.validationTime
 			}
 			jwt.TimeFunc = func() time.Time { return vtime }
+			defer func() { jwt.TimeFunc = time.Now }()
 			var notifications []*types.Notification
 			service := AuthHTTPService{
 				AuthService: AuthService{
 					Creds: CredStore{
 						Users: &userStoreMock{
-							get: func(user types.UserID) (*types.UserEntry, error) {
+							get: func(
+								user types.UserID,
+							) (*types.UserEntry, error) {
 								for i, entry := range testCase.existingUsers {
 									if entry.User == user {
 										return &testCase.existingUsers[i], nil
@@ -115,9 +121,9 @@ func TestAuthHTTPService(t *testing.T) {
 					TokenDetails: TokenDetailsFactory{
 						AccessTokens:  accessTokenFactory,
 						RefreshTokens: refreshTokenFactory,
-						TimeFunc:      func() time.Time { return now },
+						TimeFunc:      nowTimeFunc,
 					},
-					TimeFunc: func() time.Time { return now },
+					TimeFunc: nowTimeFunc,
 				},
 			}
 
@@ -151,6 +157,88 @@ func TestAuthHTTPService(t *testing.T) {
 	}
 }
 
+func TestAuthHTTPService_ExchangeRoute(t *testing.T) {
+	jwt.TimeFunc = nowTimeFunc
+	defer func() { jwt.TimeFunc = time.Now }()
+	codes := TokenFactory{
+		Issuer:        "issuer",
+		Audience:      "audience",
+		TokenValidity: time.Minute,
+		ParseKey:      []byte("signing-key"),  // symmetric
+		SigningKey:    []byte("signing-key"),  // symmetric
+		SigningMethod: jwt.SigningMethodHS512, // symmetric, deterministic
+	}
+
+	for _, testCase := range []struct {
+		name         string
+		username     string
+		code         string
+		wantedStatus int
+		wantedBody   pztest.WantedData
+	}{{
+		name:         "good code",
+		username:     "adam",
+		code:         mustString(codes.Create(now, "adam")),
+		wantedStatus: http.StatusOK,
+		wantedBody:   AnyTokens{}, // good enough
+	}} {
+		t.Run(testCase.name, func(t *testing.T) {
+
+			httpService := AuthHTTPService{
+				AuthService: AuthService{
+					Notifications: testsupport.NotificationServiceFake{},
+					TokenDetails: TokenDetailsFactory{
+						AccessTokens:  accessTokenFactory,
+						RefreshTokens: refreshTokenFactory,
+						TimeFunc:      nowTimeFunc,
+					},
+					Codes:    codes,
+					TimeFunc: nowTimeFunc,
+				},
+			}
+
+			data, err := json.Marshal(struct {
+				Code string `json:"code"`
+			}{
+				testCase.code,
+			})
+			if err != nil {
+				t.Fatalf("unexpected error marshaling auth code: %v", err)
+			}
+
+			rsp := httpService.ExchangeRoute().Handler(
+				pz.Request{Body: bytes.NewReader(data)},
+			)
+
+			if rsp.Status != testCase.wantedStatus {
+				data, err := readAll(rsp.Data)
+				if err != nil {
+					t.Logf("reading response body: %v", err)
+				}
+				t.Logf("response body: %s", data)
+
+				data, err = json.Marshal(rsp.Logging)
+				if err != nil {
+					t.Logf("marshaling response logging: %v", err)
+				}
+				t.Logf("response logging: %s", data)
+				t.Fatalf(
+					"Response.Status: wanted `%d`; found `%d`",
+					testCase.wantedStatus,
+					rsp.Status,
+				)
+			}
+
+			if err := pztest.CompareSerializer(
+				testCase.wantedBody,
+				rsp.Data,
+			); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
 const (
 	accessSigningKeyString = `-----BEGIN PRIVATE KEY-----
 MIHcAgEBBEIBb4gjfi9dZnm6jypDJ1/44jUYYPaAizXv7QQPG14aj9W1pwoULDuM
@@ -175,6 +263,8 @@ i5q05kD3gwd3T6OmOv0gCoVYvDhHwZLNuVOUHYVUjg==
 -----END PRIVATE KEY-----`
 )
 
+func nowTimeFunc() time.Time { return now }
+
 var (
 	now                = time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
 	user               = types.UserID("user")
@@ -182,28 +272,28 @@ var (
 	refreshSigningKey  = mustParseKey(refreshSigningKeyString)
 	resetSigningKey    = mustParseKey(resetSigningKeyString)
 	accessTokenFactory = TokenFactory{
-		Issuer:           "issuer",
-		Audience: "audience",
-		TokenValidity:    15 * time.Minute,
-		ParseKey:         &accessSigningKey.PublicKey,
-		SigningKey:       accessSigningKey,
-		SigningMethod:    jwt.SigningMethodES512,
+		Issuer:        "issuer",
+		Audience:      "audience",
+		TokenValidity: 15 * time.Minute,
+		ParseKey:      &accessSigningKey.PublicKey,
+		SigningKey:    accessSigningKey,
+		SigningMethod: jwt.SigningMethodES512,
 	}
 	refreshTokenFactory = TokenFactory{
-		Issuer:           "issuer",
-		Audience: "audience",
-		TokenValidity:    7 * 24 * time.Hour,
-		ParseKey:         &refreshSigningKey.PublicKey,
-		SigningKey:       refreshSigningKey,
-		SigningMethod:    jwt.SigningMethodES512,
+		Issuer:        "issuer",
+		Audience:      "audience",
+		TokenValidity: 7 * 24 * time.Hour,
+		ParseKey:      &refreshSigningKey.PublicKey,
+		SigningKey:    refreshSigningKey,
+		SigningMethod: jwt.SigningMethodES512,
 	}
 	resetTokenFactory = ResetTokenFactory{
-		Issuer:           "issuer",
-		Audience: "audience",
-		TokenValidity:    1 * time.Hour,
-		ParseKey:         &resetSigningKey.PublicKey,
-		SigningKey:       resetSigningKey,
-		SigningMethod:    jwt.SigningMethodES512,
+		Issuer:        "issuer",
+		Audience:      "audience",
+		TokenValidity: 1 * time.Hour,
+		ParseKey:      &resetSigningKey.PublicKey,
+		SigningKey:    resetSigningKey,
+		SigningMethod: jwt.SigningMethodES512,
 	}
 	accessToken  = must(accessTokenFactory.Create(now, string(user)))
 	refreshToken = must(refreshTokenFactory.Create(now, string(user)))
@@ -346,6 +436,26 @@ func (wanted *HTTPError) Compare(data []byte) error {
 			found.Error,
 		)
 	}
+	return nil
+}
+
+type AnyTokens struct{}
+
+func (AnyTokens) CompareData(data []byte) error {
+	var details TokenDetails
+
+	if err := json.Unmarshal(data, &details); err != nil {
+		return fmt.Errorf("unmarshaling `TokenDetails`: %w", err)
+	}
+
+	if details.AccessToken == "" {
+		return fmt.Errorf("missing access token")
+	}
+
+	if details.RefreshToken == "" {
+		return fmt.Errorf("missing refresh token")
+	}
+
 	return nil
 }
 
