@@ -214,10 +214,7 @@ func (ahs *AuthHTTPService) UpdatePasswordRoute() pz.Route {
 		Handler: func(r pz.Request) pz.Response {
 			var payload UpdatePassword
 			if err := r.JSON(&payload); err != nil {
-				return pz.BadRequest(nil, &struct {
-					Message, Error string
-					User           types.UserID
-				}{
+				return pz.BadRequest(nil, &logging{
 					Message: "updating password",
 					Error:   err.Error(),
 					User:    payload.User,
@@ -225,10 +222,7 @@ func (ahs *AuthHTTPService) UpdatePasswordRoute() pz.Route {
 			}
 
 			if err := ahs.UpdatePassword(&payload); err != nil {
-				l := struct {
-					Message, Error string
-					User           types.UserID
-				}{
+				l := logging{
 					Message: "updating password",
 					Error:   err.Error(),
 					User:    payload.User,
@@ -242,10 +236,7 @@ func (ahs *AuthHTTPService) UpdatePasswordRoute() pz.Route {
 				return pz.InternalServerError(&l)
 			}
 
-			return pz.Ok(pz.String("Password updated"), &struct {
-				Message string
-				User    types.UserID
-			}{
+			return pz.Ok(pz.String("Password updated"), &logging{
 				Message: "updated password",
 				User:    payload.User,
 			})
