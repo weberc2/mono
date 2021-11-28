@@ -294,10 +294,6 @@ func compareTokens(key *ecdsa.PublicKey, wanted, found string) error {
 	return nil
 }
 
-type refresh struct {
-	AccessToken string `json:"accessToken"`
-}
-
 func (wanted *refresh) CompareData(data []byte) error {
 	var found refresh
 	if err := json.Unmarshal(data, &found); err != nil {

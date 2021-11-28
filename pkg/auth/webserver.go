@@ -61,10 +61,7 @@ func (ws *WebServer) LoginHandler(r pz.Request) pz.Response {
 	if err != nil {
 		return pz.BadRequest(
 			pz.Stringf("parsing credentials: %v", err),
-			struct {
-				Message string `json:"message"`
-				Error   string `json:"error"`
-			}{
+			&logging{
 				Message: "parsing credentials from multi-part form",
 				Error:   err.Error(),
 			},
@@ -78,7 +75,7 @@ func (ws *WebServer) LoginHandler(r pz.Request) pz.Response {
 	if err != nil {
 		if errors.Is(err, ErrCredentials) {
 			return pz.Unauthorized(
-				pz.HTMLTemplate(ws.LoginForm, struct {
+				pz.HTMLTemplate(ws.LoginForm, &struct {
 					Location     html.HTML
 					FormAction   string
 					ErrorMessage string
@@ -86,21 +83,15 @@ func (ws *WebServer) LoginHandler(r pz.Request) pz.Response {
 					FormAction:   ws.BaseURL + "login",
 					ErrorMessage: "Invalid credentials",
 				}),
-				struct {
-					User    string `json:"user"`
-					Message string `json:"message"`
-				}{
-					User:    username,
+				&logging{
+					User:    types.UserID(username),
 					Message: "login failed",
+					Error:   err.Error(),
 				},
 			)
 		}
-		return pz.InternalServerError(struct {
-			User    string `json:"user"`
-			Message string `json:"message"`
-			Error   string `json:"error"`
-		}{
-			User:    username,
+		return pz.InternalServerError(&logging{
+			User:    types.UserID(username),
 			Message: "logging in",
 			Error:   err.Error(),
 		})

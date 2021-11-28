@@ -26,9 +26,7 @@ func (ahs *AuthHTTPService) LoginRoute() pz.Route {
 		Handler: func(r pz.Request) pz.Response {
 			var creds types.Credentials
 			if err := r.JSON(&creds); err != nil {
-				return pz.BadRequest(nil, struct {
-					Message, Error string
-				}{
+				return pz.BadRequest(nil, &logging{
 					Message: "failed to parse login JSON",
 					Error:   err.Error(),
 				})
@@ -39,21 +37,16 @@ func (ahs *AuthHTTPService) LoginRoute() pz.Route {
 				if errors.Is(err, ErrCredentials) {
 					return pz.Unauthorized(
 						pz.String("Invalid username or password"),
-						struct {
-							Message string
-							User    types.UserID
-						}{
+						&logging{
 							Message: "invalid username or password",
 							User:    creds.User,
+							Error:   err.Error(),
 						},
 					)
 				}
 
 				return pz.InternalServerError(
-					struct {
-						Message, Error string
-						User           types.UserID
-					}{
+					&logging{
 						Message: "logging in",
 						Error:   err.Error(),
 						User:    creds.User,
@@ -63,10 +56,7 @@ func (ahs *AuthHTTPService) LoginRoute() pz.Route {
 
 			return pz.Ok(
 				pz.JSON(tokens),
-				struct {
-					Message string
-					User    types.UserID
-				}{
+				&logging{
 					Message: "authentication succeeded",
 					User:    creds.User,
 				},
@@ -84,7 +74,7 @@ func (ahs *AuthHTTPService) RefreshRoute() pz.Route {
 				RefreshToken string `json:"refreshToken"`
 			}
 			if err := r.JSON(&payload); err != nil {
-				return pz.BadRequest(nil, struct{ Message, Error string }{
+				return pz.BadRequest(nil, &logging{
 					Message: "failed to parse refresh JSON",
 					Error:   err.Error(),
 				})
@@ -96,23 +86,19 @@ func (ahs *AuthHTTPService) RefreshRoute() pz.Route {
 				if errors.As(err, &verr) {
 					return pz.Unauthorized(
 						pz.JSON(ErrInvalidRefreshToken),
-						struct {
-							Message, Error string
-						}{
+						&logging{
 							Message: "invalid refresh token",
 							Error:   err.Error(),
 						},
 					)
 				}
-				return pz.InternalServerError(struct{ Message, Error string }{
+				return pz.InternalServerError(&logging{
 					Message: "refreshing access token",
 					Error:   err.Error(),
 				})
 			}
 
-			return pz.Ok(pz.JSON(struct {
-				AccessToken string `json:"accessToken"`
-			}{accessToken}))
+			return pz.Ok(pz.JSON(&refresh{accessToken}))
 		},
 	}
 }
@@ -228,7 +214,7 @@ func (ahs *AuthHTTPService) UpdatePasswordRoute() pz.Route {
 		Handler: func(r pz.Request) pz.Response {
 			var payload UpdatePassword
 			if err := r.JSON(&payload); err != nil {
-				return pz.BadRequest(nil, struct {
+				return pz.BadRequest(nil, &struct {
 					Message, Error string
 					User           types.UserID
 				}{
@@ -250,13 +236,13 @@ func (ahs *AuthHTTPService) UpdatePasswordRoute() pz.Route {
 				if errors.Is(err, ErrInvalidResetToken) {
 					return pz.NotFound(
 						pz.String(ErrInvalidResetToken.Error()),
-						l,
+						&l,
 					)
 				}
-				return pz.InternalServerError(l)
+				return pz.InternalServerError(&l)
 			}
 
-			return pz.Ok(pz.String("Password updated"), struct {
+			return pz.Ok(pz.String("Password updated"), &struct {
 				Message string
 				User    types.UserID
 			}{
@@ -272,13 +258,9 @@ func (ahs *AuthHTTPService) ExchangeRoute() pz.Route {
 		Path:   "/api/exchange",
 		Method: "POST",
 		Handler: func(r pz.Request) pz.Response {
-			type logging struct {
-				Message string `json:"message"`
-				Error   string `json:"error,omitempty"`
-			}
 			var code Code
 			if err := r.JSON(&code); err != nil {
-				return pz.BadRequest(nil, logging{
+				return pz.BadRequest(nil, &logging{
 					Message: "parsing auth code token payload",
 					Error:   err.Error(),
 				})
@@ -291,7 +273,7 @@ func (ahs *AuthHTTPService) ExchangeRoute() pz.Route {
 
 			return pz.Ok(
 				pz.JSON(tokens),
-				logging{Message: "auth code valid; returning tokens"},
+				&logging{Message: "auth code valid; returning tokens"},
 			)
 		},
 	}
@@ -306,4 +288,14 @@ func (ahs *AuthHTTPService) Routes() []pz.Route {
 		ahs.UpdatePasswordRoute(),
 		ahs.ExchangeRoute(),
 	}
+}
+
+type logging struct {
+	Message string       `json:"message"`
+	User    types.UserID `json:"user,omitempty"`
+	Error   string       `json:"error,omitempty"`
+}
+
+type refresh struct {
+	AccessToken string `json:"accessToken"`
 }
