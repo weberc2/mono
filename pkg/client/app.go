@@ -21,6 +21,34 @@ type App struct {
 	Key             string
 }
 
+func (app *App) DecryptAccessToken(r pz.Request) (string, error) {
+	return app.DecryptCookie(r, "Access-Token")
+}
+
+func (app *App) DecryptRefreshToken(r pz.Request) (string, error) {
+	return app.DecryptCookie(r, "Refresh-Token")
+}
+
+func (app *App) DecryptCookie(r pz.Request, cookie string) (string, error) {
+	c, err := r.Cookie(cookie)
+	if err != nil {
+		return "", fmt.Errorf("finding cookie `%s`: %w", cookie, err)
+	}
+	plaintext, err := app.decryptCookie(c)
+	if err != nil {
+		return "", fmt.Errorf("decrypting `%s` cookie: %w", cookie, err)
+	}
+	return plaintext, nil
+}
+
+func (app *App) decryptCookie(cookie *http.Cookie) (string, error) {
+	plaintext, err := decrypt(cookie.Value, app.Key)
+	if err != nil {
+		return "", fmt.Errorf("decrypting cookie: %w", err)
+	}
+	return plaintext, nil
+}
+
 func (app *App) AuthCodeCallbackRoute(path string) pz.Route {
 	return pz.Route{
 		Path:   path,
@@ -124,4 +152,22 @@ func encrypt(input, key string) (string, error) {
 		plaintext,
 		nil,
 	)), nil
+}
+
+func decrypt(input, key string) (string, error) {
+	encrypted := []byte(input)
+	k := sha256.Sum256([]byte(key))
+	block, err := aes.NewCipher(k[:])
+	if err != nil {
+		return "", err
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+
+	nsz := gcm.NonceSize()
+	data, err := gcm.Open(nil, encrypted[:nsz], encrypted[nsz:], nil)
+	return string(data), err
 }
