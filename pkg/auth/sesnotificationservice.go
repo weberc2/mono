@@ -1,4 +1,4 @@
-package main
+package auth
 
 import (
 	"bytes"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ses"
+	"github.com/weberc2/auth/pkg/types"
 )
 
 type NotificationSettings struct {
@@ -45,10 +46,10 @@ type SESNotificationService struct {
 	ForgotPasswordSettings NotificationSettings
 }
 
-func (sns *SESNotificationService) Notify(token *Notification) error {
+func (sns *SESNotificationService) Notify(token *types.Notification) error {
 	var htmlBuf, textBuf bytes.Buffer
 	payload := struct {
-		User     UserID
+		User     types.UserID
 		Email    string
 		TokenURL string
 	}{
@@ -57,7 +58,7 @@ func (sns *SESNotificationService) Notify(token *Notification) error {
 		TokenURL: sns.TokenURL(token.Token),
 	}
 	var settings *NotificationSettings
-	if token.Type == NotificationTypeRegister {
+	if token.Type == types.NotificationTypeRegister {
 		settings = &sns.RegistrationSettings
 	} else {
 		settings = &sns.ForgotPasswordSettings
