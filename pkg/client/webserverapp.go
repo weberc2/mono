@@ -73,11 +73,13 @@ func (app *WebServerApp) AuthCodeCallbackRoute(path string) pz.Route {
 		Handler: func(r pz.Request) pz.Response {
 			query := r.URL.Query()
 			context := struct {
+				Message            string `json:"message,omitempty"`
 				RedirectSpecified  string `json:"redirectSpecified"`
 				RedirectActual     string `json:"redirectActual"`
 				RedirectParseError string `json:"redirectParseError,omitempty"`
 				CodeParseError     string `json:"codeParseError,omitempty"`
 				EncryptionError    string `json:"encryptionError,omitempty"`
+				BaseURLParseError  string `json:"baseURLParseError,omitempty"`
 			}{
 				RedirectSpecified: join(app.BaseURL, query.Get("redirect")),
 			}
@@ -111,9 +113,22 @@ func (app *WebServerApp) AuthCodeCallbackRoute(path string) pz.Route {
 				return pz.InternalServerError(&context)
 			}
 
+			u, err := url.Parse(app.BaseURL)
+			if err != nil {
+				context.BaseURLParseError = err.Error()
+				return pz.InternalServerError(&context)
+			}
+
+			portStart := strings.Index(u.Host, ":")
+			if portStart < 0 {
+				portStart = len(u.Host)
+			}
+
+			context.Message = "successfully exchanged auth code"
 			return pz.SeeOther(context.RedirectActual, &context).WithCookies(
 				&http.Cookie{
 					Name:     "Access-Token",
+					Domain:   u.Host[:portStart],
 					Value:    tokens.AccessToken,
 					Secure:   true,
 					HttpOnly: true,
@@ -121,6 +136,7 @@ func (app *WebServerApp) AuthCodeCallbackRoute(path string) pz.Route {
 				},
 				&http.Cookie{
 					Name:     "Refresh-Token",
+					Domain:   u.Host[:portStart],
 					Value:    tokens.RefreshToken,
 					Secure:   true,
 					HttpOnly: true,

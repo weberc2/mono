@@ -86,6 +86,9 @@ func (c *Config) Validate() error {
 		if c.Audience == "" {
 			return "audience", "AUDIENCE"
 		}
+		if c.CodeSigningKey == (PrivateKey{}) {
+			return "codeSigningKey", "CODE_SIGNING_KEY"
+		}
 		if c.AccessSigningKey == (PrivateKey{}) {
 			return "accessSigningKey", "ACCESS_SIGNING_KEY"
 		}
