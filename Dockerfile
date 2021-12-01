@@ -8,11 +8,11 @@ COPY go.* ./
 
 RUN go mod download
 
-# the `cmd/buildhack` package references a bunch of dependencies that we want
+# the `cmd/precompile` package references a bunch of dependencies that we want
 # to precompile for caching purposes so the final `go build` only builds the
 # packages in this repo.
-COPY cmd/buildhack/ cmd/buildhack/
-RUN CGO_ENABLED=0 go build -v -ldflags '-s' -o /tmp/buildhack ./cmd/buildhack/
+COPY cmd/precompile/ cmd/precompile/
+RUN CGO_ENABLED=0 go build -v -ldflags '-s' -o /tmp/precompile ./cmd/precompile/
 
 COPY *.go ./
 
