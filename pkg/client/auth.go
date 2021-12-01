@@ -72,7 +72,7 @@ func resultOK(message string, user string) *result {
 }
 
 type AuthTypeWebServer struct {
-	App WebServerApp
+	WebServerApp
 }
 
 func (atws *AuthTypeWebServer) validate(
@@ -89,12 +89,12 @@ func (atws *AuthTypeWebServer) validate(
 		return resultErr("missing `Refresh-Token` cookie", err)
 	}
 
-	accessToken, err := atws.App.decryptCookie(accessCookie)
+	accessToken, err := atws.decryptCookie(accessCookie)
 	if err != nil {
 		return resultErr("decrypting `Access-Token` cookie", err)
 	}
 
-	refreshToken, err := atws.App.decryptCookie(refreshCookie)
+	refreshToken, err := atws.decryptCookie(refreshCookie)
 	if err != nil {
 		return resultErr("decrypting `Refresh-Token` cookie", err)
 	}
@@ -104,7 +104,7 @@ func (atws *AuthTypeWebServer) validate(
 		if err, ok := err.(*jwt.ValidationError); ok {
 			masked := err.Errors & jwt.ValidationErrorExpired
 			if masked == jwt.ValidationErrorExpired {
-				tokens, err := atws.App.Client.Refresh(refreshToken)
+				tokens, err := atws.Client.Refresh(refreshToken)
 				if err != nil {
 					return resultErr("refreshing access token", err)
 				}
@@ -118,7 +118,7 @@ func (atws *AuthTypeWebServer) validate(
 					return resultErr("parsing `sub` (user) claim", err)
 				}
 
-				encrypted, err := atws.App.Encrypt(tokens.AccessToken)
+				encrypted, err := atws.Encrypt(tokens.AccessToken)
 				if err != nil {
 					return resultErr("encrypting access token", err)
 				}

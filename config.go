@@ -17,7 +17,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/ses"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/weberc2/auth/pkg/auth"
 	pz "github.com/weberc2/httpeasy"
@@ -34,6 +33,7 @@ type Config struct {
 	HostName                string     `envconfig:"AUTH_HOST_NAME" yaml:"hostName"`
 	Issuer                  string     `envconfig:"AUTH_ISSUER" yaml:"issuer"`
 	Audience                string     `envconfig:"AUTH_AUDIENCE" yaml:"audience"`
+	CodeSigningKey          PrivateKey `envconfig:"AUTH_CODE_SIGNING_KEY" yaml:"codeSigningKey"`
 	AccessSigningKey        PrivateKey `envconfig:"AUTH_ACCESS_SIGNING_KEY" yaml:"accessSigningKey"`
 	RefreshSigningKey       PrivateKey `envconfig:"AUTH_REFRESH_SIGNING_KEY" yaml:"refreshSigningKey"`
 	ResetSigningKey         PrivateKey `envconfig:"AUTH_RESET_SIGNING_KEY" yaml:"resetSigningKey"`
@@ -130,12 +130,17 @@ func (c *Config) Run() error {
 				Client: dynamodb.New(sess),
 				Table:  "Users",
 			}},
+			Codes: auth.TokenFactory{
+				Issuer:        c.Issuer,
+				Audience:      c.Audience,
+				TokenValidity: time.Minute,
+				SigningKey:    c.CodeSigningKey.Std(),
+			},
 			ResetTokens: auth.ResetTokenFactory{
-				Issuer:           c.Issuer,
-				Audience: c.Audience,
-				TokenValidity:    1 * time.Hour,
-				SigningKey:       c.ResetSigningKey.Std(),
-				SigningMethod:    jwt.SigningMethodES512,
+				Issuer:        c.Issuer,
+				Audience:      c.Audience,
+				TokenValidity: 1 * time.Hour,
+				SigningKey:    c.ResetSigningKey.Std(),
 			},
 			Notifications: &auth.SESNotificationService{
 				Client: ses.New(sess),
@@ -148,18 +153,16 @@ func (c *Config) Run() error {
 			},
 			TokenDetails: auth.TokenDetailsFactory{
 				AccessTokens: auth.TokenFactory{
-					Issuer:           c.Issuer,
-					Audience: c.Audience,
-					TokenValidity:    15 * time.Minute,
-					SigningKey:       c.AccessSigningKey.Std(),
-					SigningMethod:    jwt.SigningMethodES512,
+					Issuer:        c.Issuer,
+					Audience:      c.Audience,
+					TokenValidity: 15 * time.Minute,
+					SigningKey:    c.AccessSigningKey.Std(),
 				},
 				RefreshTokens: auth.TokenFactory{
-					Issuer:           c.Issuer,
-					Audience: c.Audience,
-					TokenValidity:    7 * 24 * time.Hour,
-					SigningKey:       c.RefreshSigningKey.Std(),
-					SigningMethod:    jwt.SigningMethodES512,
+					Issuer:        c.Issuer,
+					Audience:      c.Audience,
+					TokenValidity: 7 * 24 * time.Hour,
+					SigningKey:    c.RefreshSigningKey.Std(),
 				},
 				TimeFunc: time.Now,
 			},

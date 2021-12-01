@@ -41,6 +41,8 @@ type WebServer struct {
 }
 
 func (ws *WebServer) LoginFormPage(r pz.Request) pz.Response {
+	query := r.URL.Query()
+
 	// create a struct for templating and logging
 	x := struct {
 		// This is intended to be a user-facing message shown in the templated
@@ -49,7 +51,8 @@ func (ws *WebServer) LoginFormPage(r pz.Request) pz.Response {
 		FormAction   string `json:"formAction"`
 	}{
 		FormAction: ws.BaseURL + "login?" + url.Values{
-			"location": []string{r.URL.Query().Get("location")},
+			"callback": []string{query.Get("callback")},
+			"redirect": []string{query.Get("redirect")},
 		}.Encode(),
 	}
 
@@ -97,44 +100,62 @@ func (ws *WebServer) LoginHandler(r pz.Request) pz.Response {
 		})
 	}
 
-	type parameter struct {
-		Value           string   `json:"value"`
-		ParseError      string   `json:"parseError,omitempty"`
-		ValidationError string   `json:"validationError,omitempty"`
-		RedirectDomain  string   `json:"redirectDomain"`
-		Parsed          *url.URL `json:"parsed,omitempty"`
-	}
-
-	location := r.URL.Query().Get("location")
-	logging := struct {
-		Message                      string    `json:"message,omitempty"`
-		LocationQueryStringParameter parameter `json:"locationQueryStringParameter"`
-		Location                     string    `json:"location,omitempty"`
+	query := r.URL.Query()
+	context := struct {
+		Message  string `json:"message,omitempty"`
+		Target   string `json:"target,omitempty"`
+		Redirect redirectResult
+		Callback redirectResult
 	}{
-		LocationQueryStringParameter: parameter{
-			Value:          location,
-			RedirectDomain: ws.RedirectDomain,
+		Callback: redirectResult{
+			Specified: query.Get("callback"),
+			Default:   ws.DefaultRedirectLocation,
+			Domain:    ws.RedirectDomain,
 		},
-		Location: location,
+		Redirect: redirectResult{
+			Specified: query.Get("redirect"),
+			Default:   ws.DefaultRedirectLocation,
+			Domain:    ws.RedirectDomain,
+		},
 	}
 
-	if location != "" {
-		u, err := url.Parse(location)
+	validateRedirect(&context.Callback)
+	if context.Callback.ParseError != "" {
+		context.Message = "`callback` parameter contains invalid URL"
+		return pz.BadRequest(nil, &context)
+	}
+	validateRedirect(&context.Redirect)
+	if context.Redirect.ParseError != "" {
+		context.Message = "`redirect` parameter contains invalid URL"
+		return pz.BadRequest(nil, &context)
+	}
+
+	context.Target = context.Callback.Actual + "?" + url.Values{
+		"code":     []string{code},
+		"redirect": []string{context.Redirect.Actual},
+		"callback": []string{context.Callback.Actual},
+	}.Encode()
+
+	// Previously we used 307 Temporary Redirect, but since we're handling a
+	// POST request, the redirect also issued a POST request instead of a GET
+	// request. It seems like 303 See Other does what we want.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections#temporary_redirections
+	return pz.SeeOther(context.Target, &context)
+}
+
+func validateRedirect(context *redirectResult) {
+	if context.Specified != "" {
+		u, err := url.Parse(context.Specified)
 		if err != nil {
-			logging.LocationQueryStringParameter.ParseError = err.Error()
-			logging.Message = "`location` query string parameter is not a " +
-				"valid URL"
-			return pz.BadRequest(
-				pz.String("Invalid redirect value"),
-				&logging,
-			)
+			context.ParseError = err.Error()
+			return
 		}
-		logging.LocationQueryStringParameter.Parsed = u
+		context.Parsed = u
 
 		// Make sure the `Host` is either an exact match for the
 		// `RedirectDomain` or a valid subdomain. If it's not, then redirect to
 		// the default redirect domain.
-		if u.Host != ws.RedirectDomain && !strings.HasSuffix(
+		if u.Host != context.Domain && !strings.HasSuffix(
 			u.Host,
 			// Note that we have to prepend a `.` onto the `RedirectDomain`
 			// before checking if it is a suffix match to be sure we're only
@@ -142,32 +163,31 @@ func (ws *WebServer) LoginHandler(r pz.Request) pz.Response {
 			// `google.com`, an attacker could register `evilgoogle.com` which
 			// would match if we didn't prepend the `.` (causing us to send the
 			// attacker our tokens).
-			fmt.Sprintf(".%s", ws.RedirectDomain),
+			fmt.Sprintf(".%s", context.Domain),
 		) {
-			logging.LocationQueryStringParameter.ValidationError = "" +
+			context.ValidationError = "" +
 				"`location` query string parameter host is neither the " +
 				"redirect domain itself nor a subdomain thereof. Falling " +
 				"back to default URL."
-			logging.Location = ws.DefaultRedirectLocation
-			location = ws.DefaultRedirectLocation
+			context.Actual = context.Default
 		}
 	} else {
-		logging.LocationQueryStringParameter.ValidationError = "`location` " +
-			"query string parameter is empty or unset. Falling back to " +
+		context.ValidationError = "`location` query string " +
+			"parameter is empty or unset. Falling back to " +
 			"default URL."
-		logging.Location = ws.DefaultRedirectLocation
-		location = ws.DefaultRedirectLocation
+		context.Actual = context.Default
 	}
+	context.Actual = context.Specified
+}
 
-	qstr := "?" + url.Values{"code": []string{code}}.Encode()
-	logging.Location += qstr
-	location += qstr
-
-	// Previously we used 307 Temporary Redirect, but since we're handling a
-	// POST request, the redirect also issued a POST request instead of a GET
-	// request. It seems like 303 See Other does what we want.
-	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections#temporary_redirections
-	return pz.SeeOther(location, &logging)
+type redirectResult struct {
+	Domain          string   `json:"domain"`
+	Specified       string   `json:"specified"`
+	Default         string   `json:"default"`
+	Parsed          *url.URL `json:"parsed,omitempty"`
+	Actual          string   `json:"actual,omitempty"`
+	ParseError      string   `json:"parseError,omitempty"`
+	ValidationError string   `json:"validationError,omitempty"`
 }
 
 func parseMultiPartForm(r pz.Request) (string, string, error) {

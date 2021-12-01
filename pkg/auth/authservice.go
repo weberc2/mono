@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"log"
@@ -27,14 +28,12 @@ type TokenFactory struct {
 	Issuer        string
 	Audience      string
 	TokenValidity time.Duration
-	ParseKey      interface{}
-	SigningKey    interface{}
-	SigningMethod jwt.SigningMethod
+	SigningKey    *ecdsa.PrivateKey
 }
 
 func (tf *TokenFactory) Create(now time.Time, subject string) (string, error) {
 	token := jwt.NewWithClaims(
-		tf.SigningMethod,
+		jwt.SigningMethodES512,
 		jwt.StandardClaims{
 			Subject:   subject,
 			Audience:  tf.Audience,
@@ -88,7 +87,7 @@ func (as *AuthService) Refresh(refreshToken string) (string, error) {
 		refreshToken,
 		&claims,
 		func(*jwt.Token) (interface{}, error) {
-			return as.TokenDetails.RefreshTokens.ParseKey, nil
+			return &as.TokenDetails.RefreshTokens.SigningKey.PublicKey, nil
 		},
 	); err != nil {
 		return "", fmt.Errorf("parsing refresh token: %w", err)
@@ -193,7 +192,7 @@ func (as *AuthService) Exchange(code string) (*TokenDetails, error) {
 		code,
 		&claims,
 		func(*jwt.Token) (interface{}, error) {
-			return as.Codes.ParseKey, nil
+			return &as.Codes.SigningKey.PublicKey, nil
 		},
 	); err != nil {
 		log.Printf("jwt.ParseWithClaims(): %v", err)

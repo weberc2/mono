@@ -190,6 +190,13 @@ bi3AWn/XJ8xxVn8cDuvnqXEWec+/oiFkJkvlqe0YTA/mz/lmoIgQget6nMVAXUa0
 C0Gwvg5hxJ6EF7+ZWwFLFgcyCWW2tezZyNqi7BBW6dAlRGOun6VrldPAJFW96cl8
 i5q05kD3gwd3T6OmOv0gCoVYvDhHwZLNuVOUHYVUjg==
 -----END PRIVATE KEY-----`
+	codesSigningKeyString = `-----BEGIN PRIVATE KEY-----
+MIHcAgEBBEIAPCYJluF6sic9MEGZAl+h3D+heZpBL4+KdBeofuVkjVjA+FYghsPI
+7sOsI8t005xekngXMtL6rUlUvDx7wU7WU8+gBwYFK4EEACOhgYkDgYYABAB5BZdD
+RrGMdKPeQ7qVOF0Vx8da49z0a49rM18+9lbStPXaLiGmJGNajBrcUSydL6bn52Fw
+2fwSJOoPX2blD/ijlAFaKrER8VYzy98B7heWO5RHACE2ZW+DYuBBAMdGXpO+HfJu
+zEBS0EsiFH2M/MoLWgvkBmeC+TdCsr761bHQYYVDMw==
+-----END PRIVATE KEY-----`
 )
 
 func nowTimeFunc() time.Time { return now }
@@ -200,38 +207,30 @@ var (
 	accessSigningKey   = mustParseKey(accessSigningKeyString)
 	refreshSigningKey  = mustParseKey(refreshSigningKeyString)
 	resetSigningKey    = mustParseKey(resetSigningKeyString)
-	codesSigningKey    = []byte("codes-signing-key")
+	codesSigningKey    = mustParseKey(codesSigningKeyString)
 	accessTokenFactory = TokenFactory{
 		Issuer:        "issuer",
 		Audience:      "audience",
 		TokenValidity: 15 * time.Minute,
-		ParseKey:      &accessSigningKey.PublicKey,
 		SigningKey:    accessSigningKey,
-		SigningMethod: jwt.SigningMethodES512,
 	}
 	refreshTokenFactory = TokenFactory{
 		Issuer:        "issuer",
 		Audience:      "audience",
 		TokenValidity: 7 * 24 * time.Hour,
-		ParseKey:      &refreshSigningKey.PublicKey,
 		SigningKey:    refreshSigningKey,
-		SigningMethod: jwt.SigningMethodES512,
 	}
 	resetTokenFactory = ResetTokenFactory{
 		Issuer:        "issuer",
 		Audience:      "audience",
 		TokenValidity: 1 * time.Hour,
-		ParseKey:      &resetSigningKey.PublicKey,
 		SigningKey:    resetSigningKey,
-		SigningMethod: jwt.SigningMethodES512,
 	}
 	codesTokenFactory = TokenFactory{
 		Issuer:        "issuer",
 		Audience:      "audience",
 		TokenValidity: time.Minute,
-		ParseKey:      codesSigningKey,
 		SigningKey:    codesSigningKey,
-		SigningMethod: jwt.SigningMethodHS512,
 	}
 	accessToken  = must(accessTokenFactory.Create(now, string(user)))
 	refreshToken = must(refreshTokenFactory.Create(now, string(user)))

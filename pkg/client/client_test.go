@@ -26,7 +26,13 @@ func testClient(srv *httptest.Server) Client {
 }
 
 func testAuthService(now time.Time) (auth.AuthService, error) {
-	authCodeKey := []byte("auth-code-key")
+	authCodeKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	if err != nil {
+		return auth.AuthService{}, fmt.Errorf(
+			"unexpected error generating auth code key: %w",
+			err,
+		)
+	}
 	accessKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
 		return auth.AuthService{}, fmt.Errorf(
@@ -46,9 +52,7 @@ func testAuthService(now time.Time) (auth.AuthService, error) {
 		Issuer:        "issuer",
 		Audience:      "audience",
 		TokenValidity: time.Minute,
-		ParseKey:      authCodeKey,
 		SigningKey:    authCodeKey,
-		SigningMethod: jwt.SigningMethodHS512,
 	}
 
 	return auth.AuthService{
@@ -62,17 +66,13 @@ func testAuthService(now time.Time) (auth.AuthService, error) {
 				Issuer:        "issuer",
 				Audience:      "audience",
 				TokenValidity: 15 * time.Minute,
-				ParseKey:      &accessKey.PublicKey,
 				SigningKey:    accessKey,
-				SigningMethod: jwt.SigningMethodES512,
 			},
 			RefreshTokens: auth.TokenFactory{
 				Issuer:        "issuer",
 				Audience:      "audience",
 				TokenValidity: 15 * time.Minute,
-				ParseKey:      &refreshKey.PublicKey,
 				SigningKey:    refreshKey,
-				SigningMethod: jwt.SigningMethodES512,
 			},
 			TimeFunc: func() time.Time { return now },
 		},

@@ -31,7 +31,6 @@ func TestAuthCodeCallback(t *testing.T) {
 
 	app := WebServerApp{
 		Client:          testClient(authSrv),
-		BaseURL:         authSrv.URL,
 		DefaultRedirect: "default",
 		Key:             "cookie-encryption-key",
 	}
@@ -41,23 +40,28 @@ func TestAuthCodeCallback(t *testing.T) {
 		app.AuthCodeCallbackRoute("/api/auth/code"),
 	))
 
+	app.BaseURL = appSrv.URL
+
 	appClient := appSrv.Client()
+	appClient.CheckRedirect = func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
 
 	code, err := authService.Codes.Create(now, "adam")
 	if err != nil {
 		t.Fatalf("unexpected error creating auth code: %v", err)
 	}
 
-	rsp, err := appClient.Get(
-		fmt.Sprintf(
-			"%s/api/auth/code?%s",
-			appSrv.URL,
-			url.Values{
-				"code":     []string{code},
-				"redirect": []string{"intended"},
-			}.Encode(),
-		),
+	url := fmt.Sprintf(
+		"%s/api/auth/code?%s",
+		appSrv.URL,
+		url.Values{
+			"code":     []string{code},
+			"redirect": []string{"intended"},
+		}.Encode(),
 	)
+	t.Logf("GET %s", url)
+	rsp, err := appClient.Get(url)
 	if err != nil {
 		t.Fatalf("unexpected error communicating with app server: %v", err)
 	}
@@ -70,7 +74,7 @@ func TestAuthCodeCallback(t *testing.T) {
 		)
 	}
 
-	wanted := "https://app.example.org/intended"
+	wanted := appSrv.URL + "/intended"
 	if rsp.Header.Get("Location") != wanted {
 		t.Fatalf(
 			"Response.Header[\"Location\"]: wanted `%s`; found `%s`",

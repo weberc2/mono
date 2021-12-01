@@ -22,7 +22,7 @@ func (rtf *ResetTokenFactory) Create(
 	email string,
 ) (string, error) {
 	token := jwt.NewWithClaims(
-		rtf.SigningMethod,
+		jwt.SigningMethodES512,
 		Claims{
 			User:  user,
 			Email: email,
@@ -44,7 +44,9 @@ func (rtf *ResetTokenFactory) Claims(token string) (*Claims, error) {
 	if _, err := jwt.ParseWithClaims(
 		token,
 		&claims,
-		func(*jwt.Token) (interface{}, error) { return rtf.ParseKey, nil },
+		func(*jwt.Token) (interface{}, error) {
+			return &rtf.SigningKey.PublicKey, nil
+		},
 	); err != nil {
 		return nil, fmt.Errorf("parsing claims from token: %w", err)
 	}
