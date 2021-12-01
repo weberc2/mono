@@ -127,7 +127,10 @@ func (app *WebServerApp) AuthCodeCallbackRoute(path string) pz.Route {
 			context.Message = "successfully exchanged auth code"
 			return pz.SeeOther(context.RedirectActual, &context).WithCookies(
 				&http.Cookie{
-					Name:     "Access-Token",
+					Name: "Access-Token",
+					// without this it will use the route's path (specifically
+					// the dirname of the route's path)
+					Path:     "/",
 					Domain:   u.Host[:portStart],
 					Value:    tokens.AccessToken,
 					Secure:   true,
@@ -135,7 +138,10 @@ func (app *WebServerApp) AuthCodeCallbackRoute(path string) pz.Route {
 					SameSite: http.SameSiteStrictMode,
 				},
 				&http.Cookie{
-					Name:     "Refresh-Token",
+					Name: "Refresh-Token",
+					// without this it will use the route's path (specifically
+					// the dirname of the route's path)
+					Path:     "/",
 					Domain:   u.Host[:portStart],
 					Value:    tokens.RefreshToken,
 					Secure:   true,
