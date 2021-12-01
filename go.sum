@@ -26,6 +26,8 @@ github.com/stretchr/testify v1.1.4 h1:ToftOQTytwshuOSj6bDSolVUa3GINfJP/fg3OkkOzQ
 github.com/stretchr/testify v1.1.4/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/weberc2/httpeasy v0.0.21 h1:bt/b5nisxXgts0bonV/1uZjZWj1dFKsWQTj2DgFGgW0=
 github.com/weberc2/httpeasy v0.0.21/go.mod h1:vjZmTmHJEPKRm2tITDQyIneHOAJvyk3KhFox6MvT/2Y=
+github.com/weberc2/httpeasy v0.0.22 h1:Bj13gcKi9WnsgCFsKp4MSj4w9duUIco+gecrAB38GEU=
+github.com/weberc2/httpeasy v0.0.22/go.mod h1:vjZmTmHJEPKRm2tITDQyIneHOAJvyk3KhFox6MvT/2Y=
 golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 h1:7I4JAnoQBe7ZtJcBaYHi5UtiO8tQHbUSXxL+pnGRANg=
 golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
 golang.org/x/net v0.0.0-20210226172049-e18ecbb05110/go.mod h1:m0MpNAwzfU5UDzcl9v0D8zg8gWTRqZa9RBIspLL5mdg=
