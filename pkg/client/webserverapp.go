@@ -188,7 +188,10 @@ func encrypt(input, key string) (string, error) {
 }
 
 func decrypt(input, key string) (string, error) {
-	encrypted := []byte(input)
+	encrypted, err := base64.RawURLEncoding.DecodeString(input)
+	if err != nil {
+		return "", fmt.Errorf("base64-decoding: %w", err)
+	}
 	k := sha256.Sum256([]byte(key))
 	block, err := aes.NewCipher(k[:])
 	if err != nil {
