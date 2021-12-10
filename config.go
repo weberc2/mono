@@ -255,6 +255,9 @@ func (pk *PrivateKey) Decode(value string) error {
 
 	for {
 		block, rest := pem.Decode(data)
+		if block == nil {
+			return fmt.Errorf("input isn't PEM data")
+		}
 		// Ideally we would just match on PRIVATE KEY, but Terraform's
 		// tls_private_key[0] module uses "EC PRIVATE KEY" 🤦
 		//

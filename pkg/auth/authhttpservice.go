@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/weberc2/auth/pkg/types"
@@ -47,9 +48,10 @@ func (ahs *AuthHTTPService) LoginRoute() pz.Route {
 
 				return pz.InternalServerError(
 					&logging{
-						Message: "logging in",
-						Error:   err.Error(),
-						User:    creds.User,
+						Message:   "logging in",
+						Error:     err.Error(),
+						ErrorType: fmt.Sprintf("%T", err),
+						User:      creds.User,
 					},
 				)
 			}
@@ -93,8 +95,9 @@ func (ahs *AuthHTTPService) RefreshRoute() pz.Route {
 					)
 				}
 				return pz.InternalServerError(&logging{
-					Message: "refreshing access token",
-					Error:   err.Error(),
+					Message:   "refreshing access token",
+					ErrorType: fmt.Sprintf("%T", err),
+					Error:     err.Error(),
 				})
 			}
 
@@ -129,18 +132,17 @@ func (ahs *AuthHTTPService) ForgotPasswordRoute() pz.Route {
 					})
 				}
 
-				return pz.InternalServerError(struct {
-					Message, User, Error string
-				}{
-					Message: "triggering forget-password notification",
-					User:    string(payload.User),
-					Error:   err.Error(),
+				return pz.InternalServerError(&logging{
+					Message:   "triggering forget-password notification",
+					User:      payload.User,
+					ErrorType: fmt.Sprintf("%T", err),
+					Error:     err.Error(),
 				})
 			}
 
-			return pz.Ok(nil, struct{ Message, User string }{
+			return pz.Ok(nil, &logging{
 				Message: "password reset notification sent",
-				User:    string(payload.User),
+				User:    payload.User,
 			})
 		},
 	}
@@ -186,13 +188,11 @@ func (ahs *AuthHTTPService) RegisterRoute() pz.Route {
 						},
 					)
 				}
-				return pz.InternalServerError(struct {
-					Message, Error string
-					User           types.UserID
-				}{
-					Message: "registering user",
-					Error:   err.Error(),
-					User:    payload.User,
+				return pz.InternalServerError(&logging{
+					Message:   "registering user",
+					ErrorType: fmt.Sprintf("%T", err),
+					Error:     err.Error(),
+					User:      payload.User,
 				})
 			}
 
@@ -223,9 +223,10 @@ func (ahs *AuthHTTPService) UpdatePasswordRoute() pz.Route {
 
 			if err := ahs.UpdatePassword(&payload); err != nil {
 				l := logging{
-					Message: "updating password",
-					Error:   err.Error(),
-					User:    payload.User,
+					Message:   "updating password",
+					Error:     err.Error(),
+					ErrorType: fmt.Sprintf("%T", err),
+					User:      payload.User,
 				}
 				if errors.Is(err, ErrInvalidResetToken) {
 					return pz.NotFound(
@@ -282,9 +283,10 @@ func (ahs *AuthHTTPService) Routes() []pz.Route {
 }
 
 type logging struct {
-	Message string       `json:"message"`
-	User    types.UserID `json:"user,omitempty"`
-	Error   string       `json:"error,omitempty"`
+	Message   string       `json:"message"`
+	User      types.UserID `json:"user,omitempty"`
+	ErrorType string       `json:"errorType,omitempty"`
+	Error     string       `json:"error,omitempty"`
 }
 
 type refresh struct {

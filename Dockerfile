@@ -12,7 +12,7 @@ COPY *.go ./
 
 COPY ./pkg ./pkg
 
-RUN CGO_ENABLED=0 go build -ldflags '-s' -o /bin/auth
+RUN CGO_ENABLED=0 go build -ldflags '-s' -v -o /bin/auth
 
 FROM scratch
 

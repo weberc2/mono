@@ -94,9 +94,10 @@ func (ws *WebServer) LoginHandler(r pz.Request) pz.Response {
 			)
 		}
 		return pz.InternalServerError(&logging{
-			User:    types.UserID(username),
-			Message: "logging in",
-			Error:   err.Error(),
+			User:      types.UserID(username),
+			Message:   "logging in",
+			ErrorType: fmt.Sprintf("%T", err),
+			Error:     err.Error(),
 		})
 	}
 
