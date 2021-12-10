@@ -94,7 +94,7 @@ func (wanted *Comment) CompareData(data []byte) error {
 }
 
 func CompareComments(wanted, found []*Comment) error {
-	if len(wanted) < len(found) {
+	if len(wanted) != len(found) {
 		return fmt.Errorf(
 			"stored comments: len `%d`; found len `%d`",
 			len(wanted),

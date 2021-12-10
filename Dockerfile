@@ -18,7 +18,9 @@ COPY *.go ./
 
 COPY ./pkg/ ./pkg/
 
-RUN CGO_ENABLED=0 go build -v -ldflags '-s' -o /bin/comments
+COPY ./cmd/comments/ ./cmd/comments/
+
+RUN CGO_ENABLED=0 go build -v -ldflags '-s' -o /bin/comments ./cmd/comments/
 
 FROM scratch
 

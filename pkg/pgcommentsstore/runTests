@@ -1,0 +1,20 @@
+#!/bin/bash
+
+export PG_PORT=5433
+export PG_PASS=password
+
+# cleanup on start just incase the previous attempt didn't successfully cleanup
+docker stop testPostgres 2>&1 > /dev/null || true
+docker rm testPostgres 2>&1 > /dev/null || true
+docker run -d -e POSTGRES_PASSWORD=$PG_PASS -p $PG_PORT:5432 --name testPostgres postgres
+while true; do
+    sleep 1
+    if [[ $(docker inspect testPostgres | jq -r '.[0].State.Status') == "running" ]]; then
+        echo "POSTGRES CONTAINER IS READY"
+        break
+    fi
+    echo "WAITING FOR POSTGRES CONTAINER TO START"
+done
+go test
+docker stop testPostgres 2>&1 > /dev/null || true
+docker rm testPostgres 2>&1 > /dev/null || true

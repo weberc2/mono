@@ -3,7 +3,7 @@ services:
   auth:
     build: "../auth"
     command: [ "/bin/auth" ]
-    ports: [ 8081:8081 ]
+    ports: [ "8081:8081" ]
     environment:
       AUTH_ADDR: :8081
       AUTH_HOST_NAME: http://localhost:8081
@@ -23,9 +23,15 @@ services:
       AWS_ACCESS_KEY_ID: "${AUTH_AWS_ACCESS_KEY_ID}"
       AWS_SECRET_ACCESS_KEY: "${AUTH_AWS_SECRET_ACCESS_KEY}"
 
+  postgres:
+    image: "postgres:14"
+    ports: [ "5432:5432" ]
+    environment:
+      POSTGRES_PASSWORD: password
+
   comments:
     build: "."
-    ports: [ 8080:8080 ]
+    ports: [ "8080:8080" ]
     environment:
       ADDR: ":8080"
       LOGIN_URL: http://localhost:8081/login
@@ -36,6 +42,8 @@ services:
       ACCESS_KEY: "${COMMENTS_ACCESS_PUBLIC_KEY}"
       AWS_REGION: us-east-2
       COOKIE_ENCRYPTION_KEY: test-key
+      PG_PASS: password
+      PG_HOST: postgres
 
       # Secrets
       AWS_ACCESS_KEY_ID: "${COMMENTS_AWS_ACCESS_KEY_ID}"

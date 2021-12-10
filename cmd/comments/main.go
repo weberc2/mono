@@ -11,12 +11,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/google/uuid"
 	"github.com/weberc2/auth/pkg/client"
 	"github.com/weberc2/comments/pkg/comments"
-	"github.com/weberc2/comments/pkg/objectstore"
+	"github.com/weberc2/comments/pkg/pgcommentsstore"
 	"github.com/weberc2/comments/pkg/types"
 	pz "github.com/weberc2/httpeasy"
 )
@@ -47,11 +45,6 @@ func main() {
 		log.Fatal("missing required env var: BASE_URL")
 	}
 
-	bucket := os.Getenv("BUCKET")
-	if bucket == "" {
-		log.Fatal("missing required env var: BUCKET")
-	}
-
 	cookieEncryptionKey := os.Getenv("COOKIE_ENCRYPTION_KEY")
 	if cookieEncryptionKey == "" {
 		log.Fatal("missing required env var: COOKIE_ENCRYPTION_KEY")
@@ -66,18 +59,14 @@ func main() {
 		log.Fatalf("decoding ACCESS_KEY: %v", err)
 	}
 
-	sess, err := session.NewSession()
+	commentsStore, err := pgcommentsstore.OpenEnv()
 	if err != nil {
-		log.Fatalf("creating AWS session: %v", err)
+		log.Fatalf("creating postgres comments store client: %v", err)
 	}
 
 	commentsService := comments.CommentsService{
 		Comments: comments.CommentsModel{
-			CommentsStore: &comments.ObjectCommentsStore{
-				Bucket:      bucket,
-				Prefix:      "",
-				ObjectStore: &objectstore.S3ObjectStore{Client: s3.New(sess)},
-			},
+			CommentsStore: commentsStore,
 			IDFunc: func() types.CommentID {
 				return types.CommentID(uuid.NewString())
 			},
