@@ -1,6 +1,7 @@
 package comments
 
 import (
+	"fmt"
 	"time"
 
 	"html"
@@ -41,6 +42,16 @@ func (cm *CommentsModel) Put(c *types.Comment) (*types.Comment, error) {
 	cp.ID = cm.IDFunc()
 	cp.Created = now
 	cp.Modified = now
+	cp.Deleted = false
 	cp.Body = html.EscapeString(c.Body)
 	return cm.CommentsStore.Put(&cp)
+}
+
+func (cm *CommentsModel) Delete(p types.PostID, c types.CommentID) error {
+	if err := cm.CommentsStore.Update(
+		types.NewCommentPatch(c, p).SetDeleted(true),
+	); err != nil {
+		return fmt.Errorf("soft-deleting comment: %w", err)
+	}
+	return nil
 }

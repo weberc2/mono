@@ -28,10 +28,12 @@ func TestPutComment(t *testing.T) {
 			wantedStatus: http.StatusCreated,
 			wantedBody: &types.Comment{
 				ID:       "comment",
+				Post:     "post",
 				Author:   "user",
 				Parent:   "",
 				Created:  now,
 				Modified: now,
+				Deleted:  false,
 				Body:     "great comment",
 			},
 		},
@@ -44,19 +46,22 @@ func TestPutComment(t *testing.T) {
 			name: "ignores id, author, created, modified",
 			input: `{
 	"id": "asdf",
+	"post": "post",
+	"parent": "parent",
 	"author": "foo",
-	"body": "great comment",
 	"created": "1970-01-01T00:00:00.000000Z",
-	"modified": "1970-01-01T00:00:00.000000Z"
+	"modified": "1970-01-01T00:00:00.000000Z",
+	"body": "great comment"
 }`,
 			wantedStatus: http.StatusCreated,
 			wantedBody: &types.Comment{
 				ID:       "comment",
+				Post:     "post",
+				Parent:   "parent",
 				Author:   "user",
-				Body:     "great comment",
-				Parent:   "",
 				Created:  now,
 				Modified: now,
+				Body:     "great comment",
 			},
 		},
 		{
@@ -69,13 +74,9 @@ func TestPutComment(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			commentsService := CommentsService{
 				Comments: CommentsModel{
-					CommentsStore: &ObjectCommentsStore{
-						ObjectStore: testsupport.ObjectStoreFake{},
-						Bucket:      "bucket",
-						Prefix:      "prefix",
-					},
-					TimeFunc: func() time.Time { return now },
-					IDFunc:   func() types.CommentID { return "comment" },
+					CommentsStore: testsupport.CommentsStoreFake{},
+					TimeFunc:      func() time.Time { return now },
+					IDFunc:        func() types.CommentID { return "comment" },
 				},
 				TimeFunc: func() time.Time { return now },
 			}

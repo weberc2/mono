@@ -1,7 +1,7 @@
 package comments
 
 import (
-	"fmt"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -14,13 +14,90 @@ const (
 	goodBody = "sufficiently long body"
 )
 
+func TestCommentsModel_Delete(t *testing.T) {
+	for _, testCase := range []struct {
+		name        string
+		state       testsupport.CommentsStoreFake
+		post        types.PostID
+		comment     types.CommentID
+		wantedState testsupport.CommentsStoreFake
+		wantedErr   types.WantedError
+	}{
+		{
+			name: "simple",
+			state: testsupport.CommentsStoreFake{
+				"post": {
+					"id": {
+						ID:       "id",
+						Post:     "post",
+						Parent:   "parent",
+						Author:   "author",
+						Created:  someTime,
+						Modified: someTime,
+						Deleted:  false,
+					},
+				},
+			},
+			post:    "post",
+			comment: "id",
+			wantedState: testsupport.CommentsStoreFake{
+				"post": {
+					"id": {
+						ID:       "id",
+						Post:     "post",
+						Parent:   "parent",
+						Author:   "author",
+						Created:  someTime,
+						Modified: now,
+						Deleted:  true,
+					},
+				},
+			},
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			model := CommentsModel{
+				CommentsStore: testCase.state,
+				IDFunc:        func() types.CommentID { return "comment" },
+				TimeFunc:      func() time.Time { return now },
+			}
+
+			if testCase.wantedErr == nil {
+				testCase.wantedErr = types.NilError{}
+			}
+			if err := testCase.wantedErr.CompareErr(
+				model.Delete(testCase.post, testCase.comment),
+			); err != nil {
+				t.Fatal(err)
+			}
+
+			t.Logf("Wanted state: %s", jsonify(testCase.wantedState.List()))
+			t.Logf("Actual state: %s", jsonify(testCase.state.List()))
+			t.Fail()
+
+			if err := testCase.wantedState.Compare(
+				testCase.state,
+			); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func jsonify(x interface{}) []byte {
+	data, err := json.MarshalIndent(x, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	return data
+}
+
 func TestCommentsModel_Put(t *testing.T) {
-	now := time.Date(1988, 9, 3, 0, 0, 0, 0, time.UTC)
 	for _, testCase := range []struct {
 		name          string
 		input         types.Comment
 		wantedComment *types.Comment
-		wantedErr     WantedError
+		wantedErr     types.WantedError
 	}{
 		{
 			name: "base case",
@@ -44,13 +121,14 @@ func TestCommentsModel_Put(t *testing.T) {
 			wantedErr: ErrInvalidPost,
 		},
 		{
-			name: "ignores `ID`, `Created`, and `Modified` fields",
+			name: "ignores `ID`, `Created`, `Modified`, and `Deleted` fields",
 			input: types.Comment{
 				Post:     "post",
 				ID:       "evil-id",
 				Author:   "user",
-				Created:  time.Now(),
-				Modified: time.Now(),
+				Created:  someTime,
+				Modified: someTime,
+				Deleted:  true,
 				Body:     goodBody,
 			},
 			wantedComment: &types.Comment{
@@ -59,6 +137,7 @@ func TestCommentsModel_Put(t *testing.T) {
 				Author:   "user",
 				Created:  now,
 				Modified: now,
+				Deleted:  false,
 				Body:     goodBody,
 			},
 		},
@@ -103,8 +182,9 @@ func TestCommentsModel_Put(t *testing.T) {
 
 			c, err := model.Put(&testCase.input)
 
-			if testCase.wantedErr == nil || testCase.wantedErr == (NilError{}) {
-				if err := (NilError{}).Compare(err); err != nil {
+			if testCase.wantedErr == nil ||
+				testCase.wantedErr == (types.NilError{}) {
+				if err := (types.NilError{}).CompareErr(err); err != nil {
 					t.Fatal(err)
 				}
 				if err := testCase.wantedComment.Compare(c); err != nil {
@@ -113,22 +193,14 @@ func TestCommentsModel_Put(t *testing.T) {
 				if err := store.Contains(testCase.wantedComment); err != nil {
 					t.Fatal(err)
 				}
-			} else if err := testCase.wantedErr.Compare(err); err != nil {
+			} else if err := testCase.wantedErr.CompareErr(err); err != nil {
 				t.Fatal(err)
 			}
 		})
 	}
 }
 
-type WantedError interface {
-	Compare(other error) error
-}
-
-type NilError struct{}
-
-func (NilError) Compare(other error) error {
-	if other != nil {
-		return fmt.Errorf("wanted `nil`, found `%T`: %v", other, other)
-	}
-	return nil
-}
+var (
+	someTime = time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
+	now      = time.Date(2022, 12, 31, 0, 0, 0, 0, time.UTC)
+)

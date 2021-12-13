@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -22,73 +23,179 @@ type Comment struct {
 	Body     string    `json:"body"`
 }
 
+type Error string
+
+func (err Error) Error() string { return string(err) }
+
+func (wanted Error) Compare(found Error) error {
+	if wanted != found {
+		return fmt.Errorf("Error: wanted `%s`; found `%s`", wanted, found)
+	}
+	return nil
+}
+
+func (wanted Error) CompareErr(found error) error {
+	if errors.Is(found, wanted) {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"Error: wanted error `%T`; found `%T`: %v",
+		wanted,
+		found,
+		found,
+	)
+}
+
+var (
+	ErrWantedNotNil Error = "wanted not-nil; found `nil`"
+	ErrWantedNil    Error = "wanted `nil`; found not-nil"
+)
+
+type FieldMismatchErr struct {
+	Field  Field
+	Wanted interface{}
+	Found  interface{}
+}
+
+func (err *FieldMismatchErr) Error() string {
+	return fmt.Sprintf(
+		"Comment.%s: wanted `%v`; found `%v`",
+		err.Field.GoString(),
+		err.Wanted,
+		err.Found,
+	)
+}
+
+func (wanted *FieldMismatchErr) Compare(found *FieldMismatchErr) error {
+	if wanted == found {
+		return nil
+	}
+
+	if wanted != nil && found == nil {
+		return ErrWantedNotNil
+	}
+
+	if wanted == nil && found != nil {
+		return ErrWantedNil
+	}
+
+	if wanted.Field != found.Field {
+		return fmt.Errorf(
+			"FieldMismatchErr.Field: wanted `%s`; found `%s`",
+			wanted.Field,
+			found.Field,
+		)
+	}
+
+	if wanted.Wanted != found.Wanted {
+		return fmt.Errorf(
+			"FieldMismatchErr.Wanted: wanted `%v` (`%T`); found `%v` (`%T`)",
+			wanted.Wanted,
+			wanted.Wanted,
+			found.Wanted,
+			found.Wanted,
+		)
+	}
+
+	if wanted.Found != found.Found {
+		return fmt.Errorf(
+			"FieldMismatchErr.Found: wanted `%v`; found `%v`",
+			wanted.Found,
+			found.Found,
+		)
+	}
+
+	return nil
+}
+
+func (wanted *FieldMismatchErr) CompareErr(found error) error {
+	var other *FieldMismatchErr
+	if !errors.As(found, &other) {
+		return fmt.Errorf(
+			"wanted `*types.FieldMismatchErr`; found `%T`: %v",
+			found,
+			found,
+		)
+	}
+	return wanted.Compare(other)
+}
+
 func (wanted *Comment) Compare(found *Comment) error {
 	if wanted == nil && found == nil {
 		return nil
 	}
 
 	if wanted != nil && found == nil {
-		return fmt.Errorf("Comment: unexpected `nil`")
+		return ErrWantedNotNil
 	}
 
 	if wanted == nil && found != nil {
-		return fmt.Errorf("Comment: wanted `nil`; found not-nil")
+		return ErrWantedNil
 	}
 
 	if wanted.ID != found.ID {
-		return fmt.Errorf(
-			"Comment.ID: wanted `%s`; found `%s`",
-			wanted.ID,
-			found.ID,
-		)
+		return &FieldMismatchErr{
+			Field:  FieldID,
+			Wanted: wanted.ID,
+			Found:  found.ID,
+		}
+	}
+
+	if wanted.Post != found.Post {
+		return &FieldMismatchErr{
+			Field:  FieldPost,
+			Wanted: wanted.Post,
+			Found:  found.Post,
+		}
 	}
 
 	if wanted.Author != found.Author {
-		return fmt.Errorf(
-			"Comment.Author: wanted `%s`; found `%s`",
-			wanted.Author,
-			found.Author,
-		)
+		return &FieldMismatchErr{
+			Field:  FieldAuthor,
+			Wanted: wanted.Author,
+			Found:  found.Author,
+		}
 	}
 
 	if wanted.Parent != found.Parent {
-		return fmt.Errorf(
-			"Comment.Parent: wanted `%s`; found `%s`",
-			wanted.Parent,
-			found.Parent,
-		)
-	}
-
-	if wanted.Body != found.Body {
-		return fmt.Errorf(
-			"Comment.Body: wanted `%s`; found `%s`",
-			wanted.Body,
-			found.Body,
-		)
+		return &FieldMismatchErr{
+			Field:  FieldParent,
+			Wanted: wanted.Parent,
+			Found:  found.Parent,
+		}
 	}
 
 	if wanted.Created != found.Created {
-		return fmt.Errorf(
-			"Comment.Created: wanted `%s`; found `%s`",
-			wanted.Created,
-			found.Created,
-		)
+		return &FieldMismatchErr{
+			Field:  FieldCreated,
+			Wanted: wanted.Created,
+			Found:  found.Created,
+		}
 	}
 
 	if wanted.Modified != found.Modified {
-		return fmt.Errorf(
-			"Comment.Modified: wanted `%s`; found `%s`",
-			wanted.Modified,
-			found.Modified,
-		)
+		return &FieldMismatchErr{
+			Field:  FieldModified,
+			Wanted: wanted.Modified,
+			Found:  found.Modified,
+		}
 	}
 
 	if wanted.Deleted != found.Deleted {
-		return fmt.Errorf(
-			"Comment.Deleted: wanted `%v`; found `%v`",
-			wanted.Deleted,
-			found.Deleted,
-		)
+		return &FieldMismatchErr{
+			Field:  FieldDeleted,
+			Wanted: wanted.Deleted,
+			Found:  found.Deleted,
+		}
+	}
+
+	if wanted.Body != found.Body {
+		return &FieldMismatchErr{
+			Field:  FieldBody,
+			Wanted: wanted.Body,
+			Found:  found.Body,
+		}
 	}
 
 	return nil
@@ -102,20 +209,70 @@ func (wanted *Comment) CompareData(data []byte) error {
 	return wanted.Compare(&other)
 }
 
+type SliceLengthMismatchErr struct {
+	Wanted int
+	Found  int
+}
+
+func (err *SliceLengthMismatchErr) Error() string {
+	return fmt.Sprintf("wanted len() `%d`; found `%d`", err.Wanted, err.Found)
+}
+
+func (wanted *SliceLengthMismatchErr) Compare(
+	found *SliceLengthMismatchErr,
+) error {
+	if wanted == found {
+		return nil
+	}
+
+	if wanted != nil && found == nil {
+		return fmt.Errorf("SliceLengthMismatchErr: %s", ErrWantedNotNil)
+	}
+
+	if wanted == nil && found != nil {
+		return fmt.Errorf("SliceLengthMismatchErr: %s", ErrWantedNil)
+	}
+
+	if wanted.Wanted != found.Wanted {
+		return fmt.Errorf(
+			"SliceLengthMismatchErr.Wanted: wanted `%d`; found `%d`",
+			wanted.Wanted,
+			found.Wanted,
+		)
+	}
+	if wanted.Found != found.Found {
+		return fmt.Errorf(
+			"SliceLengthMismatchErr.Found: wanted `%d`; found `%d`",
+			wanted.Found,
+			found.Found,
+		)
+	}
+	return nil
+}
+
+func (wanted *SliceLengthMismatchErr) CompareErr(found error) error {
+	var other *SliceLengthMismatchErr
+	if errors.As(found, &other) {
+		return wanted.Compare(other)
+	}
+	return fmt.Errorf(
+		"SliceLengthMismatchError: wanted type `%T`; found `%T`: %v",
+		wanted,
+		found,
+		found,
+	)
+}
+
 func CompareComments(wanted, found []*Comment) error {
 	if len(wanted) != len(found) {
-		return fmt.Errorf(
-			"stored comments: len `%d`; found len `%d`",
-			len(wanted),
-			len(found),
-		)
+		return &SliceLengthMismatchErr{Wanted: len(wanted), Found: len(found)}
 	}
 
 	sortComments(wanted)
 	sortComments(found)
 
 	for i := range wanted {
-		if err := wanted[i].Compare(wanted[i]); err != nil {
+		if err := wanted[i].Compare(found[i]); err != nil {
 			return fmt.Errorf("index %d: %w", i, err)
 		}
 	}

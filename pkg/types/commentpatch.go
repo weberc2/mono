@@ -87,6 +87,29 @@ func (field Field) String() string {
 	}
 }
 
+func (field Field) GoString() string {
+	switch field {
+	case FieldID:
+		return "ID"
+	case FieldPost:
+		return "Post"
+	case FieldParent:
+		return "Parent"
+	case FieldAuthor:
+		return "Author"
+	case FieldCreated:
+		return "Created"
+	case FieldModified:
+		return "Modified"
+	case FieldDeleted:
+		return "Deleted"
+	case FieldBody:
+		return "Body"
+	default:
+		panic(fmt.Sprintf("invalid field: %d", field))
+	}
+}
+
 type CommentPatch struct {
 	comment Comment
 	fields  FieldMask
@@ -103,6 +126,7 @@ func (cp *CommentPatch) Author() UserID      { return cp.comment.Author }
 func (cp *CommentPatch) Created() time.Time  { return cp.comment.Created }
 func (cp *CommentPatch) Modified() time.Time { return cp.comment.Modified }
 func (cp *CommentPatch) Deleted() bool       { return cp.comment.Deleted }
+func (cp *CommentPatch) Body() string        { return cp.comment.Body }
 
 func (cp *CommentPatch) SetID(id CommentID) *CommentPatch {
 	cp.comment.ID = id
@@ -257,4 +281,31 @@ func unmarshalCommentPatch(cp *CommentPatch, data []byte) error {
 		cp.fields.Push(field)
 	}
 	return nil
+}
+
+func (cp *CommentPatch) Apply(c *Comment) {
+	if cp.IsSet(FieldID) {
+		c.ID = cp.ID()
+	}
+	if cp.IsSet(FieldPost) {
+		c.Post = cp.Post()
+	}
+	if cp.IsSet(FieldParent) {
+		c.Parent = cp.Parent()
+	}
+	if cp.IsSet(FieldAuthor) {
+		c.Author = cp.Author()
+	}
+	if cp.IsSet(FieldCreated) {
+		c.Created = cp.Created()
+	}
+	if cp.IsSet(FieldModified) {
+		c.Modified = cp.Modified()
+	}
+	if cp.IsSet(FieldDeleted) {
+		c.Deleted = cp.Deleted()
+	}
+	if cp.IsSet(FieldBody) {
+		c.Body = cp.Body()
+	}
 }

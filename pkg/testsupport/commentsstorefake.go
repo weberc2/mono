@@ -95,7 +95,7 @@ func (csf CommentsStoreFake) Contains(comments ...*types.Comment) error {
 	return nil
 }
 
-func (csf CommentsStoreFake) Comments() []*types.Comment {
+func (csf CommentsStoreFake) List() []*types.Comment {
 	var out []*types.Comment
 	for _, comments := range csf {
 		for _, comment := range comments {
@@ -103,4 +103,48 @@ func (csf CommentsStoreFake) Comments() []*types.Comment {
 		}
 	}
 	return out
+}
+
+func (csf CommentsStoreFake) Update(patch *types.CommentPatch) error {
+	if !patch.IsSet(types.FieldID) {
+		return fmt.Errorf(
+			"`CommentPatch` is missing required field `%s`",
+			types.FieldID,
+		)
+	}
+	if !patch.IsSet(types.FieldPost) {
+		return fmt.Errorf(
+			"`CommentPatch` is missing required field `%s`",
+			types.FieldPost,
+		)
+	}
+
+	if comments, found := csf[patch.Post()]; found {
+		if comment, found := comments[patch.ID()]; found {
+			patch.Apply(comment)
+			return nil
+		}
+		// fallthrough to types.CommentNotFoundErr{} below
+	}
+	return &types.CommentNotFoundErr{Post: patch.Post(), Comment: patch.ID()}
+}
+
+func (csf CommentsStoreFake) Compare(other CommentsStoreFake) error {
+	if csf == nil && other == nil {
+		return nil
+	}
+
+	if csf == nil && other != nil {
+		return fmt.Errorf("wanted `nil`; found not-nil")
+	}
+
+	if csf != nil && other == nil {
+		return fmt.Errorf("wanted not-nil; found `nil`")
+	}
+
+	if err := types.CompareComments(csf.List(), other.List()); err != nil {
+		return fmt.Errorf("CommentsStoreFake.Compare(): %w", err)
+	}
+
+	return nil
 }

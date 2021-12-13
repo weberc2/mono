@@ -129,7 +129,7 @@ func TestReply(t *testing.T) {
 
 			if err := types.CompareComments(
 				testCase.wantedComments,
-				testCase.store.Comments(),
+				testCase.store.List(),
 			); err != nil {
 				t.Fatalf("CommentsStore: %v", err)
 			}
@@ -166,8 +166,14 @@ func TestDelete(t *testing.T) {
 					},
 				},
 			},
-			wantedStatus:   http.StatusTemporaryRedirect,
-			wantedComments: nil,
+			wantedStatus: http.StatusTemporaryRedirect,
+			wantedComments: []*types.Comment{{
+				Post:    "post",
+				ID:      "comment",
+				Author:  "adam",
+				Deleted: true,
+				Body:    "hello, world",
+			}},
 			wantedLocation: "https://comments.example.org/foo",
 		},
 		{
@@ -186,8 +192,14 @@ func TestDelete(t *testing.T) {
 					},
 				},
 			},
-			wantedStatus:   http.StatusTemporaryRedirect,
-			wantedComments: nil,
+			wantedStatus: http.StatusTemporaryRedirect,
+			wantedComments: []*types.Comment{{
+				Post:    "post",
+				ID:      "comment",
+				Author:  "adam",
+				Deleted: true,
+				Body:    "hello, world",
+			}},
 			wantedLocation: "https://comments.example.org/",
 		},
 		{
@@ -207,10 +219,11 @@ func TestDelete(t *testing.T) {
 			},
 			// expect that the comment wasn't deleted
 			wantedComments: []*types.Comment{{
-				Post:   "post",
-				ID:     "comment",
-				Author: "adam",
-				Body:   "hello, world",
+				Post:    "post",
+				ID:      "comment",
+				Author:  "adam",
+				Deleted: false,
+				Body:    "hello, world",
 			}},
 			wantedStatus: http.StatusUnauthorized,
 		},
@@ -255,7 +268,7 @@ func TestDelete(t *testing.T) {
 
 			if err := types.CompareComments(
 				testCase.wantedComments,
-				testCase.store.Comments(),
+				testCase.store.List(),
 			); err != nil {
 				t.Fatalf("CommentsStore: %v", err)
 			}
