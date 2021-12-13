@@ -64,6 +64,10 @@ func main() {
 		log.Fatalf("creating postgres comments store client: %v", err)
 	}
 
+	if err := commentsStore.EnsureTable(); err != nil {
+		log.Fatalf("ensuring comments table exists: %v", err)
+	}
+
 	commentsService := comments.CommentsService{
 		Comments: comments.CommentsModel{
 			CommentsStore: commentsStore,

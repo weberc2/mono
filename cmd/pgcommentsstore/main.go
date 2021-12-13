@@ -67,6 +67,27 @@ func main() {
 				},
 			},
 			{
+				Name:        "list",
+				Description: "list comments",
+				Action: withStore(func(
+					store *pgcommentsstore.PGCommentsStore,
+					ctx *cli.Context,
+				) error {
+					comments, err := store.List()
+					if err != nil {
+						return err
+					}
+
+					data, err := json.MarshalIndent(comments, "", "  ")
+					if err != nil {
+						return err
+					}
+
+					_, err = fmt.Printf("%s\n", data)
+					return err
+				}),
+			},
+			{
 				Name:        "put",
 				Aliases:     []string{"add", "create"},
 				Description: "add a comment",
@@ -99,6 +120,18 @@ func main() {
 						Required: false,
 					},
 					&cli.StringFlag{
+						Name: "modified",
+						Usage: "The time the comment was created. Defaults " +
+							"to the current time.",
+						Required: false,
+					},
+					&cli.BoolFlag{
+						Name: "deleted",
+						Usage: "Whether or not the comment should be " +
+							"considered deleted. Defaults to `false`.",
+						Required: false,
+					},
+					&cli.StringFlag{
 						Name:     "body",
 						Usage:    "The comment's body. Defaults to empty.",
 						Required: false,
@@ -108,12 +141,36 @@ func main() {
 					store *pgcommentsstore.PGCommentsStore,
 					ctx *cli.Context,
 				) error {
+					var (
+						now      = time.Now()
+						created  = now
+						modified = now
+						err      error
+					)
+
+					if s := ctx.String("created"); s != "" {
+						created, err = time.Parse(time.RFC3339, s)
+					}
+					if err != nil {
+						return fmt.Errorf("parsing `--created`: %w", err)
+					}
+
+					if s := ctx.String("modified"); s != "" {
+						modified, err = time.Parse(time.RFC3339, s)
+					}
+					if err != nil {
+						return fmt.Errorf("parsing `--modified`: %w", err)
+					}
+
 					input := &types.Comment{
-						ID:     types.CommentID(ctx.String("id")),
-						Post:   types.PostID(ctx.String("post")),
-						Parent: types.CommentID(ctx.String("parent")),
-						Author: types.UserID(ctx.String("author")),
-						Body:   ctx.String("body"),
+						ID:       types.CommentID(ctx.String("id")),
+						Post:     types.PostID(ctx.String("post")),
+						Parent:   types.CommentID(ctx.String("parent")),
+						Author:   types.UserID(ctx.String("author")),
+						Created:  created,
+						Modified: modified,
+						Deleted:  ctx.Bool("deleted"),
+						Body:     ctx.String("body"),
 					}
 					createdValue := ctx.String("created")
 					if createdValue != "" {
@@ -141,6 +198,105 @@ func main() {
 					}
 					comment, err := store.Put(input)
 					data, err := json.MarshalIndent(comment, "", "  ")
+					if err != nil {
+						return err
+					}
+					_, err = fmt.Printf("%s\n", data)
+					return err
+				}),
+			},
+			{
+				Name:        "update",
+				Description: "update a comment",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "id",
+						Usage:    "The comment's ID. Required",
+						Required: true,
+					},
+					&cli.StringFlag{
+						Name:     "post",
+						Usage:    "The comment's post. Required.",
+						Required: true,
+					},
+					&cli.StringFlag{
+						Name:     "parent",
+						Usage:    "The comment's parent.",
+						Required: false,
+					},
+					&cli.StringFlag{
+						Name:     "author",
+						Usage:    "The comment's author.",
+						Required: false,
+					},
+					&cli.StringFlag{
+						Name:     "created",
+						Usage:    "The time the comment was created.",
+						Required: false,
+					},
+					&cli.StringFlag{
+						Name:     "modified",
+						Usage:    "The time the comment was created",
+						Required: false,
+					},
+					&cli.BoolFlag{
+						Name: "deleted",
+						Usage: "Whether or not the comment should be " +
+							"considered deleted.",
+						Required: false,
+					},
+					&cli.StringFlag{
+						Name:     "body",
+						Usage:    "The comment's body.",
+						Required: false,
+					},
+				},
+				Action: withStore(func(
+					store *pgcommentsstore.PGCommentsStore,
+					ctx *cli.Context,
+				) error {
+					cp := types.NewCommentPatch(
+						types.CommentID(ctx.String("id")),
+						types.PostID(ctx.String("post")),
+					)
+					if ctx.IsSet("parent") {
+						cp.SetParent(types.CommentID(ctx.String("parent")))
+					}
+					if ctx.IsSet("author") {
+						cp.SetAuthor(types.UserID(ctx.String("author")))
+					}
+					if ctx.IsSet("created") {
+						created, err := time.Parse(
+							time.RFC3339,
+							ctx.String("created"),
+						)
+						if err != nil {
+							return fmt.Errorf("parsing `--created`: %w", err)
+						}
+						cp.SetCreated(created)
+					}
+					if ctx.IsSet("modified") {
+						modified, err := time.Parse(
+							time.RFC3339,
+							ctx.String("modified"),
+						)
+						if err != nil {
+							return fmt.Errorf("parsing `--modified`: %w", err)
+						}
+						cp.SetModified(modified)
+					}
+					if ctx.IsSet("deleted") {
+						cp.SetDeleted(ctx.Bool("deleted"))
+					}
+					if ctx.IsSet("body") {
+						cp.SetBody(ctx.String("body"))
+					}
+
+					if err := store.Update(cp); err != nil {
+						return err
+					}
+
+					data, err := json.MarshalIndent(cp, "", "  ")
 					if err != nil {
 						return err
 					}
@@ -233,14 +389,25 @@ func main() {
 						Usage:    "The comment's ID.",
 						Required: true,
 					},
+					&cli.BoolFlag{
+						Name: "hard",
+						Usage: "Completely remove a comment (as opposed to " +
+							"marking its `Deleted` field). Defaults to " +
+							"`false`.",
+						Required: false,
+					},
 				},
 				Action: withStore(func(
 					store *pgcommentsstore.PGCommentsStore,
 					ctx *cli.Context,
 				) error {
-					return store.Delete(
-						types.PostID(ctx.String("post")),
-						types.CommentID(ctx.String("id")),
+					p := types.PostID(ctx.String("post"))
+					c := types.CommentID(ctx.String("id"))
+					if ctx.Bool("hard") {
+						return store.Delete(p, c)
+					}
+					return store.Update(
+						types.NewCommentPatch(c, p).SetDeleted(true),
 					)
 				}),
 			},

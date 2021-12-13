@@ -77,8 +77,8 @@ func TestPut(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			if err := resetTable(store); err != nil {
-				t.Fatal(err)
+			if err := store.ClearTable(); err != nil {
+				t.Fatalf("clearing `comments` table: %v", err)
 			}
 
 			for _, comment := range testCase.state {
@@ -136,34 +136,163 @@ func TestComment(t *testing.T) {
 	}
 }
 
+func TestUpdate(t *testing.T) {
+	store, err := testPGCommentsStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, testCase := range []struct {
+		name        string
+		state       []*types.Comment
+		input       *types.CommentPatch
+		wantedState []*types.Comment
+		wantedError types.WantedError
+	}{
+		{
+			name: "simple",
+			state: []*types.Comment{
+				{
+					ID:       "id",
+					Post:     "post",
+					Parent:   "",
+					Author:   "author",
+					Created:  someDate,
+					Modified: someDate,
+					Deleted:  false,
+					Body:     "body",
+				},
+			},
+			input: types.NewCommentPatch("id", "post").SetDeleted(true),
+			wantedState: []*types.Comment{{
+				ID:       "id",
+				Post:     "post",
+				Parent:   "",
+				Author:   "author",
+				Created:  someDate,
+				Modified: someDate,
+				Deleted:  true,
+				Body:     "body",
+			}},
+			wantedError: nil,
+		},
+		{
+			name:        "not found",
+			input:       types.NewCommentPatch("id", "post").SetDeleted(true),
+			wantedState: nil,
+			wantedError: &types.CommentNotFoundErr{
+				Post:    "post",
+				Comment: "id",
+			},
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			if err := store.ClearTable(); err != nil {
+				t.Fatalf("clearing `comments` table: %v", err)
+			}
+
+			for _, comment := range testCase.state {
+				if _, err := store.Put(comment); err != nil {
+					t.Fatalf("unexpected error putting comment: %v", err)
+				}
+			}
+
+			if testCase.wantedError == nil {
+				testCase.wantedError = types.NilError{}
+			}
+			if err := testCase.wantedError.CompareErr(
+				store.Update(testCase.input),
+			); err != nil {
+				t.Fatal(err)
+			}
+
+			comments, err := store.List()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if err := types.CompareComments(
+				testCase.wantedState,
+				comments,
+			); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
 func TestDelete(t *testing.T) {
 	store, err := testPGCommentsStore()
 	if err != nil {
 		t.Fatal(err)
 	}
+	for _, testCase := range []struct {
+		name        string
+		state       []*types.Comment
+		post        types.PostID
+		comment     types.CommentID
+		wantedState []*types.Comment
+		wantedError types.WantedError
+	}{
+		{
+			name: "simple",
+			state: []*types.Comment{
+				{
+					ID:       "id",
+					Post:     "post",
+					Parent:   "",
+					Author:   "author",
+					Created:  someDate,
+					Modified: someDate,
+					Body:     "body",
+				},
+			},
+			post:        "post",
+			comment:     "id",
+			wantedState: nil,
+			wantedError: nil,
+		},
+		{
+			name:        "not found",
+			post:        "post",
+			comment:     "id",
+			wantedState: nil,
+			wantedError: &types.CommentNotFoundErr{
+				Post:    "post",
+				Comment: "id",
+			},
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			if err := store.ClearTable(); err != nil {
+				t.Fatalf("clearing `comments` table: %v", err)
+			}
 
-	input := types.Comment{
-		ID:       "id",
-		Post:     "post",
-		Parent:   "",
-		Author:   "author",
-		Created:  someDate,
-		Modified: someDate,
-		Body:     "body",
-	}
+			for _, comment := range testCase.state {
+				if _, err := store.Put(comment); err != nil {
+					t.Fatalf("unexpected error putting comment: %v", err)
+				}
+			}
 
-	if _, err := store.Put(&input); err != nil {
-		t.Fatalf("unexpected error putting comment: %v", err)
-	}
+			if testCase.wantedError == nil {
+				testCase.wantedError = types.NilError{}
+			}
+			err := store.Delete(testCase.post, testCase.comment)
+			if err := testCase.wantedError.CompareErr(err); err != nil {
+				t.Fatal(err)
+			}
 
-	if err := store.Delete(input.Post, input.ID); err != nil {
-		t.Fatalf("unexpected error deleting comment: %v", err)
-	}
+			comments, err := store.List()
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	_, err = store.Comment(input.Post, input.ID)
-	wanted := types.CommentNotFoundErr{Post: "post", Comment: "id"}
-	if err := wanted.CompareErr(err); err != nil {
-		t.Fatal(err)
+			if err := types.CompareComments(
+				[]*types.Comment{},
+				comments,
+			); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
 
@@ -378,8 +507,8 @@ func TestReplies(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			if err := resetTable(store); err != nil {
-				t.Fatal(err)
+			if err := store.ClearTable(); err != nil {
+				t.Fatalf("clearing `comments` table: %v", err)
 			}
 
 			for _, comment := range testCase.state {

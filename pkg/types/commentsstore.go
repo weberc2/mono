@@ -134,6 +134,7 @@ type CommentsStore interface {
 	Comment(PostID, CommentID) (*Comment, error)
 	Replies(PostID, CommentID) ([]*Comment, error)
 	Delete(PostID, CommentID) error
+	Update(PostID, CommentID) error
 }
 
 // fail compilation if `CommentNotFoundErr` doesn't satisfy the `Error` and

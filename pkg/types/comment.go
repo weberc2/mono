@@ -18,6 +18,7 @@ type Comment struct {
 	Author   UserID    `json:"author"`
 	Created  time.Time `json:"created"`
 	Modified time.Time `json:"modified"`
+	Deleted  bool      `json:"deleted"`
 	Body     string    `json:"body"`
 }
 
@@ -79,6 +80,14 @@ func (wanted *Comment) Compare(found *Comment) error {
 			"Comment.Modified: wanted `%s`; found `%s`",
 			wanted.Modified,
 			found.Modified,
+		)
+	}
+
+	if wanted.Deleted != found.Deleted {
+		return fmt.Errorf(
+			"Comment.Deleted: wanted `%v`; found `%v`",
+			wanted.Deleted,
+			found.Deleted,
 		)
 	}
 

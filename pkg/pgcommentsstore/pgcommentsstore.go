@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/lib/pq"
@@ -66,6 +68,7 @@ func (pgcs *PGCommentsStore) EnsureTable() error {
 			"author VARCHAR(255) NOT NULL, " +
 			"created VARCHAR(255) NOT NULL, " +
 			"modified VARCHAR(255) NOT NULL, " +
+			"deleted BOOLEAN NOT NULL DEFAULT FALSE, " +
 			"body TEXT NOT NULL)",
 	); err != nil {
 		return fmt.Errorf("creating `comments` postgres table: %w", err)
@@ -90,14 +93,15 @@ func (pgcs *PGCommentsStore) ResetTable() error {
 func (pgcs *PGCommentsStore) Put(c *types.Comment) (*types.Comment, error) {
 	if _, err := pgcs.DB.Exec(
 		"INSERT INTO comments "+
-			"(id, post, parent, author, created, modified, body) VALUES"+
-			"($1, $2, $3, $4, $5, $6, $7);",
+			"(id, post, parent, author, created, modified, deleted, body) VALUES"+
+			"($1, $2, $3, $4, $5, $6, $7, $8);",
 		c.ID,
 		c.Post,
 		c.Parent,
 		c.Author,
 		c.Created.Format(time.RFC3339),
 		c.Modified.Format(time.RFC3339),
+		c.Deleted,
 		c.Body,
 	); err != nil {
 		if err, ok := err.(*pq.Error); ok && err.Code == errUniqueViolation {
@@ -118,7 +122,7 @@ func (pgcs *PGCommentsStore) Comment(
 ) (*types.Comment, error) {
 	var comment types.Comment
 	if err := scanComment(&comment, pgcs.DB.QueryRow(
-		"SELECT id, post, parent, author, created, modified, body "+
+		"SELECT id, post, parent, author, created, modified, deleted, body "+
 			"FROM comments WHERE post = $1 AND id = $2",
 		p,
 		c,
@@ -136,17 +140,39 @@ func (pgcs *PGCommentsStore) Replies(
 	p types.PostID,
 	parent types.CommentID,
 ) ([]*types.Comment, error) {
-	rows, err := pgcs.DB.Query(
+	comments, err := pgcs.commentsQuery(
 		`WITH RECURSIVE t AS (
 	SELECT * FROM comments WHERE post = $1 AND parent = $2 UNION
 	SELECT comments.* FROM comments JOIN t ON
 	comments.post = t.post AND comments.parent = t.id
-) SELECT * FROM t`,
+) SELECT id, post, parent, author, created, modified, deleted, body FROM t`,
 		p,
 		parent,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("querying replies from postgres: %w", err)
+	}
+	return comments, nil
+}
+
+func (pgcs *PGCommentsStore) List() ([]*types.Comment, error) {
+	comments, err := pgcs.commentsQuery(
+		"SELECT id, post, parent, author, created, modified, deleted, body " +
+			"FROM comments",
+	)
+	if err != nil {
+		return nil, fmt.Errorf("listing comments from postgres: %w", err)
+	}
+	return comments, nil
+}
+
+func (pgcs *PGCommentsStore) commentsQuery(
+	query string,
+	vs ...interface{},
+) ([]*types.Comment, error) {
+	rows, err := pgcs.DB.Query(query, vs...)
+	if err != nil {
+		return nil, err
 	}
 	defer func() {
 		if err := rows.Close(); err != nil {
@@ -171,20 +197,6 @@ func (pgcs *PGCommentsStore) Replies(
 	return out, nil
 }
 
-func (pgcs *PGCommentsStore) Delete(p types.PostID, c types.CommentID) error {
-	if _, err := pgcs.DB.Exec(
-		"DELETE FROM comments WHERE post = $1 AND id = $2",
-		p,
-		c,
-	); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return &types.CommentNotFoundErr{Post: p, Comment: c}
-		}
-		return fmt.Errorf("deleting comment from postgres: %w", err)
-	}
-	return nil
-}
-
 func scanComment(
 	c *types.Comment,
 	s interface{ Scan(...interface{}) error },
@@ -197,6 +209,7 @@ func scanComment(
 		&c.Author,
 		&createdString,
 		&modifiedString,
+		&c.Deleted,
 		&c.Body,
 	); err != nil {
 		return err
@@ -219,5 +232,108 @@ func scanComment(
 	}
 	c.Created = created
 	c.Modified = modified
+	return nil
+}
+
+func (pgcs *PGCommentsStore) Update(c *types.CommentPatch) error {
+	if !c.IsSet(types.FieldID) {
+		return fmt.Errorf(
+			"`CommentPatch` is missing required field `%s`",
+			types.FieldID,
+		)
+	}
+	if !c.IsSet(types.FieldPost) {
+		return fmt.Errorf(
+			"`CommentPatch` is missing required field `%s`",
+			types.FieldPost,
+		)
+	}
+
+	columns, params := fieldsToColumnsAndParams(c)
+	// The `RETURNING id` is required to provoke a `sql.ErrNoRows` response in
+	// cases where the `(post, id)` tuple is not found. Similarly, the `dummy`
+	// variable is required to prevent the `Scan()` call from failing.
+	var dummy string
+	if err := pgcs.DB.QueryRow(
+		fmt.Sprintf(
+			"UPDATE comments SET %s WHERE id=$1 AND post=$2 RETURNING id",
+			columns,
+		),
+		params...,
+	).Scan(&dummy); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = &types.CommentNotFoundErr{Post: c.Post(), Comment: c.ID()}
+		}
+		return fmt.Errorf("updating comment in postgres: %w", err)
+	}
+	return nil
+}
+
+func fieldsToColumnsAndParams(cp *types.CommentPatch) (string, []interface{}) {
+	var (
+		fields  = cp.Fields()
+		params  = []interface{}{cp.ID()}
+		columns strings.Builder
+		field   types.Field
+	)
+	columns.WriteString(fieldToColumn(types.Fields[0]))
+	columns.WriteString("=$1")
+	for _, field = range types.Fields[1:] {
+		if fields.Contains(field) {
+			params = append(params, fieldToSQLParam(cp, field))
+			columns.WriteString(", ")
+			columns.WriteString(fieldToColumn(field))
+			columns.WriteByte('=')
+			columns.WriteByte('$')
+			columns.WriteString(strconv.Itoa(len(params)))
+		}
+	}
+	return columns.String(), params
+}
+
+func fieldToColumn(field types.Field) string {
+	// At some point in the future, column names and field names might differ
+	// (e.g., if we add a field with multiple words, we'll camel-case the
+	// field name but snake-case the column name since Postgres doesn't do well
+	// with case sensitivity).
+	return field.String()
+}
+
+func fieldToSQLParam(cp *types.CommentPatch, field types.Field) interface{} {
+	switch field {
+	case types.FieldID:
+		return cp.ID()
+	case types.FieldPost:
+		return cp.Post()
+	case types.FieldParent:
+		return cp.Parent()
+	case types.FieldAuthor:
+		return cp.Author()
+	case types.FieldCreated:
+		return cp.Created().Format(time.RFC3339)
+	case types.FieldModified:
+		return cp.Modified().Format(time.RFC3339)
+	case types.FieldDeleted:
+		return cp.Deleted()
+	default:
+		panic(fmt.Sprintf("invalid field: %d", field))
+	}
+}
+
+func (pgcs *PGCommentsStore) Delete(p types.PostID, c types.CommentID) error {
+	// The `RETURNING id` is required to provoke a `sql.ErrNoRows` response in
+	// cases where the `(post, id)` tuple is not found. Similarly, the `dummy`
+	// variable is required to prevent the `Scan()` call from failing.
+	var dummy string
+	if err := pgcs.DB.QueryRow(
+		"DELETE FROM comments WHERE post = $1 AND id = $2 RETURNING id",
+		p,
+		c,
+	).Scan(&dummy); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return &types.CommentNotFoundErr{Post: p, Comment: c}
+		}
+		return fmt.Errorf("deleting comment from postgres: %w", err)
+	}
 	return nil
 }
