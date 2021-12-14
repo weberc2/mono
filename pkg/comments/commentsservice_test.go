@@ -47,7 +47,7 @@ func TestPutComment(t *testing.T) {
 			input: `{
 	"id": "asdf",
 	"post": "post",
-	"parent": "parent",
+	"parent": "",
 	"author": "foo",
 	"created": "1970-01-01T00:00:00.000000Z",
 	"modified": "1970-01-01T00:00:00.000000Z",
@@ -57,7 +57,7 @@ func TestPutComment(t *testing.T) {
 			wantedBody: &types.Comment{
 				ID:       "comment",
 				Post:     "post",
-				Parent:   "parent",
+				Parent:   "",
 				Author:   "user",
 				Created:  now,
 				Modified: now,

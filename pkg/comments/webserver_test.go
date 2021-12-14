@@ -35,8 +35,9 @@ func TestReply(t *testing.T) {
 			store:        testsupport.CommentsStoreFake{},
 			wantedStatus: http.StatusSeeOther,
 			wantedComments: []*types.Comment{{
-				Post:     "post",
 				ID:       "comment",
+				Post:     "post",
+				Parent:   "",
 				Author:   "adam",
 				Body:     "hello, world",
 				Created:  now,
@@ -54,8 +55,9 @@ func TestReply(t *testing.T) {
 			store: testsupport.CommentsStoreFake{
 				"post": {
 					"parent": {
-						Post:     "post",
 						ID:       "parent",
+						Post:     "post",
+						Parent:   "",
 						Author:   "jesse",
 						Body:     "hello, world",
 						Created:  now.Add(-24 * time.Hour),
@@ -66,16 +68,17 @@ func TestReply(t *testing.T) {
 			wantedStatus: http.StatusSeeOther,
 			wantedComments: []*types.Comment{
 				{
-					Post:     "post",
 					ID:       "parent",
+					Post:     "post",
+					Parent:   "",
 					Author:   "jesse",
 					Body:     "hello, world",
 					Created:  now.Add(-24 * time.Hour),
 					Modified: now.Add(-24 * time.Hour),
 				},
 				{
-					Post:     "post",
 					ID:       "comment",
+					Post:     "post",
 					Parent:   "parent",
 					Author:   "david",
 					Body:     "hello, jesse",
@@ -101,8 +104,8 @@ func TestReply(t *testing.T) {
 
 			rsp := webServer.Reply(pz.Request{
 				Vars: map[string]string{
-					"post-id":    "post",
-					"comment-id": "parent",
+					"post-id":    string(testCase.post),
+					"comment-id": string(testCase.parent),
 				},
 				Headers: http.Header{"User": []string{string(testCase.user)}},
 				Body: strings.NewReader(
@@ -159,20 +162,22 @@ func TestDelete(t *testing.T) {
 			store: testsupport.CommentsStoreFake{
 				"post": {
 					"comment": &types.Comment{
-						Post:   "post",
-						ID:     "comment",
-						Author: "adam",
-						Body:   "hello, world",
+						Post:     "post",
+						ID:       "comment",
+						Author:   "adam",
+						Modified: now,
+						Body:     "hello, world",
 					},
 				},
 			},
 			wantedStatus: http.StatusTemporaryRedirect,
 			wantedComments: []*types.Comment{{
-				Post:    "post",
-				ID:      "comment",
-				Author:  "adam",
-				Deleted: true,
-				Body:    "hello, world",
+				Post:     "post",
+				ID:       "comment",
+				Author:   "adam",
+				Modified: now,
+				Deleted:  true,
+				Body:     "hello, world",
 			}},
 			wantedLocation: "https://comments.example.org/foo",
 		},
@@ -194,11 +199,12 @@ func TestDelete(t *testing.T) {
 			},
 			wantedStatus: http.StatusTemporaryRedirect,
 			wantedComments: []*types.Comment{{
-				Post:    "post",
-				ID:      "comment",
-				Author:  "adam",
-				Deleted: true,
-				Body:    "hello, world",
+				Post:     "post",
+				ID:       "comment",
+				Author:   "adam",
+				Modified: now,
+				Deleted:  true,
+				Body:     "hello, world",
 			}},
 			wantedLocation: "https://comments.example.org/",
 		},
@@ -217,13 +223,12 @@ func TestDelete(t *testing.T) {
 					},
 				},
 			},
-			// expect that the comment wasn't deleted
+			// expect that the comment wasn't changed
 			wantedComments: []*types.Comment{{
-				Post:    "post",
-				ID:      "comment",
-				Author:  "adam",
-				Deleted: false,
-				Body:    "hello, world",
+				Post:   "post",
+				ID:     "comment",
+				Author: "adam",
+				Body:   "hello, world",
 			}},
 			wantedStatus: http.StatusUnauthorized,
 		},

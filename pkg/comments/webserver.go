@@ -28,7 +28,13 @@ type WebServer struct {
 }
 
 var repliesTemplate = html.Must(html.New("").Parse(`<html>
-<head></head>
+<head>
+<style>
+.comment {
+	border: 1px solid black;
+}
+</style>
+</head>
 <body>
 <a href="{{.BaseURL}}/posts/{{.Post}}/comments/toplevel/reply">Reply To Post</a>
 <h1>Replies</h1>
@@ -45,8 +51,12 @@ var repliesTemplate = html.Must(html.New("").Parse(`<html>
 {{range .Replies}}
 	<div id="{{.ID}}">
 		<a id="{{.ID}}"></a>
-		<div class="comment-header">
+		<div class="comment">
+			{{ if not .Deleted }}
 			<span class="author">{{.Author}}</p>
+			{{ else }}
+			<span class="author">DELETED</span>
+			{{ end }}
 			<span class="date">{{.Created}}</p>
 			{{if eq .Author $user}}
 			<a href="{{$baseURL}}/posts/{{$post}}/comments/{{.ID}}/delete-confirm">
@@ -57,12 +67,16 @@ var repliesTemplate = html.Must(html.New("").Parse(`<html>
 			</a>
 			{{end}}
 			{{/* if the user is logged in they can reply */}}
-			{{if $user}}
+			{{if and $user (not .Deleted) }}
 			<a href="{{$baseURL}}/posts/{{$post}}/comments/{{.ID}}/reply">
 				reply
 			</a>
 			{{end}}
+			{{ if not .Deleted }}
 			<p class="body">{{.Body}}</p>
+			{{ else }}
+			<p class="body">DELETED</p>
+			{{ end }}
 		</div>
 	</div>
 {{end}}

@@ -1,7 +1,6 @@
 package comments
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -13,6 +12,100 @@ import (
 const (
 	goodBody = "sufficiently long body"
 )
+
+func TestCommentsModel_Replies(t *testing.T) {
+	for _, testCase := range []struct {
+		name           string
+		state          testsupport.CommentsStoreFake
+		post           types.PostID
+		parent         types.CommentID
+		wantedComments []*types.Comment
+		wantedErr      types.WantedError
+	}{
+		{
+			name: "simple",
+			state: testsupport.CommentsStoreFake{
+				"post": {
+					"id": {
+						ID:       "id",
+						Post:     "post",
+						Parent:   "",
+						Author:   "author",
+						Created:  someTime,
+						Modified: someTime,
+						Deleted:  false,
+						Body:     "body",
+					},
+				},
+			},
+			post:   "post",
+			parent: "",
+			wantedComments: []*types.Comment{{
+				ID:       "id",
+				Post:     "post",
+				Parent:   "",
+				Author:   "author",
+				Created:  someTime,
+				Modified: someTime,
+				Deleted:  false,
+				Body:     "body",
+			}},
+		},
+		{
+			name: "deleted posts are redacted",
+			state: testsupport.CommentsStoreFake{
+				"post": {
+					"id": {
+						ID:       "id",
+						Post:     "post",
+						Parent:   "",
+						Author:   "author",
+						Created:  someTime,
+						Modified: someTime,
+						Deleted:  true,
+						Body:     "body",
+					},
+				},
+			},
+			post:   "post",
+			parent: "",
+			wantedComments: []*types.Comment{{
+				ID:       "id",
+				Post:     "post",
+				Parent:   "",
+				Author:   "",
+				Created:  someTime,
+				Modified: someTime,
+				Deleted:  true,
+				Body:     "",
+			}},
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			if testCase.wantedErr == nil {
+				testCase.wantedErr = types.NilError{}
+			}
+
+			model := CommentsModel{
+				CommentsStore: testCase.state,
+				TimeFunc:      func() time.Time { return now },
+			}
+
+			comments, err := model.Replies(testCase.post, testCase.parent)
+
+			if err := types.CompareComments(
+				testCase.wantedComments,
+				comments,
+			); err != nil {
+				t.Fatal(err)
+			}
+
+			if err := testCase.wantedErr.CompareErr(err); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
 
 func TestCommentsModel_Delete(t *testing.T) {
 	for _, testCase := range []struct {
@@ -71,10 +164,6 @@ func TestCommentsModel_Delete(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			t.Logf("Wanted state: %s", jsonify(testCase.wantedState.List()))
-			t.Logf("Actual state: %s", jsonify(testCase.state.List()))
-			t.Fail()
-
 			if err := testCase.wantedState.Compare(
 				testCase.state,
 			); err != nil {
@@ -84,17 +173,10 @@ func TestCommentsModel_Delete(t *testing.T) {
 	}
 }
 
-func jsonify(x interface{}) []byte {
-	data, err := json.MarshalIndent(x, "", "  ")
-	if err != nil {
-		panic(err)
-	}
-	return data
-}
-
 func TestCommentsModel_Put(t *testing.T) {
 	for _, testCase := range []struct {
 		name          string
+		state         testsupport.CommentsStoreFake
 		input         types.Comment
 		wantedComment *types.Comment
 		wantedErr     types.WantedError
@@ -106,6 +188,7 @@ func TestCommentsModel_Put(t *testing.T) {
 				Author: "user",
 				Body:   goodBody,
 			},
+			state: testsupport.CommentsStoreFake{},
 			wantedComment: &types.Comment{
 				Post:     "post",
 				ID:       "comment",
@@ -117,11 +200,13 @@ func TestCommentsModel_Put(t *testing.T) {
 		},
 		{
 			name:      "missing `post` field",
+			state:     testsupport.CommentsStoreFake{},
 			input:     types.Comment{Author: "user", Body: goodBody},
 			wantedErr: ErrInvalidPost,
 		},
 		{
-			name: "ignores `ID`, `Created`, `Modified`, and `Deleted` fields",
+			name:  "ignores `ID`, `Created`, `Modified`, and `Deleted` fields",
+			state: testsupport.CommentsStoreFake{},
 			input: types.Comment{
 				Post:     "post",
 				ID:       "evil-id",
@@ -143,11 +228,13 @@ func TestCommentsModel_Put(t *testing.T) {
 		},
 		{
 			name:      "body too short",
+			state:     testsupport.CommentsStoreFake{},
 			input:     types.Comment{Post: "post", Author: "author", Body: ""},
 			wantedErr: ErrBodyTooShort,
 		},
 		{
-			name: "body too long",
+			name:  "body too long",
+			state: testsupport.CommentsStoreFake{},
 			input: types.Comment{
 				Post:   "post",
 				Author: "author",
@@ -156,7 +243,8 @@ func TestCommentsModel_Put(t *testing.T) {
 			wantedErr: ErrBodyTooLong,
 		},
 		{
-			name: "html escape body",
+			name:  "html escape body",
+			state: testsupport.CommentsStoreFake{},
 			input: types.Comment{
 				Post:   "post",
 				Author: "user",
@@ -171,30 +259,56 @@ func TestCommentsModel_Put(t *testing.T) {
 				Body:     "&lt;script&gt;&lt;/script&gt;",
 			},
 		},
+		{
+			name: "reply to deleted comment",
+			state: testsupport.CommentsStoreFake{
+				"post": {
+					"id": {
+						ID:       "id",
+						Post:     "post",
+						Parent:   "",
+						Author:   "author",
+						Created:  someTime,
+						Modified: someTime,
+						Deleted:  true,
+					},
+				},
+			},
+			input: types.Comment{
+				ID:     "reply",
+				Post:   "post",
+				Parent: "id",
+				Author: "author",
+				Body:   goodBody,
+			},
+			wantedErr: &types.CommentNotFoundErr{Post: "post", Comment: "id"},
+		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			store := testsupport.CommentsStoreFake{}
 			model := CommentsModel{
-				CommentsStore: store,
+				CommentsStore: testCase.state,
 				IDFunc:        func() types.CommentID { return "comment" },
 				TimeFunc:      func() time.Time { return now },
 			}
 
 			c, err := model.Put(&testCase.input)
 
-			if testCase.wantedErr == nil ||
-				testCase.wantedErr == (types.NilError{}) {
-				if err := (types.NilError{}).CompareErr(err); err != nil {
-					t.Fatal(err)
-				}
-				if err := testCase.wantedComment.Compare(c); err != nil {
-					t.Fatal(err)
-				}
-				if err := store.Contains(testCase.wantedComment); err != nil {
-					t.Fatal(err)
-				}
-			} else if err := testCase.wantedErr.CompareErr(err); err != nil {
+			if testCase.wantedErr == nil {
+				testCase.wantedErr = types.NilError{}
+			}
+
+			if err := testCase.wantedErr.CompareErr(err); err != nil {
 				t.Fatal(err)
+			}
+			if err := testCase.wantedComment.Compare(c); err != nil {
+				t.Fatal(err)
+			}
+			if testCase.wantedComment != nil {
+				if err := testCase.state.Contains(
+					testCase.wantedComment,
+				); err != nil {
+					t.Fatal(err)
+				}
 			}
 		})
 	}
