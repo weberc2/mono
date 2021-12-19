@@ -113,12 +113,12 @@ func (atws *AuthTypeWebServer) validate(
 				// it's coming directly from the auth service, but we need its
 				// user. If we got here, the previous access token's user
 				// failed to parse because the token was expired.
-				user, err := validateAccessToken(tokens.AccessToken, key)
+				user, err := validateAccessToken(tokens.AccessToken.Token, key)
 				if err != nil {
 					return resultErr("parsing `sub` (user) claim", err)
 				}
 
-				encrypted, err := atws.Encrypt(tokens.AccessToken)
+				encrypted, err := atws.Encrypt(tokens.AccessToken.Token)
 				if err != nil {
 					return resultErr("encrypting access token", err)
 				}

@@ -3,11 +3,13 @@ package auth
 import (
 	"fmt"
 	"time"
+
+	"github.com/weberc2/auth/pkg/types"
 )
 
 type TokenDetails struct {
-	AccessToken  string `json:"accessToken"`
-	RefreshToken string `json:"refreshToken"`
+	AccessToken  types.Token `json:"accessToken"`
+	RefreshToken types.Token `json:"refreshToken"`
 }
 
 type TokenDetailsFactory struct {
@@ -29,11 +31,15 @@ func (tdf *TokenDetailsFactory) Create(subject string) (*TokenDetails, error) {
 	}
 
 	return &TokenDetails{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
+		AccessToken:  *accessToken,
+		RefreshToken: *refreshToken,
 	}, nil
 }
 
 func (tdf *TokenDetailsFactory) AccessToken(subject string) (string, error) {
-	return tdf.AccessTokens.Create(tdf.TimeFunc(), subject)
+	tok, err := tdf.AccessTokens.Create(tdf.TimeFunc(), subject)
+	if err != nil {
+		return "", fmt.Errorf("creating access token: %w", err)
+	}
+	return tok.Token, nil
 }

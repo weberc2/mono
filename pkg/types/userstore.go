@@ -7,9 +7,9 @@ import (
 type UserID string
 
 type UserEntry struct {
-	User         UserID
-	Email        string
-	PasswordHash []byte
+	User         UserID `json:"user"`
+	Email        string `json:"email"`
+	PasswordHash []byte `json:"-"`
 }
 
 type UserStore interface {

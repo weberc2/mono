@@ -31,7 +31,11 @@ type TokenFactory struct {
 	SigningKey    *ecdsa.PrivateKey
 }
 
-func (tf *TokenFactory) Create(now time.Time, subject string) (string, error) {
+func (tf *TokenFactory) Create(
+	now time.Time,
+	subject string,
+) (*types.Token, error) {
+	expires := now.Add(tf.TokenValidity)
 	token := jwt.NewWithClaims(
 		jwt.SigningMethodES512,
 		jwt.StandardClaims{
@@ -39,15 +43,20 @@ func (tf *TokenFactory) Create(now time.Time, subject string) (string, error) {
 			Audience:  tf.Audience,
 			Issuer:    tf.Issuer,
 			IssuedAt:  now.Unix(),
-			ExpiresAt: now.Add(tf.TokenValidity).Unix(),
+			ExpiresAt: expires.Unix(),
 			NotBefore: now.Unix(),
 		},
 	)
-	return token.SignedString(tf.SigningKey)
+	t, err := token.SignedString(tf.SigningKey)
+	if err != nil {
+		return nil, fmt.Errorf("signing token: %w", err)
+	}
+	return &types.Token{Token: t, Expires: expires}, nil
 }
 
 type AuthService struct {
 	Creds         CredStore
+	Tokens        types.TokenStore
 	Notifications types.NotificationService
 	ResetTokens   ResetTokenFactory
 	TokenDetails  TokenDetailsFactory
@@ -65,6 +74,13 @@ func (as *AuthService) Login(c *types.Credentials) (*TokenDetails, error) {
 		return nil, fmt.Errorf("creating token details: %w", err)
 	}
 
+	if err := as.Tokens.Put(
+		tokenDetails.RefreshToken.Token,
+		tokenDetails.RefreshToken.Expires,
+	); err != nil {
+		return nil, fmt.Errorf("storing refresh token: %w", err)
+	}
+
 	return tokenDetails, nil
 }
 
@@ -78,7 +94,7 @@ func (as *AuthService) LoginAuthCode(c *types.Credentials) (string, error) {
 		return "", fmt.Errorf("creating auth code: %w", err)
 	}
 
-	return code, nil
+	return code.Token, nil
 }
 
 func (as *AuthService) Refresh(refreshToken string) (string, error) {
@@ -95,6 +111,10 @@ func (as *AuthService) Refresh(refreshToken string) (string, error) {
 
 	if err := claims.Valid(); err != nil {
 		return "", fmt.Errorf("validating refresh token: %w", err)
+	}
+
+	if err := as.Tokens.Exists(refreshToken); err != nil {
+		return "", fmt.Errorf("fetching refresh token expiry: %w", err)
 	}
 
 	return as.TokenDetails.AccessToken(claims.Subject)
