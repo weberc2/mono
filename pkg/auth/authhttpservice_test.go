@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/weberc2/auth/pkg/testsupport"
 	"github.com/weberc2/auth/pkg/types"
 	pz "github.com/weberc2/httpeasy"
 	pztest "github.com/weberc2/httpeasy/testsupport"
@@ -23,9 +24,11 @@ func TestAuthHTTPService(t *testing.T) {
 		input          string
 		route          func(*AuthHTTPService) pz.Route
 		validationTime time.Time
+		existingTokens testsupport.TokenStoreFake
 		existingUsers  []types.UserEntry
 		wantedStatus   int
 		wantedPayload  pztest.WantedData
+		wantedTokens   []types.Token
 	}{
 		{
 			name:  "forgot password",
@@ -36,28 +39,37 @@ func TestAuthHTTPService(t *testing.T) {
 				Email:        "user@example.org",
 				PasswordHash: hashBcrypt("password"),
 			}},
-			wantedStatus:  200,
-			wantedPayload: Any{},
+			existingTokens: testsupport.TokenStoreFake{},
+			wantedStatus:   200,
+			wantedPayload:  Any{},
 		},
 		{
 			// Still want to return 200 when user isn't found to avoid leaking
 			// details to potential attackers.
-			name:          "forgot password: user not found",
-			input:         `{"user": "user"}`,
-			route:         (*AuthHTTPService).ForgotPasswordRoute,
-			existingUsers: nil,
-			wantedStatus:  200,
-			wantedPayload: Any{},
+			name:           "forgot password: user not found",
+			input:          `{"user": "user"}`,
+			route:          (*AuthHTTPService).ForgotPasswordRoute,
+			existingUsers:  nil,
+			existingTokens: testsupport.TokenStoreFake{},
+			wantedStatus:   200,
+			wantedPayload:  Any{},
 		},
 		{
 			// Expect tokens are returned when a valid refresh token is
 			// provided.
-			name:           "refresh",
-			input:          fmt.Sprintf(`{"refreshToken": "%s"}`, refreshToken),
-			route:          (*AuthHTTPService).RefreshRoute,
+			name: "refresh",
+			input: fmt.Sprintf(
+				`{"refreshToken": "%s"}`,
+				refreshToken.Token,
+			),
+			route: (*AuthHTTPService).RefreshRoute,
+			existingTokens: testsupport.TokenStoreFake{
+				refreshToken.Token: refreshToken.Expires,
+			},
 			validationTime: now.Add(2 * time.Second),
 			wantedStatus:   200,
-			wantedPayload:  &refresh{AccessToken: accessToken},
+			wantedPayload:  &refresh{AccessToken: accessToken.Token},
+			wantedTokens:   []types.Token{*refreshToken},
 		},
 		{
 			// Expect an error when an invalid refresh token is provided. The
@@ -67,6 +79,7 @@ func TestAuthHTTPService(t *testing.T) {
 			name:           "refresh: invalid token",
 			input:          `{"refreshToken": "foobar"}`,
 			route:          (*AuthHTTPService).RefreshRoute,
+			existingTokens: testsupport.TokenStoreFake{},
 			validationTime: now.Add(2 * time.Second),
 			wantedStatus:   401,
 			wantedPayload:  ErrInvalidRefreshToken,
@@ -79,6 +92,7 @@ func TestAuthHTTPService(t *testing.T) {
 			name:           "refresh: expired token",
 			input:          fmt.Sprintf(`{"refreshToken": "%s"}`, refreshToken),
 			route:          (*AuthHTTPService).RefreshRoute,
+			existingTokens: testsupport.TokenStoreFake{},
 			validationTime: now.Add(30 * 24 * time.Hour),
 			wantedStatus:   401,
 			wantedPayload:  ErrInvalidRefreshToken,
@@ -86,13 +100,27 @@ func TestAuthHTTPService(t *testing.T) {
 		{
 			// Expect tokens returned in exchange for a valid auth code.
 			name:           "exchange auth code",
-			input:          fmt.Sprintf(`{"code": "%s"}`, authCode),
+			input:          fmt.Sprintf(`{"code": "%s"}`, authCode.Token),
 			route:          (*AuthHTTPService).ExchangeRoute,
+			existingTokens: testsupport.TokenStoreFake{},
 			validationTime: now,
 			wantedStatus:   200,
 			wantedPayload: &TokenDetails{
-				AccessToken:  accessToken,
-				RefreshToken: refreshToken,
+				AccessToken:  *accessToken,
+				RefreshToken: *refreshToken,
+			},
+		},
+		{
+			name: "logout",
+			existingTokens: testsupport.TokenStoreFake{
+				refreshToken.Token: refreshToken.Expires,
+			},
+			route:        (*AuthHTTPService).LogoutRoute,
+			input:        fmt.Sprintf(`{"refreshToken": "%s"}`, refreshToken.Token),
+			wantedStatus: 200,
+			wantedPayload: &LogoutResponse{
+				Status:  200,
+				Message: "successfully logged out",
 			},
 		},
 	} {
@@ -106,6 +134,7 @@ func TestAuthHTTPService(t *testing.T) {
 			var notifications []*types.Notification
 			service := AuthHTTPService{
 				AuthService: AuthService{
+					Tokens: testCase.existingTokens,
 					Creds: CredStore{
 						Users: &userStoreMock{
 							get: func(
@@ -162,6 +191,14 @@ func TestAuthHTTPService(t *testing.T) {
 					t.Logf("response data: %s", err.Data)
 				}
 				t.Fatal(err)
+			}
+
+			found, _ := testCase.existingTokens.List()
+			if err := types.CompareTokens(
+				testCase.wantedTokens,
+				found,
+			); err != nil {
+				t.Fatalf("checking token store: %v", err)
 			}
 		})
 	}
@@ -247,7 +284,7 @@ func mustParseKey(keyString string) *ecdsa.PrivateKey {
 	return key
 }
 
-func must(s string, err error) string {
+func must(s *types.Token, err error) *types.Token {
 	if err != nil {
 		panic(err)
 	}
@@ -320,8 +357,8 @@ func (wanted *TokenDetails) CompareData(data []byte) error {
 
 	if err := compareTokens(
 		&accessSigningKey.PublicKey,
-		wanted.AccessToken,
-		found.AccessToken,
+		wanted.AccessToken.Token,
+		found.AccessToken.Token,
 	); err != nil {
 		log.Printf(
 			"access token: wanted `%s`; found `%s`",
@@ -333,8 +370,8 @@ func (wanted *TokenDetails) CompareData(data []byte) error {
 
 	if err := compareTokens(
 		&refreshSigningKey.PublicKey,
-		wanted.RefreshToken,
-		found.RefreshToken,
+		wanted.RefreshToken.Token,
+		found.RefreshToken.Token,
 	); err != nil {
 		log.Printf(
 			"refresh token: wanted `%s`; found `%s`",

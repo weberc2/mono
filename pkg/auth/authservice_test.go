@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/weberc2/auth/pkg/testsupport"
 	"github.com/weberc2/auth/pkg/types"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -58,6 +59,7 @@ func TestLogin(t *testing.T) {
 
 	now := time.Date(2022, 01, 01, 0, 0, 0, 0, time.UTC)
 	jwt.TimeFunc = func() time.Time { return now.Add(1 * time.Second) }
+	tokenStore := testsupport.TokenStoreFake{}
 	authService := AuthService{
 		Creds: CredStore{&userStoreMock{
 			get: func(u types.UserID) (*types.UserEntry, error) {
@@ -67,6 +69,7 @@ func TestLogin(t *testing.T) {
 				return &types.UserEntry{User: "user", PasswordHash: hashed}, nil
 			},
 		}},
+		Tokens: tokenStore,
 		TokenDetails: TokenDetailsFactory{
 			AccessTokens: TokenFactory{
 				Issuer:        "issuer",
@@ -93,7 +96,7 @@ func TestLogin(t *testing.T) {
 		t.Fatalf("Unexpected err: %v", err)
 	}
 
-	claims, err := parseToken(tokens.AccessToken, accessKey)
+	claims, err := parseToken(tokens.AccessToken.Token, accessKey)
 	if err != nil {
 		t.Fatalf("Unexpected err: %v", err)
 	}
@@ -109,7 +112,7 @@ func TestLogin(t *testing.T) {
 		t.Fatalf("Wanted:\n%# v\n\nFound:\n%# v", wanted, claims)
 	}
 
-	claims, err = parseToken(tokens.RefreshToken, refreshKey)
+	claims, err = parseToken(tokens.RefreshToken.Token, refreshKey)
 	if err != nil {
 		t.Fatalf("Unexpected err: %v", err)
 	}
@@ -124,6 +127,19 @@ func TestLogin(t *testing.T) {
 	}); wanted != *claims {
 		t.Fatalf("Wanted:\n%# v\n\nFound:\n%# v", wanted, claims)
 	}
+
+	// make sure the token was persisted
+	entries, _ := tokenStore.List()
+	if err := types.CompareTokens(
+		[]types.Token{{
+			Token:   tokens.RefreshToken.Token,
+			Expires: tokens.RefreshToken.Expires,
+		}},
+		entries,
+	); err != nil {
+		t.Fatal(err)
+	}
+
 }
 
 func parseToken(token string, key *ecdsa.PrivateKey) (*jwt.StandardClaims, error) {
@@ -363,6 +379,49 @@ func TestUpdatePassword(t *testing.T) {
 
 	if err := wantedCredentials.CompareUserEntry(entry); err != nil {
 		t.Fatalf("UserStore.Upsert(*Credentials): %v", err)
+	}
+}
+
+func TestLogout(t *testing.T) {
+	for _, testCase := range []struct {
+		name         string
+		state        testsupport.TokenStoreFake
+		refreshToken string
+		wantedErr    types.WantedError
+		wantedState  []types.Token
+	}{
+		{
+			name:         "simple",
+			state:        testsupport.TokenStoreFake{"token": now},
+			refreshToken: "token",
+		},
+		{
+			name:         "not found",
+			state:        testsupport.TokenStoreFake{},
+			refreshToken: "token",
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			if testCase.wantedErr == nil {
+				testCase.wantedErr = types.NilError{}
+			}
+			if err := testCase.wantedErr.CompareErr(
+				(*AuthService).Logout(
+					&AuthService{Tokens: testCase.state},
+					testCase.refreshToken,
+				),
+			); err != nil {
+				t.Fatal(err)
+			}
+
+			found, _ := testCase.state.List()
+			if err := types.CompareTokens(
+				testCase.wantedState,
+				found,
+			); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
 

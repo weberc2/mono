@@ -132,7 +132,7 @@ func (app *WebServerApp) AuthCodeCallbackRoute(path string) pz.Route {
 					// the dirname of the route's path)
 					Path:     "/",
 					Domain:   u.Host[:portStart],
-					Value:    tokens.AccessToken,
+					Value:    tokens.AccessToken.Token,
 					Secure:   true,
 					HttpOnly: true,
 					SameSite: http.SameSiteStrictMode,
@@ -143,7 +143,7 @@ func (app *WebServerApp) AuthCodeCallbackRoute(path string) pz.Route {
 					// the dirname of the route's path)
 					Path:     "/",
 					Domain:   u.Host[:portStart],
-					Value:    tokens.RefreshToken,
+					Value:    tokens.RefreshToken.Token,
 					Secure:   true,
 					HttpOnly: true,
 					SameSite: http.SameSiteStrictMode,
@@ -154,15 +154,15 @@ func (app *WebServerApp) AuthCodeCallbackRoute(path string) pz.Route {
 }
 
 func encryptTokens(tokens *auth.TokenDetails, key string) error {
-	access, err := encrypt(tokens.AccessToken, key)
+	access, err := encrypt(tokens.AccessToken.Token, key)
 	if err != nil {
 		return fmt.Errorf("encrypting access token: %w", err)
 	}
-	refresh, err := encrypt(tokens.RefreshToken, key)
+	refresh, err := encrypt(tokens.RefreshToken.Token, key)
 	if err != nil {
 		return fmt.Errorf("encrypting refresh token: %w", err)
 	}
-	tokens.AccessToken, tokens.RefreshToken = access, refresh
+	tokens.AccessToken.Token, tokens.RefreshToken.Token = access, refresh
 	return nil
 }
 

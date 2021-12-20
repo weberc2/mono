@@ -18,7 +18,7 @@ type Code struct {
 }
 
 // WebServer serves the authentication pages for websites (as opposed to
-// single-page apps). It passes tokens to the client via cookies.
+// single-page apps).
 type WebServer struct {
 	// AuthService is the authentication service backend.
 	AuthService AuthService

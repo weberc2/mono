@@ -105,16 +105,16 @@ func TestExchangeRoute(t *testing.T) {
 		t.Fatalf("unexpected error creating auth code: %v", err)
 	}
 
-	tokens, err := client.Exchange(code)
+	tokens, err := client.Exchange(code.Token)
 	if err != nil {
 		t.Fatalf("unexpected error exchanging auth code: %v", err)
 	}
 
-	if tokens.AccessToken == "" {
+	if tokens.AccessToken.Token == "" {
 		t.Fatal("missing access token")
 	}
 
-	if tokens.RefreshToken == "" {
+	if tokens.RefreshToken.Token == "" {
 		t.Fatal("missing refresh token")
 	}
 }

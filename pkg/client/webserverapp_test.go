@@ -56,7 +56,7 @@ func TestAuthCodeCallback(t *testing.T) {
 		"%s/api/auth/code?%s",
 		appSrv.URL,
 		url.Values{
-			"code":     []string{code},
+			"code":     []string{code.Token},
 			"redirect": []string{"intended"},
 		}.Encode(),
 	)
