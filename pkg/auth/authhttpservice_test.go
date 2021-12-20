@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/json"
@@ -350,17 +349,3 @@ func (wanted *TokenDetails) CompareData(data []byte) error {
 type Any struct{}
 
 func (Any) CompareData(data []byte) error { return nil }
-
-func readAll(s pz.Serializer) ([]byte, error) {
-	writerTo, err := s()
-	if err != nil {
-		return nil, fmt.Errorf("executing serializer: %w", err)
-	}
-
-	var buf bytes.Buffer
-	if _, err := writerTo.WriteTo(&buf); err != nil {
-		return nil, fmt.Errorf("buffering response body: %w", err)
-	}
-
-	return buf.Bytes(), nil
-}
