@@ -343,6 +343,7 @@ func (ahs *AuthHTTPService) ExchangeRoute() pz.Route {
 func (ahs *AuthHTTPService) Routes() []pz.Route {
 	return []pz.Route{
 		ahs.LoginRoute(),
+		ahs.LogoutRoute(),
 		ahs.RefreshRoute(),
 		ahs.RegisterRoute(),
 		ahs.ForgotPasswordRoute(),
