@@ -382,6 +382,49 @@ func TestUpdatePassword(t *testing.T) {
 	}
 }
 
+func TestLogout(t *testing.T) {
+	for _, testCase := range []struct {
+		name         string
+		state        testsupport.TokenStoreFake
+		refreshToken string
+		wantedErr    types.WantedError
+		wantedState  []types.Token
+	}{
+		{
+			name:         "simple",
+			state:        testsupport.TokenStoreFake{"token": now},
+			refreshToken: "token",
+		},
+		{
+			name:         "not found",
+			state:        testsupport.TokenStoreFake{},
+			refreshToken: "token",
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			if testCase.wantedErr == nil {
+				testCase.wantedErr = types.NilError{}
+			}
+			if err := testCase.wantedErr.CompareErr(
+				(*AuthService).Logout(
+					&AuthService{Tokens: testCase.state},
+					testCase.refreshToken,
+				),
+			); err != nil {
+				t.Fatal(err)
+			}
+
+			found, _ := testCase.state.List()
+			if err := types.CompareTokens(
+				testCase.wantedState,
+				found,
+			); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
 func hashBcrypt(password string) []byte {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {

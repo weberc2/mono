@@ -29,6 +29,7 @@ func TestAuthHTTPService(t *testing.T) {
 		existingUsers  []types.UserEntry
 		wantedStatus   int
 		wantedPayload  pztest.WantedData
+		wantedTokens   []types.Token
 	}{
 		{
 			name:  "forgot password",
@@ -69,6 +70,7 @@ func TestAuthHTTPService(t *testing.T) {
 			validationTime: now.Add(2 * time.Second),
 			wantedStatus:   200,
 			wantedPayload:  &refresh{AccessToken: accessToken.Token},
+			wantedTokens:   []types.Token{*refreshToken},
 		},
 		{
 			// Expect an error when an invalid refresh token is provided. The
@@ -107,6 +109,19 @@ func TestAuthHTTPService(t *testing.T) {
 			wantedPayload: &TokenDetails{
 				AccessToken:  *accessToken,
 				RefreshToken: *refreshToken,
+			},
+		},
+		{
+			name: "logout",
+			existingTokens: testsupport.TokenStoreFake{
+				refreshToken.Token: refreshToken.Expires,
+			},
+			route:        (*AuthHTTPService).LogoutRoute,
+			input:        fmt.Sprintf(`{"refreshToken": "%s"}`, refreshToken.Token),
+			wantedStatus: 200,
+			wantedPayload: &LogoutResponse{
+				Status:  200,
+				Message: "successfully logged out",
 			},
 		},
 	} {
@@ -177,6 +192,14 @@ func TestAuthHTTPService(t *testing.T) {
 					t.Logf("response data: %s", err.Data)
 				}
 				t.Fatal(err)
+			}
+
+			found, _ := testCase.existingTokens.List()
+			if err := types.CompareTokens(
+				testCase.wantedTokens,
+				found,
+			); err != nil {
+				t.Fatalf("checking token store: %v", err)
 			}
 		})
 	}

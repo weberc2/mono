@@ -1,8 +1,10 @@
 package auth
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/weberc2/auth/pkg/types"
@@ -65,6 +67,73 @@ func (ahs *AuthHTTPService) LoginRoute() pz.Route {
 			)
 		},
 	}
+}
+
+func (ahs *AuthHTTPService) LogoutRoute() pz.Route {
+	return pz.Route{
+		Path:   "/api/logout",
+		Method: "POST",
+		Handler: func(r pz.Request) pz.Response {
+			var payload struct {
+				RefreshToken string `json:"refreshToken"`
+			}
+			if err := r.JSON(&payload); err != nil {
+				return pz.BadRequest(
+					pz.JSON(&LogoutResponse{
+						Message: "failed to parse refresh JSON",
+						Status:  http.StatusBadRequest,
+					}),
+					&logging{
+						Message: "failed to parse refresh JSON",
+						Error:   err.Error(),
+					},
+				)
+			}
+			if err := ahs.Logout(payload.RefreshToken); err != nil {
+				return pz.HandleError("logging out", err)
+			}
+			return pz.Ok(pz.JSON(&LogoutResponse{
+				Message: "successfully logged out",
+				Status:  http.StatusOK,
+			}), &logging{
+				Message: "successfully logged out",
+			})
+		},
+	}
+}
+
+type LogoutResponse struct {
+	Message string `json:"message"`
+	Status  int    `json:"status"`
+}
+
+func (wanted *LogoutResponse) Compare(found *LogoutResponse) error {
+	if wanted.Message != found.Message {
+		return fmt.Errorf(
+			"LogoutResponse.Message: wanted `%s`; found `%s`",
+			wanted.Message,
+			found.Message,
+		)
+	}
+
+	if wanted.Status != found.Status {
+		return fmt.Errorf(
+			"LogoutResponse.Status: wanted `%d`; found `%d`",
+			wanted.Status,
+			found.Status,
+		)
+	}
+
+	return nil
+}
+
+func (lr *LogoutResponse) CompareData(data []byte) error {
+	var other LogoutResponse
+	if err := json.Unmarshal(data, &other); err != nil {
+		return fmt.Errorf("unmarshaling `LogoutResponse`: %w", err)
+	}
+
+	return lr.Compare(&other)
 }
 
 func (ahs *AuthHTTPService) RefreshRoute() pz.Route {

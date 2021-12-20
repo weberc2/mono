@@ -84,6 +84,17 @@ func (as *AuthService) Login(c *types.Credentials) (*TokenDetails, error) {
 	return tokenDetails, nil
 }
 
+func (as *AuthService) Logout(refreshToken string) error {
+	if err := as.Tokens.Delete(refreshToken); err != nil {
+		if errors.Is(err, types.ErrTokenNotFound) {
+			log.Printf("ignoring token not found error: %v", err)
+		} else {
+			return fmt.Errorf("deleting refresh token from storage: %w", err)
+		}
+	}
+	return nil
+}
+
 func (as *AuthService) LoginAuthCode(c *types.Credentials) (string, error) {
 	if err := as.Creds.Validate(c); err != nil {
 		return "", fmt.Errorf("validating credentials: %w", err)
