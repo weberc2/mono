@@ -104,7 +104,7 @@ func (pgts *PGTokenStore) Exists(token string) error {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = types.ErrTokenNotFound
 		}
-		return fmt.Errorf("checking for token expiry in postgres: %w", err)
+		return fmt.Errorf("checking for token in postgres: %w", err)
 	}
 	return nil
 }
@@ -134,7 +134,9 @@ func (pgts *PGTokenStore) DeleteExpired(now time.Time) error {
 }
 
 func (pgts *PGTokenStore) List() ([]types.Token, error) {
-	var entries []types.Token
+	// we don't want to return a `nil` slice because that gets JSON-marshaled
+	// to `null` instead of `[]`.
+	entries := []types.Token{}
 
 	rows, err := (*sql.DB)(pgts).Query("SELECT token, expires FROM tokens")
 	if err != nil {
