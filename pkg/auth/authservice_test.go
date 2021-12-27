@@ -66,7 +66,10 @@ func TestLogin(t *testing.T) {
 				if u != "user" {
 					return nil, types.ErrUserNotFound
 				}
-				return &types.UserEntry{User: "user", PasswordHash: hashed}, nil
+				return &types.UserEntry{
+					User:         "user",
+					PasswordHash: hashed,
+				}, nil
 			},
 		}},
 		Tokens: tokenStore,
