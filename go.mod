@@ -1,16 +1,16 @@
 module github.com/weberc2/auth
 
-go 1.18
+go 1.17
 
 require (
-	github.com/aws/aws-sdk-go v1.41.19
+	github.com/aws/aws-sdk-go v1.42.25
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/google/uuid v1.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/lib/pq v1.10.4
 	github.com/nbutton23/zxcvbn-go v0.0.0-20210217022336-fa2cb2858354
 	github.com/urfave/cli/v2 v2.3.0
-	github.com/weberc2/httpeasy v0.0.23
+	github.com/weberc2/httpeasy v0.0.26
 	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
 	gopkg.in/yaml.v2 v2.4.0
 )

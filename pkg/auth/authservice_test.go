@@ -42,7 +42,113 @@ func (usm *userStoreMock) Create(entry *types.UserEntry) error {
 	return usm.create(entry)
 }
 
-func TestLogin(t *testing.T) {
+func TestAuthService_ConfirmRegistration(t *testing.T) {
+	for _, testCase := range []struct {
+		name      string
+		subject   types.UserID
+		token     string
+		email     string
+		password  string
+		wanted    *types.Credentials
+		wantedErr types.WantedError
+	}{
+		{
+			name:     "simple",
+			subject:  "subject",
+			token:    mustResetToken(now, "subject", "subject@example.org"),
+			email:    "subject@example.org",
+			password: goodPassword,
+			wanted: &types.Credentials{
+				User:     "subject",
+				Email:    "subject@example.org",
+				Password: goodPassword,
+			},
+		},
+		{
+			name:     "token parse err",
+			subject:  "user",
+			token:    "",
+			email:    "user@example.org",
+			password: goodPassword,
+			wanted:   nil,
+			wantedErr: TokenClaimsParseErr(fmt.Errorf(
+				"parsing claims from token: %v",
+				jwt.NewValidationError(
+					"token contains an invalid number of segments",
+					jwt.ValidationErrorMalformed,
+				),
+			)),
+		},
+		{
+			name:      "password validation err",
+			subject:   "user",
+			token:     mustResetToken(now, "user", "user@example.org"),
+			email:     "user@example.org",
+			password:  "", // invalid
+			wanted:    nil,
+			wantedErr: ErrPasswordTooSimple,
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			jwt.TimeFunc = func() time.Time { return now }
+			defer func() { jwt.TimeFunc = time.Now }()
+
+			userStore := testsupport.UserStoreFake{}
+			authService := AuthService{
+				Creds:  CredStore{userStore},
+				Tokens: testsupport.TokenStoreFake{},
+				TokenDetails: TokenDetailsFactory{
+					AccessTokens:  accessTokenFactory,
+					RefreshTokens: refreshTokenFactory,
+					TimeFunc:      func() time.Time { return now },
+				},
+				Codes:         codesTokenFactory,
+				ResetTokens:   resetTokenFactory,
+				TimeFunc:      func() time.Time { return now },
+				Notifications: &testsupport.NotificationServiceFake{},
+			}
+			if testCase.wantedErr == nil {
+				testCase.wantedErr = types.NilError{}
+			}
+			if err := testCase.wantedErr.CompareErr(
+				authService.ConfirmRegistration(
+					testCase.token,
+					testCase.password,
+				),
+			); err != nil {
+				t.Fatal(err)
+			}
+
+			entry, err := userStore.Get(testCase.subject)
+			if testCase.wanted == nil && errors.Is(
+				err,
+				types.ErrUserNotFound,
+			) {
+				return
+			}
+			if err != nil {
+				t.Fatalf(
+					"unexpected error getting user from user store: %v",
+					err,
+				)
+			}
+
+			if err := testCase.wanted.CompareUserEntry(entry); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func mustResetToken(now time.Time, user types.UserID, email string) string {
+	t, err := resetTokenFactory.Create(now, user, email)
+	if err != nil {
+		panic(fmt.Sprintf("creating reset token: %v", err))
+	}
+	return t
+}
+
+func TestAuthService_Login(t *testing.T) {
 	accessKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
 		t.Fatalf("Unexpected err: %v", err)
@@ -184,7 +290,7 @@ func (nsm *notificationServiceMock) Notify(rt *types.Notification) error {
 	return nsm.notify(rt)
 }
 
-func TestRegister(t *testing.T) {
+func TestAuthService_Register(t *testing.T) {
 	var (
 		notifyCalledWithToken *types.Notification
 		now                   = time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -194,13 +300,11 @@ func TestRegister(t *testing.T) {
 		t.Fatalf("Unexpected err: %v", err)
 	}
 	authService := AuthService{
-		Creds: CredStore{
-			Users: &userStoreMock{
-				get: func(u types.UserID) (*types.UserEntry, error) {
-					return nil, types.ErrUserNotFound
-				},
+		Creds: CredStore{&userStoreMock{
+			get: func(u types.UserID) (*types.UserEntry, error) {
+				return nil, types.ErrUserNotFound
 			},
-		},
+		}},
 		ResetTokens: ResetTokenFactory{
 			Issuer:        "issuer",
 			Audience:      "audience",
@@ -232,19 +336,17 @@ func TestRegister(t *testing.T) {
 	}
 }
 
-func TestRegister_UserNameExists(t *testing.T) {
+func TestAuthService_Register_UserNameExists(t *testing.T) {
 	authService := AuthService{
-		Creds: CredStore{
-			Users: &userStoreMock{
-				get: func(u types.UserID) (*types.UserEntry, error) {
-					return &types.UserEntry{
-						User:         u,
-						Email:        "user@example.org",
-						PasswordHash: hashBcrypt("password"),
-					}, nil
-				},
+		Creds: CredStore{&userStoreMock{
+			get: func(u types.UserID) (*types.UserEntry, error) {
+				return &types.UserEntry{
+					User:         u,
+					Email:        "user@example.org",
+					PasswordHash: hashBcrypt("password"),
+				}, nil
 			},
-		},
+		}},
 	}
 
 	if err := authService.Register("user", "user@example.org"); err != nil {
@@ -260,7 +362,7 @@ func TestRegister_UserNameExists(t *testing.T) {
 	t.Fatal("Wanted `ErrUserExists`; found `<nil>`")
 }
 
-func TestRegister_InvalidEmailAddress(t *testing.T) {
+func TestAuthService_Register_InvalidEmailAddress(t *testing.T) {
 	authService := AuthService{}
 	for _, email := range []string{"", "nodomain@", "noatsign"} {
 		if err := authService.Register("user", email); err != nil {
@@ -273,7 +375,7 @@ func TestRegister_InvalidEmailAddress(t *testing.T) {
 	}
 }
 
-func TestForgotPassword(t *testing.T) {
+func TestAuthService_ForgotPassword(t *testing.T) {
 	var (
 		getCalledWithUser     types.UserID
 		notifyCalledWithToken *types.Notification
@@ -334,7 +436,7 @@ func TestForgotPassword(t *testing.T) {
 	}
 }
 
-func TestUpdatePassword(t *testing.T) {
+func TestAuthService_UpdatePassword(t *testing.T) {
 	var (
 		now      = time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
 		password = "osakldflhkjewadfkjsfduIHUHKJGFU"
@@ -345,16 +447,18 @@ func TestUpdatePassword(t *testing.T) {
 		t.Fatalf("Unexpected err: %v", err)
 	}
 	authService := AuthService{
-		Creds: CredStore{&userStoreMock{
-			get: func(types.UserID) (*types.UserEntry, error) {
-				return &types.UserEntry{
-					User:         "user",
-					Email:        "user@example.org",
-					PasswordHash: hashBcrypt(password),
-				}, nil
+		Creds: CredStore{
+			Users: &userStoreMock{
+				get: func(types.UserID) (*types.UserEntry, error) {
+					return &types.UserEntry{
+						User:         "user",
+						Email:        "user@example.org",
+						PasswordHash: hashBcrypt(password),
+					}, nil
+				},
+				upsert: func(e *types.UserEntry) error { entry = e; return nil },
 			},
-			upsert: func(e *types.UserEntry) error { entry = e; return nil },
-		}},
+		},
 		Notifications: &notificationServiceMock{
 			notify: func(n *types.Notification) error { return nil },
 		},
@@ -391,7 +495,7 @@ func TestUpdatePassword(t *testing.T) {
 	}
 }
 
-func TestLogout(t *testing.T) {
+func TestAuthService_Logout(t *testing.T) {
 	for _, testCase := range []struct {
 		name         string
 		state        testsupport.TokenStoreFake
@@ -444,3 +548,5 @@ func hashBcrypt(password string) []byte {
 	}
 	return hash
 }
+
+var goodPassword = ";oasdfipas#@#$OPYODF:;asdf"

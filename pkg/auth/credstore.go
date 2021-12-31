@@ -4,14 +4,19 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 
 	"github.com/nbutton23/zxcvbn-go"
 	"github.com/weberc2/auth/pkg/types"
+	pz "github.com/weberc2/httpeasy"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
-var ErrPasswordTooSimple = errors.New("password is too simple")
+var ErrPasswordTooSimple = &pz.HTTPError{
+	Status:  http.StatusBadRequest,
+	Message: "password is too simple",
+}
 
 type CredStore struct {
 	Users types.UserStore

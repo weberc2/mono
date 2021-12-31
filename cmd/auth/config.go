@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	html "html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -160,7 +159,7 @@ func (c *Config) Run() error {
 				Sender: c.NotificationSender,
 				TokenURL: func(tok string) string {
 					return fmt.Sprintf(
-						"https://%s/password?t=%s",
+						"https://%s/confirm?t=%s",
 						c.HostName,
 						tok,
 					)
@@ -187,32 +186,11 @@ func (c *Config) Run() error {
 		},
 	}
 
-	loginForm, err := html.New("").Parse(`<html>
-<head>
-	<title>Login</title>
-</head>
-<body>
-<h1>Login</h1>
-{{ if .ErrorMessage }}<p id="error-message">{{ .ErrorMessage }}</p>{{ end }}
-<form action={{ .FormAction }} method="POST">
-	<label for="username">Username</label>
-	<input type="text" id="username" name="username"><br><br>
-	<label for="password">Password</label>
-	<input type="password" id="password" name="password"><br><br>
-	<input type="submit" value="Submit">
-</form>
-</body>
-</html>`)
-	if err != nil {
-		return fmt.Errorf("parsing login form template: %w", err)
-	}
-
 	webServer := auth.WebServer{
 		AuthService:             authService.AuthService,
 		BaseURL:                 c.BaseURL.Std(),
 		RedirectDomain:          c.RedirectDomain,
 		DefaultRedirectLocation: c.DefaultRedirectLocation,
-		LoginForm:               loginForm,
 	}
 
 	log.Printf(`{"message": "listening on %s"}`, c.Addr)
@@ -232,6 +210,10 @@ func (c *Config) Run() error {
 					Method:  "POST",
 					Handler: webServer.LoginHandler,
 				},
+				webServer.RegistrationFormRoute(),
+				webServer.RegistrationHandlerRoute(),
+				webServer.RegistrationConfirmationFormRoute(),
+				webServer.RegistrationConfirmationHandlerRoute(),
 			)...,
 		),
 	); err != nil {
