@@ -241,7 +241,8 @@ func (ws *WebServer) LoginFormPage(r pz.Request) pz.Response {
 
 	// create a struct for templating and logging
 	context := struct {
-		FormAction string `json:"formAction"`
+		FormAction   string `json:"formAction"`
+		ErrorMessage string `json:"-"`
 	}{
 		FormAction: ws.BaseURL + "login?" + url.Values{
 			"callback": []string{query.Get("callback")},
