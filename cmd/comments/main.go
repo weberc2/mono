@@ -31,6 +31,11 @@ func main() {
 		log.Fatal("missing required env var: LOGIN_URL")
 	}
 
+	registerURL := os.Getenv("REGISTER_URL")
+	if registerURL == "" {
+		log.Fatal("missing required env var: REGISTER_URL")
+	}
+
 	authBaseURL := os.Getenv("AUTH_BASE_URL")
 	if authBaseURL == "" {
 		log.Fatal("missing required env var: AUTH_BASE_URL")
@@ -80,6 +85,7 @@ func main() {
 
 	webServer := comments.WebServer{
 		LoginURL:         loginURL,
+		RegisterURL:      registerURL,
 		LogoutPath:       "/auth/logout",
 		BaseURL:          baseURLString,
 		Comments:         commentsService.Comments,

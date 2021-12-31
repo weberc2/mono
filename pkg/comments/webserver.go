@@ -23,6 +23,7 @@ type logging struct {
 
 type WebServer struct {
 	LoginURL         string
+	RegisterURL      string
 	LogoutPath       string
 	BaseURL          string
 	Comments         CommentsModel
@@ -45,6 +46,7 @@ var repliesTemplate = html.Must(html.New("").Parse(`<html>
     {{.User}} - <a href="{{.LogoutURL}}">logout</a>
 {{else}}
     <a href="{{.LoginURL}}">login</a>
+	<a href="{{.RegisterURL}}">register</a>
 {{end}}
 
 {{$baseURL := .BaseURL}}
@@ -115,13 +117,14 @@ func (ws *WebServer) Replies(r pz.Request) pz.Response {
 
 	return pz.Ok(
 		pz.HTMLTemplate(repliesTemplate, struct {
-			LoginURL  string           `json:"loginURL"`
-			LogoutURL string           `json:"logoutURL"`
-			BaseURL   string           `json:"baseURL"`
-			Post      types.PostID     `json:"post"`
-			Parent    types.CommentID  `json:"parent"`
-			Replies   []*types.Comment `json:"replies"`
-			User      types.UserID     `json:"user"`
+			LoginURL    string           `json:"loginURL"`
+			LogoutURL   string           `json:"logoutURL"`
+			RegisterURL string           `json:"registerURL"`
+			BaseURL     string           `json:"baseURL"`
+			Post        types.PostID     `json:"post"`
+			Parent      types.CommentID  `json:"parent"`
+			Replies     []*types.Comment `json:"replies"`
+			User        types.UserID     `json:"user"`
 		}{
 			LoginURL: fmt.Sprintf(
 				"%s?%s",
@@ -143,12 +146,13 @@ func (ws *WebServer) Replies(r pz.Request) pz.Response {
 					)},
 				}.Encode(),
 			),
-			LogoutURL: join(ws.BaseURL, ws.LogoutPath),
-			BaseURL:   ws.BaseURL,
-			Post:      post,
-			Parent:    parent,
-			Replies:   replies,
-			User:      user, // empty if unauthorized
+			LogoutURL:   join(ws.BaseURL, ws.LogoutPath),
+			RegisterURL: ws.RegisterURL,
+			BaseURL:     ws.BaseURL,
+			Post:        post,
+			Parent:      parent,
+			Replies:     replies,
+			User:        user, // empty if unauthorized
 		}),
 		&logging{Post: post, Parent: parent, User: user},
 	)
