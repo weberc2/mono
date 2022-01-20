@@ -4,7 +4,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
+
+	"github.com/lib/pq"
 )
 
 // Column represents a SQL table column.
@@ -189,7 +192,7 @@ func (t *Table) Delete(db *sql.DB, id interface{}) error {
 // columns, if the provided item has a value which already exists, the column's
 // `Unique` field will be returned.
 func (t *Table) Insert(db *sql.DB, item Item) error {
-	return t.inserter().insert(db, item)
+	return insert(db, t, insertSQL, item)
 }
 
 // Upsert puts the provided item into the table. If a record already exists
@@ -197,7 +200,194 @@ func (t *Table) Insert(db *sql.DB, item Item) error {
 // other constraint violations. For UNIQUE columns, if the provided item has a
 // value which already exists, the column's `Unique` field will be returned.
 func (t *Table) Upsert(db *sql.DB, item Item) error {
-	return t.upserter().insert(db, item)
+	return insert(db, t, upsertSQL, item)
+}
+
+// Update updates a row in a table. If the row isn't found, the table's
+// `NotFoundErr` field is returned.
+func (t *Table) Update(db *sql.DB, item Item) error {
+	return update(db, t, item)
+}
+
+func updateSQL(t *Table, columns []string) string {
+	// There must be an ID column in position 0 and at least one other column
+	// to set because neither `UPDATE <table> SET WHERE <idColumn>=<id>` nor
+	// `UPDATE <table> WHERE <idColumn>=<id>` are valid SQL.
+	if len(columns) > 1 {
+		setList := setListSQL(columns)
+		idc := t.IDColumn().Name
+		return fmt.Sprintf(
+			"UPDATE \"%s\" SET %s WHERE \"%s\"=$1 RETURNING \"%s\"",
+			t.Name,
+			setList,
+			idc,
+			idc,
+		)
+	}
+	return ""
+}
+
+func insertSQL(t *Table, columns []string) string {
+	var columnNames, placeholders strings.Builder
+	columnNames.WriteByte('"')
+	columnNames.WriteString(columns[0])
+	columnNames.WriteByte('"')
+	placeholders.WriteString("$1")
+
+	for i := range columns[1:] {
+		columnNames.WriteByte(',')
+		columnNames.WriteByte(' ')
+		columnNames.WriteByte('"')
+		columnNames.WriteString(columns[i+1])
+		columnNames.WriteByte('"')
+
+		placeholders.WriteByte(',')
+		placeholders.WriteByte(' ')
+		placeholders.WriteString(fmt.Sprintf("$%d", i+2))
+	}
+
+	return fmt.Sprintf(
+		"INSERT INTO \"%s\" (%s) VALUES(%s)",
+		t.Name,
+		columnNames.String(),
+		placeholders.String(),
+	)
+}
+
+func update(
+	db *sql.DB,
+	table *Table,
+	item Item,
+) error {
+	columns, values := table.columnsAndValues(item)
+	if len(columns) < 2 {
+		return fmt.Errorf(
+			"update requires 2 columns; found %d: %v",
+			len(columns),
+			columns,
+		)
+	}
+	rows, err := db.Query(updateSQL(table, columns), values...)
+	if err != nil {
+		return fmt.Errorf(
+			"inserting row into postgres table `%s`: %w",
+			table.Name,
+			handleErr(table, err),
+		)
+	}
+	if !rows.Next() {
+		return fmt.Errorf(
+			"inserting row into postgres table `%s`: %w",
+			table.Name,
+			table.NotFoundErr,
+		)
+	}
+	return nil
+}
+
+func insert(
+	db *sql.DB,
+	table *Table,
+	sqlFunc func(*Table, []string) string,
+	item Item,
+) error {
+	columns, values := table.columnsAndValues(item)
+	sql := sqlFunc(table, columns)
+	if _, err := db.Exec(sql, values...); err != nil {
+		return fmt.Errorf(
+			"inserting row into postgres table `%s`: %w",
+			table.Name,
+			handleErr(table, err),
+		)
+	}
+	return nil
+}
+
+func handleErr(table *Table, err error) error {
+	if err, ok := err.(*pq.Error); ok && err.Code == "23505" {
+		if fmt.Sprintf("%s_pkey", table.Name) == err.Constraint {
+			return table.ExistsErr
+		}
+		prefix := table.Name + "_"
+		suffix := "_key"
+		if strings.HasPrefix(err.Constraint, prefix) &&
+			strings.HasSuffix(err.Constraint, suffix) {
+			column := err.Constraint[len(prefix) : len(err.Constraint)-len(suffix)]
+			for _, c := range table.Columns {
+				if c.Name == column {
+					return c.Unique
+				}
+			}
+		}
+	}
+	return err
+}
+
+func (t *Table) columnsAndValues(item Item) ([]string, []interface{}) {
+	buf := make([]interface{}, len(t.Columns))
+	item.Values(buf)
+	var columnNames []string
+	var nonNilValues []interface{}
+
+	for i := range buf {
+		if buf[i] != nil {
+			columnNames = append(columnNames, t.Columns[i].Name)
+			nonNilValues = append(nonNilValues, buf[i])
+			continue
+		}
+	}
+	return columnNames, nonNilValues
+}
+
+func upsertSQL(t *Table, columns []string) string {
+	// build the SET list (the list of "<COLUMN>"=<value> pairs following the
+	// SET keyword)
+	//
+	// there's always at least 1 column--the ID column (at position 0). we
+	// don't change that column value, so we ignore it in the SET list.
+	if len(columns) > 1 {
+		setList := setListSQL(columns)
+		idc := t.IDColumn().Name
+		return fmt.Sprintf(
+			"%s ON CONFLICT (\"%s\") DO UPDATE SET %s WHERE \"%s\".\"%s\" = $%d",
+			insertSQL(t, columns),
+			idc,
+			setList,
+			t.Name,
+			idc,
+			idColumnPosition+1, // postgres placeholders are 1-indexed
+		)
+	}
+	return fmt.Sprintf(
+		"%s ON CONFLICT (\"%s\") DO NOTHING",
+		insertSQL(t, columns),
+		t.IDColumn().Name,
+	)
+}
+
+// build the SET list (the list of "<COLUMN>"=<value> pairs following the SET
+// keyword)
+//
+// there's always at least 1 column in the table--the ID column (at position
+// 0). we don't change that column value, so we ignore it in the SET list.
+func setListSQL(columns []string) string {
+	var sb strings.Builder
+	sb.WriteByte('"')
+	sb.WriteString(columns[1])
+	sb.WriteByte('"')
+	sb.WriteString("=$2")
+
+	for i, column := range columns[2:] {
+		sb.WriteByte(',')
+		sb.WriteByte(' ')
+		sb.WriteByte('"')
+		sb.WriteString(column)
+		sb.WriteByte('"')
+		sb.WriteByte('=')
+		sb.WriteByte('$')
+		sb.WriteString(strconv.Itoa(i + 3))
+	}
+	return sb.String()
 }
 
 // Ensure creates the table if it doesn't already exist. If the table already
