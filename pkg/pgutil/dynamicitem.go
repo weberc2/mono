@@ -33,8 +33,11 @@ const (
 	// return an error.
 	ValueTypeInvalid ValueType = -1
 
+	// ValueTypeBoolean is the ValueType for Boolean values.
+	ValueTypeBoolean ValueType = iota
+
 	// ValueTypeString is the ValueType for String values.
-	ValueTypeString ValueType = iota
+	ValueTypeString
 
 	// ValueTypeInteger is the ValueType for Integer values.
 	ValueTypeInteger
@@ -47,6 +50,8 @@ const (
 // column type. If the column type isn't supported, an error is returned.
 func ValueTypeFromColumnType(columnType string) (ValueType, error) {
 	switch columnType {
+	case "BOOLEAN":
+		return ValueTypeBoolean, nil
 	case "TEXT":
 		return ValueTypeString, nil
 	case "INTEGER":
@@ -62,6 +67,41 @@ func ValueTypeFromColumnType(columnType string) (ValueType, error) {
 			columnType,
 		)
 	}
+}
+
+// Boolean represents a bool Value.
+type Boolean bool
+
+// Value returns the underlying data as a `bool`.
+func (b *Boolean) Value() interface{} {
+	if b == nil {
+		return nil
+	}
+	return bool(*b)
+}
+
+// Pointer returns a pointer to the underlying `bool`-typed data.
+func (b *Boolean) Pointer() interface{} { return (*bool)(b) }
+
+// CompareValue compares the `Boolean` with other values. If the other value is
+// not a `*Boolean` with the same value, an error is returned.
+func (b *Boolean) CompareValue(found Value) error {
+	if found, ok := found.(*Boolean); ok {
+		if b == found {
+			return nil
+		}
+		if b != nil && found == nil {
+			return fmt.Errorf("wanted `%v`; found `nil`", *b)
+		}
+		if b == nil && found != nil {
+			return fmt.Errorf("wanted `nil`; found `%v`", *found)
+		}
+		if *b != *found {
+			return fmt.Errorf("wanted `%v`; found `%v`", *b, *found)
+		}
+		return nil
+	}
+	return fmt.Errorf("wanted type `Boolean`; found `%T`", found)
 }
 
 // String represents a string Value.
