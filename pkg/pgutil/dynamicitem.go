@@ -215,6 +215,9 @@ func (t Time) MarshalJSON() ([]byte, error) {
 	return json.Marshal(time.Time.Format(time.Time(t), time.RFC3339))
 }
 
+// NewBoolean creates a new `*Boolean` object.
+func NewBoolean(b bool) *Boolean { return (*Boolean)(&b) }
+
 // NewString creates a new `*String` object.
 func NewString(s string) *String { return (*String)(&s) }
 
@@ -223,6 +226,9 @@ func NewInteger(i int) *Integer { return (*Integer)(&i) }
 
 // NewTime creates a new `*Time` object.
 func NewTime(t time.Time) *Time { return (*Time)(&t) }
+
+// NilBoolean creates a `Value` which is implemented by a nil `*Boolean`.
+func NilBoolean() Value { return new(Boolean) }
 
 // NilString creates a `Value` which is implemented by a nil `*String`.
 func NilString() Value { return new(String) }
@@ -258,6 +264,8 @@ func NilValueFuncFromColumnType(columnType string) (func() Value, error) {
 		return nil, err
 	}
 	switch valueType {
+	case ValueTypeBoolean:
+		return NilBoolean, nil
 	case ValueTypeString:
 		return NilString, nil
 	case ValueTypeInteger:
