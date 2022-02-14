@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -40,10 +41,10 @@ type Workflow struct {
 	Jobs map[string]Job
 }
 
-func WorkflowRelease(targets ...string) Workflow {
-	jobs := make(map[string]Job, len(targets))
-	for _, target := range targets {
-		jobs[target] = JobRelease(target)
+func WorkflowRelease(images ...*Image) Workflow {
+	jobs := make(map[string]Job, len(images))
+	for _, image := range images {
+		jobs[image.Name] = JobRelease(image)
 	}
 	return Workflow{
 		Name: "release",
@@ -57,7 +58,33 @@ func WorkflowRelease(targets ...string) Workflow {
 	}
 }
 
-func JobRelease(target string) Job {
+type Image struct {
+	// The name of the GitHub Action Job to build the image as well as the
+	// github-username-prefixed name of the image in the registry. E.g.,
+	// for github user `weberc2` and name `comments`, this would get pushed to
+	// the registry as `weberc2/comments`.
+	Name string
+
+	// The path to the Dockerfile relative to the repo root.
+	Dockerfile string
+
+	// The path to the build context relative to the repo root.
+	Context string
+
+	// The build arguments.
+	Args map[string]string
+}
+
+func GoImage(target string) *Image {
+	return &Image{
+		Name:       target,
+		Context:    ".",
+		Dockerfile: "./docker/golang/Dockerfile",
+		Args:       map[string]string{"TARGET": target},
+	}
+}
+
+func JobRelease(image *Image) Job {
 	return Job{
 		RunsOn: "ubuntu-latest",
 		Steps: []Step{{
@@ -85,7 +112,7 @@ fi
 
 # Set output parameters.
 echo ::set-output name=tags::${TAGS}
-echo ::set-output name=docker_image::${DOCKER_IMAGE}`, target),
+echo ::set-output name=docker_image::${DOCKER_IMAGE}`, image.Name),
 		}, {
 			Name: "Set up QEMU",
 			Uses: "docker/setup-qemu-action@master",
@@ -106,10 +133,16 @@ echo ::set-output name=docker_image::${DOCKER_IMAGE}`, target),
 			Name: "Build",
 			Uses: "docker/build-push-action@v2",
 			With: Args{
-				"builder":    "${{ steps.buildx.outputs.name }}",
-				"build-args": "TARGET=" + target,
+				"builder": "${{ steps.buildx.outputs.name }}",
+				"build-args": func() string {
+					lines := make([]string, 0, len(image.Args))
+					for key, value := range image.Args {
+						lines = append(lines, fmt.Sprintf("%s=%s", key, value))
+					}
+					return strings.Join(lines, "\n")
+				}(),
 				"context":    ".",
-				"file":       "./Dockerfile",
+				"file":       image.Dockerfile,
 				"platforms":  "linux/amd64,linux/arm64",
 				"push":       true,
 				"tags":       "${{ steps.prep.outputs.tags }}",
@@ -118,19 +151,6 @@ echo ::set-output name=docker_image::${DOCKER_IMAGE}`, target),
 			},
 		}},
 	}
-}
-
-func MarshalTo(dst string, v interface{}) error {
-	f, err := os.Create(dst)
-	if err != nil {
-		return fmt.Errorf("opening file `%s`: %w", dst, err)
-	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			log.Println("WARNING failed to close file `%s`: %v", dst, err)
-		}
-	}()
-	return MarshalToWriter(f, v)
 }
 
 func MarshalToWriter(w io.Writer, v interface{}) error {
@@ -145,7 +165,15 @@ func MarshalToWriter(w io.Writer, v interface{}) error {
 func main() {
 	if err := MarshalToWriter(
 		os.Stdout,
-		WorkflowRelease("auth", "comments"),
+		WorkflowRelease(
+			GoImage("auth"),
+			GoImage("comments"),
+			&Image{
+				Name:       "pgbackup",
+				Dockerfile: "./docker/pgbackup/Dockerfile",
+				Context:    "./docker/pgbackup",
+			},
+		),
 	); err != nil {
 		log.Fatalf("marshaling release workflow: %v", err)
 	}
