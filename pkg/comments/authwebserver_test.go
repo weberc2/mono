@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/weberc2/auth/pkg/client"
-	"github.com/weberc2/comments/pkg/comments/testsupport"
+	"github.com/weberc2/mono/pkg/auth/client"
+	"github.com/weberc2/mono/pkg/comments/testsupport"
 	pz "github.com/weberc2/httpeasy"
 )
 

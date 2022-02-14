@@ -1,7 +1,7 @@
 package comments
 
 import (
-	"github.com/weberc2/auth/pkg/client"
+	"github.com/weberc2/mono/pkg/auth/client"
 	pz "github.com/weberc2/httpeasy"
 )
 

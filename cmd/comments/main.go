@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/weberc2/auth/pkg/client"
-	"github.com/weberc2/comments/pkg/comments"
-	"github.com/weberc2/comments/pkg/comments/types"
-	"github.com/weberc2/comments/pkg/pgcommentsstore"
+	"github.com/weberc2/mono/pkg/auth/client"
+	"github.com/weberc2/mono/pkg/comments"
+	"github.com/weberc2/mono/pkg/comments/types"
+	"github.com/weberc2/mono/pkg/pgcommentsstore"
 	pz "github.com/weberc2/httpeasy"
 )
 

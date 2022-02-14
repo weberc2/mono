@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/weberc2/auth/pkg/pgutil"
-	"github.com/weberc2/comments/pkg/comments/types"
+	"github.com/weberc2/mono/pkg/pgutil"
+	"github.com/weberc2/mono/pkg/comments/types"
 )
 
 type PGCommentsStore sql.DB

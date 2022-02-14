@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/weberc2/comments/pkg/comments/testsupport"
-	"github.com/weberc2/comments/pkg/comments/types"
+	"github.com/weberc2/mono/pkg/comments/testsupport"
+	"github.com/weberc2/mono/pkg/comments/types"
 )
 
 const (

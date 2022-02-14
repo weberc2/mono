@@ -3,7 +3,7 @@ package testsupport
 import (
 	"fmt"
 
-	"github.com/weberc2/comments/pkg/comments/types"
+	"github.com/weberc2/mono/pkg/comments/types"
 )
 
 type CommentsStoreFake map[types.PostID]map[types.CommentID]*types.Comment

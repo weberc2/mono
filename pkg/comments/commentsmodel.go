@@ -6,7 +6,7 @@ import (
 
 	"html"
 
-	"github.com/weberc2/comments/pkg/comments/types"
+	"github.com/weberc2/mono/pkg/comments/types"
 	pz "github.com/weberc2/httpeasy"
 )
 
