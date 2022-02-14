@@ -10,17 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lib/pq"
+	"github.com/weberc2/auth/pkg/pgutil"
 	"github.com/weberc2/comments/pkg/types"
 )
 
-const errUniqueViolation = "23505"
-
-var _ types.CommentsStore = &PGCommentsStore{}
-
-type PGCommentsStore struct {
-	DB *sql.DB
-}
+type PGCommentsStore sql.DB
 
 func OpenEnv() (*PGCommentsStore, error) {
 	db, err := sql.Open(
@@ -43,7 +37,7 @@ func OpenEnv() (*PGCommentsStore, error) {
 		return nil, fmt.Errorf("pinging postgres database: %w", err)
 	}
 
-	return &PGCommentsStore{db}, nil
+	return (*PGCommentsStore)(db), nil
 }
 
 func getEnv(env, def string) string {
@@ -55,84 +49,38 @@ func getEnv(env, def string) string {
 }
 
 func (pgcs *PGCommentsStore) DropTable() error {
-	if _, err := pgcs.DB.Exec("DROP TABLE IF EXISTS comments"); err != nil {
-		return fmt.Errorf("dropping table `comments`: %w", err)
-	}
-	return nil
+	return Table.Drop((*sql.DB)(pgcs))
 }
 
 func (pgcs *PGCommentsStore) EnsureTable() error {
-	if _, err := pgcs.DB.Exec(
-		"CREATE TABLE IF NOT EXISTS comments (" +
-			"id VARCHAR(255) NOT NULL PRIMARY KEY, " +
-			"post TEXT NOT NULL, " +
-			"parent VARCHAR(255) NOT NULL, " +
-			"author VARCHAR(255) NOT NULL, " +
-			"created VARCHAR(255) NOT NULL, " +
-			"modified VARCHAR(255) NOT NULL, " +
-			"deleted BOOLEAN NOT NULL DEFAULT FALSE, " +
-			"body TEXT NOT NULL)",
-	); err != nil {
-		return fmt.Errorf("creating `comments` postgres table: %w", err)
-	}
-	return nil
+	return Table.Ensure((*sql.DB)(pgcs))
 }
 
 func (pgcs *PGCommentsStore) ClearTable() error {
-	if _, err := pgcs.DB.Exec("DELETE FROM comments"); err != nil {
-		return fmt.Errorf("clearing `comments` postgres table: %w", err)
-	}
-	return nil
+	return Table.Clear((*sql.DB)(pgcs))
 }
 
 func (pgcs *PGCommentsStore) ResetTable() error {
-	if err := pgcs.DropTable(); err != nil {
-		return err
-	}
-	return pgcs.EnsureTable()
+	return Table.Reset((*sql.DB)(pgcs))
 }
 
-func (pgcs *PGCommentsStore) Put(c *types.Comment) (*types.Comment, error) {
-	if _, err := pgcs.DB.Exec(
-		"INSERT INTO comments "+
-			"(id, post, parent, author, created, modified, deleted, body) "+
-			"VALUES($1, $2, $3, $4, $5, $6, $7, $8);",
-		c.ID,
-		c.Post,
-		c.Parent,
-		c.Author,
-		c.Created.Format(time.RFC3339),
-		c.Modified.Format(time.RFC3339),
-		c.Deleted,
-		c.Body,
-	); err != nil {
-		if err, ok := err.(*pq.Error); ok && err.Code == errUniqueViolation {
-			return nil, &types.CommentExistsErr{Post: c.Post, Comment: c.ID}
-		}
-		return nil, fmt.Errorf("inserting comment into postgres: %w", err)
-	}
-
-	return c, nil
+func (pgcs *PGCommentsStore) Put(c *types.Comment) error {
+	return Table.Insert((*sql.DB)(pgcs), (*comment)(c))
 }
 
 func (pgcs *PGCommentsStore) Comment(
 	p types.PostID,
 	c types.CommentID,
 ) (*types.Comment, error) {
-	var comment types.Comment
-	if err := scanComment(&comment, pgcs.DB.QueryRow(
-		"SELECT id, post, parent, author, created, modified, deleted, body "+
-			"FROM comments WHERE post = $1 AND id = $2",
-		p,
-		c,
-	)); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, &types.CommentNotFoundErr{Post: p, Comment: c}
-		}
-		return nil, fmt.Errorf("fetching comment from postgres: %w", err)
+	var out comment
+	if err := Table.Get(
+		(*sql.DB)(pgcs),
+		&comment{ID: c, Post: p},
+		&out,
+	); err != nil {
+		return nil, err
 	}
-
-	return &comment, nil
+	return (*types.Comment)(&out), nil
 }
 
 func (pgcs *PGCommentsStore) Replies(
@@ -155,12 +103,19 @@ func (pgcs *PGCommentsStore) Replies(
 }
 
 func (pgcs *PGCommentsStore) List() ([]*types.Comment, error) {
-	comments, err := pgcs.commentsQuery(
-		"SELECT id, post, parent, author, created, modified, deleted, body " +
-			"FROM comments",
-	)
+	result, err := Table.List((*sql.DB)(pgcs))
 	if err != nil {
-		return nil, fmt.Errorf("listing comments from postgres: %w", err)
+		return nil, fmt.Errorf("listing comments: %w", err)
+	}
+	var values []comment
+	var comments []*types.Comment
+	for result.Next() {
+		values = append(values, comment{})
+		comment := &values[len(values)-1]
+		if err := result.Scan(comment); err != nil {
+			return nil, fmt.Errorf("scanning comment: %w", err)
+		}
+		comments = append(comments, (*types.Comment)(comment))
 	}
 	return comments, nil
 }
@@ -169,7 +124,7 @@ func (pgcs *PGCommentsStore) commentsQuery(
 	query string,
 	vs ...interface{},
 ) ([]*types.Comment, error) {
-	rows, err := pgcs.DB.Query(query, vs...)
+	rows, err := (*sql.DB)(pgcs).Query(query, vs...)
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +208,7 @@ func (pgcs *PGCommentsStore) Update(c *types.CommentPatch) error {
 	// cases where the `(post, id)` tuple is not found. Similarly, the `dummy`
 	// variable is required to prevent the `Scan()` call from failing.
 	var dummy string
-	if err := pgcs.DB.QueryRow(
+	if err := (*sql.DB)(pgcs).QueryRow(
 		fmt.Sprintf(
 			"UPDATE comments SET %s WHERE id=$1 AND post=$2 RETURNING id",
 			columns,
@@ -261,7 +216,7 @@ func (pgcs *PGCommentsStore) Update(c *types.CommentPatch) error {
 		params...,
 	).Scan(&dummy); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			err = &types.CommentNotFoundErr{Post: c.Post(), Comment: c.ID()}
+			err = types.ErrCommentNotFound
 		}
 		return fmt.Errorf("updating comment in postgres: %w", err)
 	}
@@ -322,19 +277,78 @@ func fieldToSQLParam(cp *types.CommentPatch, field types.Field) interface{} {
 }
 
 func (pgcs *PGCommentsStore) Delete(p types.PostID, c types.CommentID) error {
-	// The `RETURNING id` is required to provoke a `sql.ErrNoRows` response in
-	// cases where the `(post, id)` tuple is not found. Similarly, the `dummy`
-	// variable is required to prevent the `Scan()` call from failing.
-	var dummy string
-	if err := pgcs.DB.QueryRow(
-		"DELETE FROM comments WHERE post = $1 AND id = $2 RETURNING id",
-		p,
-		c,
-	).Scan(&dummy); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return &types.CommentNotFoundErr{Post: p, Comment: c}
-		}
-		return fmt.Errorf("deleting comment from postgres: %w", err)
-	}
-	return nil
+	return Table.Delete((*sql.DB)(pgcs), &comment{Post: p, ID: c})
 }
+
+// Implement `pgutil.Item` for `types.Comment`.
+//
+// Since the implementation for a `pgutil.Item` is tightly coupled to the table
+// (specifically the number and quantity of columns), we're going to collocate
+// the implementation with the column definition/specification rather than
+// implementing the interface on `types.Comment` directly.
+type comment types.Comment
+
+func (c *comment) Values(values []interface{}) {
+	values[0] = c.Post
+	values[1] = c.ID
+	values[2] = c.Parent
+	values[3] = c.Author
+	values[4] = c.Created
+	values[5] = c.Modified
+	values[6] = c.Deleted
+	values[7] = c.Body
+}
+
+func (c *comment) Scan(pointers []interface{}) {
+	pointers[0] = &c.Post
+	pointers[1] = &c.ID
+	pointers[2] = &c.Parent
+	pointers[3] = &c.Author
+	pointers[4] = &c.Created
+	pointers[5] = &c.Modified
+	pointers[6] = &c.Deleted
+	pointers[7] = &c.Body
+}
+
+var (
+	// fail compilation if `comment` doesn't implement the `pgutil.Item`
+	// interface.
+	_ pgutil.Item         = &comment{}
+	_ types.CommentsStore = new(PGCommentsStore)
+
+	Table = pgutil.Table{
+		Name: "comments",
+		PrimaryKeys: []pgutil.Column{{
+			Name: "post",
+			Type: "VARCHAR(255)",
+		}, {
+			Name: "id",
+			Type: "VARCHAR(255)",
+		}},
+		OtherColumns: []pgutil.Column{{
+			Name:    "parent",
+			Type:    "VARCHAR(255)",
+			Default: pgutil.NewString(""),
+		}, {
+			Name: "author",
+			Type: "VARCHAR(255)",
+		}, {
+			Name:    "created",
+			Type:    "TIMESTAMPTZ",
+			Default: pgutil.SQL("CURRENT_TIMESTAMP"),
+		}, {
+			Name:    "modified",
+			Type:    "TIMESTAMPTZ",
+			Default: pgutil.SQL("CURRENT_TIMESTAMP"),
+		}, {
+			Name:    "deleted",
+			Type:    "BOOLEAN",
+			Default: pgutil.NewBoolean(false),
+		}, {
+			Name: "body",
+			Type: "VARCHAR(5096)",
+		}},
+		ExistsErr:   types.ErrCommentExists,
+		NotFoundErr: types.ErrCommentNotFound,
+	}
+)

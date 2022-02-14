@@ -9,7 +9,7 @@ import (
 	"github.com/weberc2/comments/pkg/types"
 )
 
-func TestPut(t *testing.T) {
+func TestPGCommentsStore_Put(t *testing.T) {
 	store, err := testPGCommentsStore()
 	if err != nil {
 		t.Fatal(err)
@@ -33,21 +33,12 @@ func TestPut(t *testing.T) {
 				Modified: someDate,
 				Body:     "body",
 			},
-			wantedComment: &types.Comment{
-				ID:       "id",
-				Post:     "post",
-				Parent:   "",
-				Author:   "author",
-				Created:  someDate,
-				Modified: someDate,
-				Body:     "body",
-			},
 			wantedError: nil,
 		},
 		{
 			// GIVEN a comment with ID `id` exists
 			// WHEN we try to Put() a comment with the same ID
-			// THEN expect we get a `CommentExistsErr`
+			// THEN expect we get a `ErrCommentExists`
 			name: "unique ids",
 			state: []*types.Comment{
 				{
@@ -69,11 +60,7 @@ func TestPut(t *testing.T) {
 				Modified: someDate,
 				Body:     "body",
 			},
-			wantedComment: nil,
-			wantedError: &types.CommentExistsErr{
-				Post:    "post",
-				Comment: "id",
-			},
+			wantedError: types.ErrCommentExists,
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -82,7 +69,7 @@ func TestPut(t *testing.T) {
 			}
 
 			for _, comment := range testCase.state {
-				if _, err := store.Put(comment); err != nil {
+				if err := store.Put(comment); err != nil {
 					t.Fatalf(
 						"unexpected error preparing test database state: %v",
 						err,
@@ -90,23 +77,19 @@ func TestPut(t *testing.T) {
 				}
 			}
 
-			c, err := store.Put(&testCase.input)
-
-			if err := testCase.wantedComment.Compare(c); err != nil {
-				t.Fatal(err)
-			}
-
 			if testCase.wantedError == nil {
 				testCase.wantedError = types.NilError{}
 			}
-			if err := testCase.wantedError.CompareErr(err); err != nil {
+			if err := testCase.wantedError.CompareErr(
+				store.Put(&testCase.input),
+			); err != nil {
 				t.Fatal(err)
 			}
 		})
 	}
 }
 
-func TestComment(t *testing.T) {
+func TestPGCommentsStore_Comment(t *testing.T) {
 	store, err := testPGCommentsStore()
 	if err != nil {
 		t.Fatal(err)
@@ -122,7 +105,7 @@ func TestComment(t *testing.T) {
 		Body:     "body",
 	}
 
-	if _, err := store.Put(&input); err != nil {
+	if err := store.Put(&input); err != nil {
 		t.Fatalf("unexpected error putting comment: %v", err)
 	}
 
@@ -136,7 +119,7 @@ func TestComment(t *testing.T) {
 	}
 }
 
-func TestUpdate(t *testing.T) {
+func TestPGCommentsStore_Update(t *testing.T) {
 	store, err := testPGCommentsStore()
 	if err != nil {
 		t.Fatal(err)
@@ -179,10 +162,7 @@ func TestUpdate(t *testing.T) {
 			name:        "not found",
 			input:       types.NewCommentPatch("id", "post").SetDeleted(true),
 			wantedState: nil,
-			wantedError: &types.CommentNotFoundErr{
-				Post:    "post",
-				Comment: "id",
-			},
+			wantedError: types.ErrCommentNotFound,
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -191,7 +171,7 @@ func TestUpdate(t *testing.T) {
 			}
 
 			for _, comment := range testCase.state {
-				if _, err := store.Put(comment); err != nil {
+				if err := store.Put(comment); err != nil {
 					t.Fatalf("unexpected error putting comment: %v", err)
 				}
 			}
@@ -220,7 +200,7 @@ func TestUpdate(t *testing.T) {
 	}
 }
 
-func TestDelete(t *testing.T) {
+func TestPGCommentsStore_Delete(t *testing.T) {
 	store, err := testPGCommentsStore()
 	if err != nil {
 		t.Fatal(err)
@@ -256,10 +236,7 @@ func TestDelete(t *testing.T) {
 			post:        "post",
 			comment:     "id",
 			wantedState: nil,
-			wantedError: &types.CommentNotFoundErr{
-				Post:    "post",
-				Comment: "id",
-			},
+			wantedError: types.ErrCommentNotFound,
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -268,7 +245,7 @@ func TestDelete(t *testing.T) {
 			}
 
 			for _, comment := range testCase.state {
-				if _, err := store.Put(comment); err != nil {
+				if err := store.Put(comment); err != nil {
 					t.Fatalf("unexpected error putting comment: %v", err)
 				}
 			}
@@ -296,7 +273,7 @@ func TestDelete(t *testing.T) {
 	}
 }
 
-func TestReplies(t *testing.T) {
+func TestPGCommentsStore_Replies(t *testing.T) {
 	store, err := testPGCommentsStore()
 	if err != nil {
 		t.Fatal(err)
@@ -512,7 +489,7 @@ func TestReplies(t *testing.T) {
 			}
 
 			for _, comment := range testCase.state {
-				if _, err := store.Put(comment); err != nil {
+				if err := store.Put(comment); err != nil {
 					t.Fatalf(
 						"unexpected error preparing test database state: %v",
 						err,

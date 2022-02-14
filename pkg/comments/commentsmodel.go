@@ -56,7 +56,7 @@ func (cm *CommentsModel) Put(c *types.Comment) (*types.Comment, error) {
 		if parent.Deleted {
 			return nil, fmt.Errorf(
 				"fetching parent comment: %w",
-				&types.CommentNotFoundErr{Post: c.Post, Comment: c.Parent},
+				types.ErrCommentNotFound,
 			)
 		}
 	}
@@ -67,7 +67,10 @@ func (cm *CommentsModel) Put(c *types.Comment) (*types.Comment, error) {
 	cp.Modified = now
 	cp.Deleted = false
 	cp.Body = html.EscapeString(c.Body)
-	return cm.CommentsStore.Put(&cp)
+	if err := cm.CommentsStore.Put(&cp); err != nil {
+		return nil, err
+	}
+	return &cp, nil
 }
 
 func (cm *CommentsModel) Delete(p types.PostID, c types.CommentID) error {
@@ -116,10 +119,7 @@ func (cm *CommentsModel) Update(update *CommentUpdate) error {
 		return fmt.Errorf("updating comment: %w", err)
 	}
 	if c.Deleted {
-		return fmt.Errorf(
-			"updating comment: %w",
-			&types.CommentNotFoundErr{Post: update.Post, Comment: update.ID},
-		)
+		return fmt.Errorf("updating comment: %w", types.ErrCommentNotFound)
 	}
 	return cm.CommentsStore.Update(
 		types.NewCommentPatch(update.ID, update.Post).

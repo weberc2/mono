@@ -8,18 +8,16 @@ import (
 
 type CommentsStoreFake map[types.PostID]map[types.CommentID]*types.Comment
 
-func (csf CommentsStoreFake) Put(
-	c *types.Comment,
-) (*types.Comment, error) {
+func (csf CommentsStoreFake) Put(c *types.Comment) error {
 	if postComments := csf[c.Post]; postComments != nil {
 		if _, found := postComments[c.ID]; !found {
 			csf[c.Post][c.ID] = c
-			return c, nil
+			return nil
 		}
-		return nil, &types.CommentExistsErr{Post: c.Post, Comment: c.ID}
+		return types.ErrCommentExists
 	}
 	csf[c.Post] = map[types.CommentID]*types.Comment{c.ID: c}
-	return c, nil
+	return nil
 }
 
 func (csf CommentsStoreFake) Comment(
@@ -28,17 +26,11 @@ func (csf CommentsStoreFake) Comment(
 ) (*types.Comment, error) {
 	postComments, found := csf[post]
 	if !found {
-		return nil, &types.CommentNotFoundErr{
-			Post:    post,
-			Comment: comment,
-		}
+		return nil, types.ErrCommentNotFound
 	}
 	c, found := postComments[comment]
 	if !found {
-		return nil, &types.CommentNotFoundErr{
-			Post:    post,
-			Comment: comment,
-		}
+		return nil, types.ErrCommentNotFound
 	}
 	return c, nil
 }
@@ -49,10 +41,7 @@ func (csf CommentsStoreFake) Replies(
 ) ([]*types.Comment, error) {
 	postComments, found := csf[post]
 	if !found {
-		return nil, &types.CommentNotFoundErr{
-			Post:    post,
-			Comment: comment,
-		}
+		return nil, types.ErrCommentNotFound
 	}
 	var replies []*types.Comment
 	for _, c := range postComments {
@@ -69,16 +58,10 @@ func (csf CommentsStoreFake) Delete(
 ) error {
 	postComments, found := csf[post]
 	if !found {
-		return &types.CommentNotFoundErr{
-			Post:    post,
-			Comment: comment,
-		}
+		return types.ErrCommentNotFound
 	}
 	if _, found := postComments[comment]; !found {
-		return &types.CommentNotFoundErr{
-			Post:    post,
-			Comment: comment,
-		}
+		return types.ErrCommentNotFound
 	}
 	delete(postComments, comment)
 	return nil
@@ -129,7 +112,7 @@ func (csf CommentsStoreFake) Update(patch *types.CommentPatch) error {
 		}
 		// fallthrough to types.CommentNotFoundErr{} below
 	}
-	return &types.CommentNotFoundErr{Post: patch.Post(), Comment: patch.ID()}
+	return types.ErrCommentNotFound
 }
 
 func (csf CommentsStoreFake) Compare(other CommentsStoreFake) error {
