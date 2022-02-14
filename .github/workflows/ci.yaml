@@ -75,3 +75,15 @@ jobs:
       - name: Build
         id: build
         run: go build ./...
+      - name: Workflows
+        id: workflows
+        run: |
+          cd .github/workflows
+          go run generate.go > release.yaml
+          if [ -n "$(git diff)" ]; then
+            echo "change detected in .github/workflows/release.yaml."
+            echo "please run go run .github/workflows/generate.go > .github/workflows/release.yaml"
+            echo ""
+            git diff
+            exit 1
+          fi
