@@ -13,11 +13,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	pz "github.com/weberc2/httpeasy"
 	"github.com/weberc2/mono/pkg/auth/client"
 	"github.com/weberc2/mono/pkg/comments"
 	"github.com/weberc2/mono/pkg/comments/types"
 	"github.com/weberc2/mono/pkg/pgcommentsstore"
-	pz "github.com/weberc2/httpeasy"
 )
 
 func main() {

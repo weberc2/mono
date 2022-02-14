@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/weberc2/mono/pkg/comments/testsupport"
-	"github.com/weberc2/mono/pkg/comments/types"
 	pz "github.com/weberc2/httpeasy"
 	pztest "github.com/weberc2/httpeasy/testsupport"
+	"github.com/weberc2/mono/pkg/comments/testsupport"
+	"github.com/weberc2/mono/pkg/comments/types"
 )
 
 func TestCommentsService_Delete(t *testing.T) {

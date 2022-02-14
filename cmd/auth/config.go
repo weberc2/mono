@@ -16,10 +16,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ses"
 	"github.com/kelseyhightower/envconfig"
+	pz "github.com/weberc2/httpeasy"
 	"github.com/weberc2/mono/pkg/auth"
 	"github.com/weberc2/mono/pkg/pgtokenstore"
 	"github.com/weberc2/mono/pkg/pguserstore"
-	pz "github.com/weberc2/httpeasy"
 	"gopkg.in/yaml.v2"
 )
 

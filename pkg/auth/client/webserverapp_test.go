@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/weberc2/mono/pkg/auth"
-	"github.com/weberc2/mono/pkg/auth/testsupport"
 	pz "github.com/weberc2/httpeasy"
 	pztest "github.com/weberc2/httpeasy/testsupport"
+	"github.com/weberc2/mono/pkg/auth"
+	"github.com/weberc2/mono/pkg/auth/testsupport"
 )
 
 func TestWebServerApp_Logout(t *testing.T) {

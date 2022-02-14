@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"testing"
 
+	pz "github.com/weberc2/httpeasy"
 	"github.com/weberc2/mono/pkg/auth/client"
 	"github.com/weberc2/mono/pkg/comments/testsupport"
-	pz "github.com/weberc2/httpeasy"
 )
 
 func TestAuthWebServer(t *testing.T) {

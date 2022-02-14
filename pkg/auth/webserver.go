@@ -10,8 +10,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/weberc2/mono/pkg/auth/types"
 	pz "github.com/weberc2/httpeasy"
+	"github.com/weberc2/mono/pkg/auth/types"
 )
 
 type Code struct {

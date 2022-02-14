@@ -10,8 +10,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/weberc2/mono/pkg/comments/types"
 	pz "github.com/weberc2/httpeasy"
+	"github.com/weberc2/mono/pkg/comments/types"
 )
 
 type logging struct {

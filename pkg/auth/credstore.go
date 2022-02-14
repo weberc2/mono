@@ -7,8 +7,8 @@ import (
 	"net/http"
 
 	"github.com/nbutton23/zxcvbn-go"
-	"github.com/weberc2/mono/pkg/auth/types"
 	pz "github.com/weberc2/httpeasy"
+	"github.com/weberc2/mono/pkg/auth/types"
 
 	"golang.org/x/crypto/bcrypt"
 )

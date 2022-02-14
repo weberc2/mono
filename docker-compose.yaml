@@ -1,8 +1,10 @@
 version: "3.9"
 services:
   auth:
-    build: "../auth"
-    command: [ "/bin/auth" ]
+    build:
+      context: "."
+      args:
+        TARGET: "auth"
     ports: [ "8081:8081" ]
     environment:
       AUTH_ADDR: :8081
@@ -32,7 +34,10 @@ services:
       POSTGRES_PASSWORD: password
 
   comments:
-    build: "."
+    build:
+      context: "."
+      args:
+        TARGET: "comments"
     ports: [ "8080:8080" ]
     environment:
       ADDR: ":8080"

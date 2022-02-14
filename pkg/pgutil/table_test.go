@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/weberc2/mono/pkg/auth/types"
 	pz "github.com/weberc2/httpeasy"
+	"github.com/weberc2/mono/pkg/auth/types"
 )
 
 func TestTable_Update(t *testing.T) {

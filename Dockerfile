@@ -1,7 +1,5 @@
 FROM golang:1.17.3
 
-ARG TARGET
-
 RUN apt-get update && apt-get install -y ca-certificates
 
 WORKDIR /workspace
@@ -13,6 +11,8 @@ RUN go mod download
 COPY *.go ./
 
 COPY ./pkg ./pkg
+
+ARG TARGET
 
 COPY ./cmd/${TARGET} ./cmd/${TARGET}
 

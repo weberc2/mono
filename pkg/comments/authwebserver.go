@@ -1,8 +1,8 @@
 package comments
 
 import (
-	"github.com/weberc2/mono/pkg/auth/client"
 	pz "github.com/weberc2/httpeasy"
+	"github.com/weberc2/mono/pkg/auth/client"
 )
 
 type AuthWebServer struct {

@@ -7,8 +7,8 @@ import (
 	"net/http"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/weberc2/mono/pkg/auth/types"
 	pz "github.com/weberc2/httpeasy"
+	"github.com/weberc2/mono/pkg/auth/types"
 )
 
 var (

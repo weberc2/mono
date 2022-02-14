@@ -4,8 +4,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/weberc2/mono/pkg/pgutil/cli"
 	"github.com/weberc2/mono/pkg/pgcommentsstore"
+	"github.com/weberc2/mono/pkg/pgutil/cli"
 )
 
 func main() {
