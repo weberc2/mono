@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	_ "github.com/lib/pq"
+	"github.com/weberc2/auth/pkg/auth/types"
 	"github.com/weberc2/auth/pkg/pgutil"
-	"github.com/weberc2/auth/pkg/types"
 )
 
 // PGUserStore is a postgres implementation of `types.UserStore`.
@@ -119,9 +119,11 @@ func (entry *userEntry) Scan(pointers []interface{}) {
 	pointers[3] = &entry.Created
 }
 
-func (entry *userEntry) ID() interface{} { return entry.User }
-
 var (
+	// fail compilation if `userEntry` doesn't implement the `pgutil.Item`
+	// interface.
+	_ pgutil.Item = &userEntry{}
+
 	Table = pgutil.Table{
 		Name: "users",
 		PrimaryKeys: []pgutil.Column{
