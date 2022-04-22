@@ -151,21 +151,6 @@ func TestTable_Page(t *testing.T) {
 	}
 }
 
-func compareResult(table *Table, result *Result, wanted []DynamicItem) error {
-	newItem, err := ZeroedDynamicItemFactoryFromTable(table)
-	if err != nil {
-		return fmt.Errorf(
-			"unexpected error building DynamicItemFactory: %w",
-			err,
-		)
-	}
-	items, err := result.ToDynamicItems(newItem)
-	if err != nil {
-		return err
-	}
-	return CompareDynamicItems(wanted, items)
-}
-
 func TestTable_Update(t *testing.T) {
 	for _, testCase := range []struct {
 		name        string
@@ -371,6 +356,21 @@ func TestTable_Update(t *testing.T) {
 			}
 		})
 	}
+}
+
+func compareResult(table *Table, result *Result, wanted []DynamicItem) error {
+	newItem, err := ZeroedDynamicItemFactoryFromTable(table)
+	if err != nil {
+		return fmt.Errorf(
+			"unexpected error building DynamicItemFactory: %w",
+			err,
+		)
+	}
+	items, err := result.ToDynamicItems(newItem)
+	if err != nil {
+		return err
+	}
+	return CompareDynamicItems(wanted, items)
 }
 
 func TestTable_Upsert(t *testing.T) {
