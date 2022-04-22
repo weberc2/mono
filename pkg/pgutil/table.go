@@ -146,7 +146,13 @@ func (t *Table) Page(db *sql.DB, offset, limit int) (*Result, error) {
 		offset,
 	))
 	if err != nil {
-		return nil, fmt.Errorf("listing rows from table `%s`: %w", t.Name, err)
+		return nil, fmt.Errorf(
+			"paging rows from table `%s` (offset=%d, limit=%d): %w",
+			t.Name,
+			limit,
+			offset,
+			err,
+		)
 	}
 
 	return &Result{rows: rows, pointers: t.buffer()}, nil
