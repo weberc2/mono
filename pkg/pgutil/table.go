@@ -133,6 +133,25 @@ func (t *Table) List(db *sql.DB) (*Result, error) {
 	return &Result{rows: rows, pointers: t.buffer()}, nil
 }
 
+// Page retrieves a page of records from the table.
+func (t *Table) Page(db *sql.DB, offset, limit int) (*Result, error) {
+	var sb strings.Builder
+	t.columnNames(&sb)
+
+	rows, err := db.Query(fmt.Sprintf(
+		"SELECT %s FROM \"%s\" LIMIT %d OFFSET %d",
+		sb.String(),
+		t.Name,
+		limit,
+		offset,
+	))
+	if err != nil {
+		return nil, fmt.Errorf("listing rows from table `%s`: %w", t.Name, err)
+	}
+
+	return &Result{rows: rows, pointers: t.buffer()}, nil
+}
+
 // Get retrieves a single item by ID and scans it into the provided `out` item.
 // If the item isn't found, the table's `NotFoundErr` field will be returned.
 func (t *Table) Get(db *sql.DB, id, out Item) error {

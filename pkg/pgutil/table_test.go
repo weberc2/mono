@@ -10,6 +10,162 @@ import (
 	"github.com/weberc2/mono/pkg/auth/types"
 )
 
+func TestTable_Page(t *testing.T) {
+	table := Table{
+		Name:        "rows",
+		PrimaryKeys: []Column{{Name: "id", Type: "INTEGER"}},
+		OtherColumns: []Column{{
+			Name:   "email",
+			Type:   "VARCHAR(255)",
+			Unique: types.ErrEmailExists,
+		}},
+		ExistsErr:   errRowExists,
+		NotFoundErr: errRowNotFound,
+	}
+
+	for _, testCase := range []struct {
+		name      string
+		state     []DynamicItem
+		offset    int
+		limit     int
+		wanted    []DynamicItem
+		wantedErr types.WantedError
+	}{
+		{
+			name:   "get first page of empty table",
+			offset: 0,
+			limit:  10,
+		},
+		{
+			name:   "get second page of empty table",
+			offset: 10,
+			limit:  10,
+		},
+		{
+			name: "get first page of one row table",
+			state: []DynamicItem{
+				{NewInteger(0), NewString("user-0@example.com")},
+			},
+			offset: 0,
+			limit:  10,
+			wanted: []DynamicItem{
+				{NewInteger(0), NewString("user-0@example.com")},
+			},
+		},
+		{
+			name: "get second page of one row table",
+			state: []DynamicItem{
+				{NewInteger(0), NewString("user-0@example.com")},
+			},
+			offset: 10,
+			limit:  10,
+		},
+		{
+			name: "get first page of long table",
+			state: []DynamicItem{
+				{NewInteger(0), NewString("user-0@example.com")},
+				{NewInteger(1), NewString("user-1@example.com")},
+				{NewInteger(2), NewString("user-2@example.com")},
+				{NewInteger(3), NewString("user-3@example.com")},
+				{NewInteger(4), NewString("user-4@example.com")},
+			},
+			offset: 0,
+			limit:  2,
+			wanted: []DynamicItem{
+				{NewInteger(0), NewString("user-0@example.com")},
+				{NewInteger(1), NewString("user-1@example.com")},
+			},
+		},
+		{
+			name: "get second page of long table",
+			state: []DynamicItem{
+				{NewInteger(0), NewString("user-0@example.com")},
+				{NewInteger(1), NewString("user-1@example.com")},
+				{NewInteger(2), NewString("user-2@example.com")},
+				{NewInteger(3), NewString("user-3@example.com")},
+				{NewInteger(4), NewString("user-4@example.com")},
+			},
+			offset: 2,
+			limit:  2,
+			wanted: []DynamicItem{
+				{NewInteger(2), NewString("user-2@example.com")},
+				{NewInteger(3), NewString("user-3@example.com")},
+			},
+		},
+		{
+			name: "get last page of long table",
+			state: []DynamicItem{
+				{NewInteger(0), NewString("user-0@example.com")},
+				{NewInteger(1), NewString("user-1@example.com")},
+				{NewInteger(2), NewString("user-2@example.com")},
+				{NewInteger(3), NewString("user-3@example.com")},
+				{NewInteger(4), NewString("user-4@example.com")},
+			},
+			offset: 4,
+			limit:  2,
+			wanted: []DynamicItem{
+				{NewInteger(4), NewString("user-4@example.com")},
+			},
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			if err := table.Reset(db); err != nil {
+				t.Fatalf("unexpected error resetting test table: %v", err)
+			}
+			defer func() {
+				if err := table.Drop(db); err != nil {
+					t.Fatalf("failed to clean up after test case: %v", err)
+				}
+			}()
+
+			for i, row := range testCase.state {
+				if err := table.Insert(db, &row); err != nil {
+					t.Fatalf(
+						"preparing test state: inserting row %d: %v",
+						i,
+						err,
+					)
+				}
+			}
+
+			result, err := table.Page(
+				db,
+				testCase.offset,
+				testCase.limit,
+			)
+			if testCase.wantedErr == nil {
+				testCase.wantedErr = types.NilError{}
+			}
+			if err := testCase.wantedErr.CompareErr(err); err != nil {
+				t.Fatal(err)
+			}
+
+			if err := compareResult(
+				&table,
+				result,
+				testCase.wanted,
+			); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func compareResult(table *Table, result *Result, wanted []DynamicItem) error {
+	newItem, err := ZeroedDynamicItemFactoryFromTable(table)
+	if err != nil {
+		return fmt.Errorf(
+			"unexpected error building DynamicItemFactory: %w",
+			err,
+		)
+	}
+	items, err := result.ToDynamicItems(newItem)
+	if err != nil {
+		return err
+	}
+	return CompareDynamicItems(wanted, items)
+}
+
 func TestTable_Update(t *testing.T) {
 	for _, testCase := range []struct {
 		name        string
@@ -205,18 +361,12 @@ func TestTable_Update(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error listing table rows: %v", err)
 			}
-			newItem, err := ZeroedDynamicItemFactoryFromTable(&testCase.table)
-			if err != nil {
-				t.Fatalf(
-					"unexpected error building DynamicItemFactory: %v",
-					err,
-				)
-			}
-			items, err := result.ToDynamicItems(newItem)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := CompareDynamicItems(testCase.wantedState, items); err != nil {
+
+			if err := compareResult(
+				&testCase.table,
+				result,
+				testCase.wantedState,
+			); err != nil {
 				t.Fatal(err)
 			}
 		})
