@@ -8,8 +8,21 @@ profiles:
     site_root: "https://weberc2.github.io"
     home_page: "index.html"
     title: "Craig Weber"
+    author:
+      name: "Craig Weber"
+      email: "weberc2@gmail.com"
   - name: blog-weberc2-com
     site_root: "https://blog.weberc2.com"
     home_page: "index.html"
     title: "Craig Weber"
+    author:
+      name: "Craig Weber"
+      email: "weberc2@gmail.com"
+  - name: blog-test-weberc2-com
+    site_root: "https://blog-test.weberc2.com"
+    home_page: "index.html"
+    title: "Craig Weber"
+    author:
+      name: "Craig Weber"
+      email: "weberc2@gmail.com"
 default: "dev"
