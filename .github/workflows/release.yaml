@@ -2,8 +2,8 @@ name: release
 
 on:
   push:
-    tags:
-      - '*'
+#    tags:
+#      - '*'
 
 jobs:
   docker:
@@ -64,3 +64,13 @@ jobs:
           tags: ${{ steps.prep.outputs.tags }}
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
+
+      - name: Deploy
+        if: github.event_name != 'pull_request'
+        run: |-
+          sudo apt update && sudo apt install -y curl
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          cat <<EOF > kubeconfig.yaml
+          ${{ secrets.KUBECONFIG }}
+          EOF
+          KUBECONFIG=kubeconfig.yaml kubectl patch deployment -n blog blog -p '{"spec": {"template": {"spec": {"containers": [{"name": "blog", "image": "${{ steps.prep.outputs.docker_image }}"}]}}}}'
