@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	pz "github.com/weberc2/httpeasy"
 	"github.com/weberc2/mono/pkg/comments/types"
@@ -40,7 +41,7 @@ var repliesTemplate = html.Must(html.New("").Parse(`
 			{{ else }}
 			<span class="author">DELETED</span>
 			{{ end }}
-			<span class="date">{{.Created}}</p>
+			<span class="date" title="{{.Created}}">{{.CreatedAgo}}</p>
 			{{/*
 			If the current user is the author AND the post isn't deleted. The
 			latter is necessary or else not-logged-in visitors will have an
@@ -174,6 +175,7 @@ func (ws *WebServer) Replies(r pz.Request) pz.Response {
 			Parent:      parent,
 			User:        user,
 			Replies: replies(
+				ws.Comments.TimeFunc().UTC(),
 				comments,
 				&globals{BaseURL: ws.BaseURL, User: user},
 			),
@@ -198,10 +200,15 @@ type globals struct {
 type reply struct {
 	*globals
 	*types.Comment
-	Children []*reply
+	CreatedAgo string // .Comment.Created in "ago" format
+	Children   []*reply
 }
 
-func replies(comments []*types.Comment, globals *globals) []*reply {
+func replies(
+	now time.Time,
+	comments []*types.Comment,
+	globals *globals,
+) []*reply {
 	// values is just a buffer so we don't have to allocate O(n) replies.
 	values := make([]reply, len(comments)+1)
 
@@ -214,6 +221,7 @@ func replies(comments []*types.Comment, globals *globals) []*reply {
 	for i, c := range comments {
 		r := &values[i+1]
 		r.Comment = c
+		r.CreatedAgo = ago(now, c.Created)
 		r.globals = globals
 		repliesByID[c.ID] = r
 	}
@@ -230,6 +238,26 @@ func replies(comments []*types.Comment, globals *globals) []*reply {
 
 	// return the root reply's children
 	return values[0].Children
+}
+
+func ago(now, t time.Time) string {
+	d := now.Sub(t)
+	if d < time.Minute {
+		return fmt.Sprintf("%d seconds ago", int(d.Seconds()))
+	}
+	if d < time.Hour {
+		return fmt.Sprintf("%d minutes ago", int(d.Minutes()))
+	}
+	if d < 24*time.Hour {
+		return fmt.Sprintf("%d hours ago", int(d.Hours()))
+	}
+	if d < 30*24*time.Hour {
+		return fmt.Sprintf("%d days ago", int(d.Hours()/24))
+	}
+	if d < 365*24*time.Hour {
+		return fmt.Sprintf("%d months ago", int(d.Hours()/(30*24)))
+	}
+	return fmt.Sprintf("%d years ago", int(d.Hours()/(365*24)))
 }
 
 var deleteConfirmationTemplate = html.Must(html.New("").Parse(`<html>
