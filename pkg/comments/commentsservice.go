@@ -15,6 +15,14 @@ type CommentsService struct {
 	TimeFunc func() time.Time
 }
 
+func (cs *CommentsService) PutRoute() pz.Route {
+	return pz.Route{
+		Method:  "POST",
+		Path:    "/api/posts/{post-id}/comments",
+		Handler: cs.Put,
+	}
+}
+
 func (cs *CommentsService) Put(r pz.Request) pz.Response {
 	var c types.Comment
 	if err := r.JSON(&c); err != nil {
@@ -45,6 +53,14 @@ func (cs *CommentsService) Put(r pz.Request) pz.Response {
 	})
 }
 
+func (cs *CommentsService) RepliesRoute() pz.Route {
+	return pz.Route{
+		Method:  "GET",
+		Path:    "/api/posts/{post-id}/comments/{comment-id}/replies",
+		Handler: cs.Replies,
+	}
+}
+
 func (cs *CommentsService) Replies(r pz.Request) pz.Response {
 	var parent types.CommentID
 	if commentID := r.Vars["comment-id"]; commentID != "toplevel" {
@@ -60,6 +76,14 @@ func (cs *CommentsService) Replies(r pz.Request) pz.Response {
 	return pz.Ok(pz.JSON(comments))
 }
 
+func (cs *CommentsService) GetRoute() pz.Route {
+	return pz.Route{
+		Method:  "GET",
+		Path:    "/api/posts/{post-id}/comments/{comment-id}",
+		Handler: cs.Get,
+	}
+}
+
 func (cs *CommentsService) Get(r pz.Request) pz.Response {
 	comment, err := cs.Comments.Comment(
 		types.PostID(r.Vars["post-id"]),
@@ -69,6 +93,14 @@ func (cs *CommentsService) Get(r pz.Request) pz.Response {
 		return pz.HandleError("retrieving comment", err)
 	}
 	return pz.Ok(pz.JSON(comment))
+}
+
+func (cs *CommentsService) DeleteRoute() pz.Route {
+	return pz.Route{
+		Method:  "DELETE",
+		Path:    "/api/posts/{post-id}/comments/{comment-id}",
+		Handler: cs.Delete,
+	}
 }
 
 func (cs *CommentsService) Delete(r pz.Request) pz.Response {
@@ -147,6 +179,14 @@ func (wanted *DeleteCommentResponse) Compare(
 	}
 
 	return nil
+}
+
+func (cs *CommentsService) UpdateRoute() pz.Route {
+	return pz.Route{
+		Method:  "PATCH",
+		Path:    "/api/posts/{post-id}/comments/{comment-id}",
+		Handler: cs.Update,
+	}
 }
 
 func (cs *CommentsService) Update(r pz.Request) pz.Response {

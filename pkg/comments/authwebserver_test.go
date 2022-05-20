@@ -52,26 +52,27 @@ func TestAuthWebServer(t *testing.T) {
 			optional: false,
 		},
 	} {
-		rsp := testCase.method(&AuthWebServer{
-			WebServer: WebServer{
-				Comments: CommentsModel{
-					CommentsStore: testsupport.CommentsStoreFake{},
+		t.Run(testCase.name, func(t *testing.T) {
+			rsp := testCase.method(&AuthWebServer{
+				WebServer: WebServer{
+					Comments: CommentsModel{
+						CommentsStore: testsupport.CommentsStoreFake{},
+					},
 				},
-			},
-			AuthType: client.ConstantAuthType(client.ResultErr(
-				"ERR",
-				errors.New("ERR"),
-			)),
-		}).Handler(pz.Request{Headers: make(http.Header)})
+				Auth: Auth{
+					AuthType: client.ConstantAuthType(client.ResultErr(
+						"ERR",
+						errors.New("ERR"),
+					)),
+				},
+			}).Handler(pz.Request{Headers: make(http.Header)})
 
-		if testCase.optional && rsp.Status == 401 {
-			t.Fatalf("expected optional authentication, but got `401`")
-		}
-		if !testCase.optional && rsp.Status != 401 {
-			t.Fatalf(
-				"expected required authentication--wanted `401`; found `%d`",
-				rsp.Status,
-			)
-		}
+			if testCase.optional && rsp.Status == 401 {
+				t.Fatal("expected optional authentication, but got `401`")
+			}
+			if !testCase.optional && rsp.Status != 401 {
+				t.Fatalf("auth required--wanted `401`; found `%d`", rsp.Status)
+			}
+		})
 	}
 }
