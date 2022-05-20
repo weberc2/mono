@@ -126,6 +126,7 @@ func TestAuthHTTPService(t *testing.T) {
 				AccessToken:  *accessToken,
 				RefreshToken: *refreshToken,
 			},
+			wantedTokens: []types.Token{*refreshToken},
 		},
 		{
 			name: "logout",
@@ -214,7 +215,8 @@ func TestAuthHTTPService(t *testing.T) {
 			}
 
 			found, _ := testCase.existingTokens.List()
-			if err := types.CompareTokens(
+			if err := compareManyTokens(
+				&refreshTokenFactory.SigningKey.PublicKey,
 				testCase.wantedTokens,
 				found,
 			); err != nil {
@@ -313,6 +315,39 @@ func must(s *types.Token, err error) *types.Token {
 
 type Wanted interface {
 	Compare(data []byte) error
+}
+
+func compareManyTokens(
+	key *ecdsa.PublicKey,
+	wanted []types.Token,
+	found []types.Token,
+) error {
+	if len(wanted) != len(found) {
+		return fmt.Errorf(
+			"wanted %d tokens; found %d tokens",
+			len(wanted),
+			len(found),
+		)
+	}
+	for i := range wanted {
+		if err := compareTokens(
+			key,
+			wanted[i].Token,
+			found[i].Token,
+		); err != nil {
+			return fmt.Errorf("token %d: %w", i, err)
+		}
+		if !wanted[i].Expires.Equal(found[i].Expires) {
+			return fmt.Errorf(
+				"token %d: Token.Expires: wanted `%s`; found `%s`",
+				i,
+				wanted[i].Expires,
+				found[i].Expires,
+			)
+		}
+	}
+
+	return nil
 }
 
 func compareTokens(key *ecdsa.PublicKey, wanted, found string) error {
