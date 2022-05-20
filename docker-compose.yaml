@@ -3,6 +3,7 @@ services:
   auth:
     build:
       context: "."
+      dockerfile: "docker/golang/Dockerfile"
       args:
         TARGET: "auth"
     ports: [ "8081:8081" ]
@@ -36,6 +37,7 @@ services:
   comments:
     build:
       context: "."
+      dockerfile: "docker/golang/Dockerfile"
       args:
         TARGET: "comments"
     ports: [ "8080:8080" ]

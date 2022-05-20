@@ -287,5 +287,12 @@ func (as *AuthService) Exchange(code string) (*TokenDetails, error) {
 		return nil, fmt.Errorf("creating access and refresh tokens: %w", err)
 	}
 
+	if err := as.Tokens.Put(
+		tokens.RefreshToken.Token,
+		tokens.RefreshToken.Expires,
+	); err != nil {
+		return nil, fmt.Errorf("storing refresh token: %w", err)
+	}
+
 	return tokens, nil
 }
