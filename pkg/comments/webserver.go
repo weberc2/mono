@@ -41,7 +41,15 @@ var repliesTemplate = html.Must(html.New("").Parse(`
 			<span class="author">DELETED</span>
 			{{ end }}
 			<span class="date">{{.Created}}</p>
-			{{if eq .Author .User}}
+			{{/*
+			If the current user is the author AND the post isn't deleted. The
+			latter is necessary or else not-logged-in visitors will have an
+			empty-string 'user' and deleted posts have an .Author field whose
+			value is also an empty string.
+
+			https://trello.com/c/zhjbpbMQ/56-comments-tombstones-comments-show-edit-delete-buttons
+			*/ -}}
+			{{if and (eq .Author .User) (not .Deleted)}}
 			<a href="{{.BaseURL}}/posts/{{.Post}}/comments/{{.ID}}/delete-confirm">
 				delete
 			</a>
