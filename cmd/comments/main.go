@@ -73,13 +73,21 @@ func main() {
 		log.Fatalf("ensuring comments table exists: %v", err)
 	}
 
-	commentsService := comments.CommentsService{
-		Comments: comments.CommentsModel{
-			CommentsStore: commentsStore,
-			IDFunc: func() types.CommentID {
-				return types.CommentID(uuid.NewString())
+	authenticator := client.Authenticator{Key: key}
+
+	commentsService := comments.AuthCommentsService{
+		CommentsService: comments.CommentsService{
+			Comments: comments.CommentsModel{
+				CommentsStore: commentsStore,
+				IDFunc: func() types.CommentID {
+					return types.CommentID(uuid.NewString())
+				},
+				TimeFunc: time.Now,
 			},
-			TimeFunc: time.Now,
+		},
+		Auth: comments.Auth{
+			AuthType:      client.AuthTypeClientProgram{},
+			Authenticator: authenticator,
 		},
 	}
 
@@ -92,7 +100,6 @@ func main() {
 		},
 	}
 
-	a := client.Authenticator{Key: key}
 	webServer := comments.AuthWebServer{
 		WebServer: comments.WebServer{
 			LoginURL:         loginURL,
@@ -102,38 +109,21 @@ func main() {
 			Comments:         commentsService.Comments,
 			AuthCallbackPath: "/auth/callback",
 		},
-		AuthType:      &webServerAuth,
-		Authenticator: a,
+		Auth: comments.Auth{
+			AuthType:      &webServerAuth,
+			Authenticator: authenticator,
+		},
 	}
-
-	apiAuth := client.AuthTypeClientProgram{}
 
 	if err := http.ListenAndServe(addr, pz.Register(
 		pz.JSONLog(os.Stderr),
 		append(
-			webServer.Routes(),
-			webServerAuth.AuthCodeCallbackRoute(webServer.AuthCallbackPath),
-			webServerAuth.LogoutRoute(webServer.LogoutPath),
-			pz.Route{
-				Method:  "GET",
-				Path:    "/api/posts/{post-id}/comments/{comment-id}/replies",
-				Handler: commentsService.Replies,
-			},
-			pz.Route{
-				Method:  "POST",
-				Path:    "/api/posts/{post-id}/comments",
-				Handler: a.Auth(apiAuth, commentsService.Put),
-			},
-			pz.Route{
-				Method:  "GET",
-				Path:    "/api/posts/{post-id}/comments/{comment-id}",
-				Handler: commentsService.Get,
-			},
-			pz.Route{
-				Method:  "PATCH",
-				Path:    "/api/posts/{post-id}/comments/{comment-id}",
-				Handler: a.Auth(apiAuth, commentsService.Update),
-			},
+			append(
+				webServer.Routes(),
+				webServerAuth.AuthCodeCallbackRoute(webServer.AuthCallbackPath),
+				webServerAuth.LogoutRoute(webServer.LogoutPath),
+			),
+			commentsService.Routes()...,
 		)...,
 	)); err != nil {
 		log.Fatal(err)
