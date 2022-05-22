@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	html "html/template"
+	"strings"
 	text "text/template"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -14,11 +15,12 @@ import (
 type NotificationSettings struct {
 	HTMLTemplate *html.Template
 	TextTemplate *text.Template
+	TokenURL     string
 	Subject      string
 }
 
-var (
-	DefaultRegistrationSettings = NotificationSettings{
+func DefaultRegistrationSettings(baseURL string) NotificationSettings {
+	return NotificationSettings{
 		Subject: "Register account",
 		HTMLTemplate: html.Must(html.New("").Parse(`<p>Hello,<br /><br />
 
@@ -26,9 +28,13 @@ Someone has attempted to register an account with this email address. If this wa
 		TextTemplate: text.Must(text.New("").Parse(`Hello,
 
 Someone has attempted to register an account with this email address. If this was not you, please disregard this message. If this was intentional, please enter the following URL into your web browser to finish creating your account: {{ .TokenURL }}`)),
+		TokenURL: strings.TrimRight(baseURL, "/") +
+			pathRegistrationConfirmationHandler,
 	}
+}
 
-	DefaultForgotPasswordSettings = NotificationSettings{
+func DefaultForgotPasswordSettings(baseURL string) NotificationSettings {
+	return NotificationSettings{
 		Subject: "Forgot password",
 		HTMLTemplate: html.Must(
 			html.New("").Parse(`<p>Hello {{ .User }},<br /><br />
@@ -37,18 +43,26 @@ Someone has attempted to reset your password. If this was not you, please disreg
 		),
 		TextTemplate: text.Must(text.New("").Parse(`Hello {{ .User }},
 Someone has attempted to reset your password. If this was not you, please disregard this message. If this was intentional, please enter the following URL into your web browser to reset your password: {{ .TokenURL }}`)),
+		TokenURL: strings.TrimRight(baseURL, "/") +
+			pathPasswordResetConfirmation,
 	}
-)
+}
 
 type SESNotificationService struct {
 	Client                 *ses.SES
 	Sender                 string
-	TokenURL               func(string) string
 	RegistrationSettings   NotificationSettings
 	ForgotPasswordSettings NotificationSettings
 }
 
 func (sns *SESNotificationService) Notify(token *types.Notification) error {
+	var settings *NotificationSettings
+	if token.Type == types.NotificationTypeRegister {
+		settings = &sns.RegistrationSettings
+	} else {
+		settings = &sns.ForgotPasswordSettings
+	}
+
 	var htmlBuf, textBuf bytes.Buffer
 	payload := struct {
 		User     types.UserID
@@ -57,13 +71,7 @@ func (sns *SESNotificationService) Notify(token *types.Notification) error {
 	}{
 		User:     token.User,
 		Email:    token.Email,
-		TokenURL: sns.TokenURL(token.Token),
-	}
-	var settings *NotificationSettings
-	if token.Type == types.NotificationTypeRegister {
-		settings = &sns.RegistrationSettings
-	} else {
-		settings = &sns.ForgotPasswordSettings
+		TokenURL: fmt.Sprintf("%s?t=%s", settings.TokenURL, token.Token),
 	}
 
 	if err := settings.TextTemplate.Execute(&htmlBuf, &payload); err != nil {

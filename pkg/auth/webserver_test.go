@@ -33,7 +33,7 @@ func TestWebServer_RegistrationConfirmationHandlerRoute(t *testing.T) {
 		{
 			name: "simple",
 			body: confirmationForm(
-				mustResetToken(now, "user", "user@example.org"),
+				mustResetToken(t, "user", "user@example.org"),
 				goodPassword,
 			),
 			wantedStatus:   http.StatusSeeOther,
@@ -52,7 +52,7 @@ func TestWebServer_RegistrationConfirmationHandlerRoute(t *testing.T) {
 		{
 			name: "missing password",
 			body: confirmationForm(
-				mustResetToken(now, "user", "user@example.org"),
+				mustResetToken(t, "user", "user@example.org"),
 				"", // password
 			),
 			wantedStatus: http.StatusBadRequest,
@@ -125,6 +125,14 @@ func TestWebServer_RegistrationConfirmationHandlerRoute(t *testing.T) {
 	}
 }
 
+func mustResetToken(t *testing.T, user types.UserID, email string) string {
+	tok, err := resetTokenFactory.Create(now, user, email)
+	if err != nil {
+		t.Fatalf("unexpected error creating reset token: %v", err)
+	}
+	return tok
+}
+
 func TestWebServer_RegistrationHandlerRoute(t *testing.T) {
 	for _, testCase := range []struct {
 		name                string
@@ -143,20 +151,7 @@ func TestWebServer_RegistrationHandlerRoute(t *testing.T) {
 				Type:  types.NotificationTypeRegister,
 				User:  "user",
 				Email: "user@example.org",
-				Token: func() string {
-					tok, err := resetTokenFactory.Create(
-						now,
-						"user",
-						"user@example.org",
-					)
-					if err != nil {
-						t.Fatalf(
-							"unexpected error creating reset token: %v",
-							err,
-						)
-					}
-					return tok
-				}(),
+				Token: mustResetToken(t, "user", "user@example.org"),
 			}},
 		},
 		{
@@ -225,89 +220,103 @@ func TestWebServer_RegistrationHandlerRoute(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			wanted := testCase.wantedNotifications
-			found := notificationService.Notifications
-			if len(wanted) != len(found) {
-				t.Fatalf(
-					"sent notifications: length: wanted `%d`; found `%d`",
-					len(wanted),
-					len(found),
-				)
-			}
-
-			for i := range wanted {
-				if wanted[i].Email != found[i].Email {
-					t.Fatalf(
-						"Notifications[%d].Email: wanted `%s`; found `%s`",
-						i,
-						wanted[i].Email,
-						found[i].Email,
-					)
-				}
-
-				if wanted[i].Type != found[i].Type {
-					t.Fatalf(
-						"Notifications[%d].Type: wanted `%s`; found `%s`",
-						i,
-						wanted[i].Type,
-						found[i].Type,
-					)
-				}
-
-				if wanted[i].User != found[i].User {
-					t.Fatalf(
-						"Notifications[%d].User: wanted `%s`; found `%s`",
-						i,
-						wanted[i].User,
-						found[i].User,
-					)
-				}
-
-				wantedClaims, err := parseClaims(wanted[i].Token)
-				if err != nil {
-					t.Fatalf(
-						"Notifications[%d].Token: parsing wanted token: %v",
-						i,
-						err,
-					)
-				}
-
-				foundClaims, err := parseClaims(found[i].Token)
-				if err != nil {
-					t.Fatalf(
-						"Notifications[%d].Token: parsing found token: %v",
-						i,
-						err,
-					)
-				}
-
-				if *wantedClaims != *foundClaims {
-					wanted, err := json.Marshal(wantedClaims)
-					if err != nil {
-						t.Fatalf(
-							"marshaling wanted[%d]'s token claims: %v",
-							i,
-							err,
-						)
-					}
-					found, err := json.Marshal(foundClaims)
-					if err != nil {
-						t.Fatalf(
-							"marshaling found[%d]'s token claims: %v",
-							i,
-							err,
-						)
-					}
-					t.Fatalf(
-						"Notifications[%d].Token: wanted `%s`; found `%s`",
-						i,
-						wanted,
-						found,
-					)
-				}
+			if err := compareNotifications(
+				resetTokenFactory.SigningKey.PublicKey,
+				testCase.wantedNotifications,
+				notificationService.Notifications,
+			); err != nil {
+				t.Fatal(err)
 			}
 		})
 	}
+}
+
+func compareNotifications(
+	key ecdsa.PublicKey,
+	wanted []*types.Notification,
+	found []*types.Notification,
+) error {
+	if len(wanted) != len(found) {
+		return fmt.Errorf(
+			"sent notifications: length: wanted `%d`; found `%d`",
+			len(wanted),
+			len(found),
+		)
+	}
+
+	for i := range wanted {
+		if wanted[i].Email != found[i].Email {
+			return fmt.Errorf(
+				"Notifications[%d].Email: wanted `%s`; found `%s`",
+				i,
+				wanted[i].Email,
+				found[i].Email,
+			)
+		}
+
+		if wanted[i].Type != found[i].Type {
+			return fmt.Errorf(
+				"Notifications[%d].Type: wanted `%s`; found `%s`",
+				i,
+				wanted[i].Type,
+				found[i].Type,
+			)
+		}
+
+		if wanted[i].User != found[i].User {
+			return fmt.Errorf(
+				"Notifications[%d].User: wanted `%s`; found `%s`",
+				i,
+				wanted[i].User,
+				found[i].User,
+			)
+		}
+
+		wantedClaims, err := parseClaims(key, wanted[i].Token)
+		if err != nil {
+			return fmt.Errorf(
+				"Notifications[%d].Token: parsing wanted token: %w",
+				i,
+				err,
+			)
+		}
+
+		foundClaims, err := parseClaims(key, found[i].Token)
+		if err != nil {
+			return fmt.Errorf(
+				"Notifications[%d].Token: parsing found token: %w",
+				i,
+				err,
+			)
+		}
+
+		if *wantedClaims != *foundClaims {
+			wanted, err := json.Marshal(wantedClaims)
+			if err != nil {
+				return fmt.Errorf(
+					"marshaling wanted[%d]'s token claims: %w",
+					i,
+					err,
+				)
+			}
+			found, err := json.Marshal(foundClaims)
+			if err != nil {
+				return fmt.Errorf(
+					"marshaling found[%d]'s token claims: %w",
+					i,
+					err,
+				)
+			}
+			return fmt.Errorf(
+				"Notifications[%d].Token: wanted `%s`; found `%s`",
+				i,
+				wanted,
+				found,
+			)
+		}
+	}
+
+	return nil
 }
 
 func regForm(username, email string) string {
@@ -324,14 +333,12 @@ func confirmationForm(token, password string) string {
 	}.Encode()
 }
 
-func parseClaims(tok string) (*Claims, error) {
+func parseClaims(key ecdsa.PublicKey, tok string) (*Claims, error) {
 	var claims Claims
 	if _, err := jwt.ParseWithClaims(
 		tok,
 		&claims,
-		func(*jwt.Token) (interface{}, error) {
-			return &resetTokenFactory.SigningKey.PublicKey, nil
-		},
+		func(*jwt.Token) (interface{}, error) { return &key, nil },
 	); err != nil {
 		return nil, fmt.Errorf("parsing token: %w", err)
 	}

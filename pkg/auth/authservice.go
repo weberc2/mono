@@ -210,34 +210,37 @@ func (as *AuthService) ForgotPassword(user types.UserID) error {
 }
 
 type UpdatePassword struct {
-	User     types.UserID `json:"user"`
-	Password string       `json:"password"`
-	Token    string       `json:"token"`
+	Token    string `json:"token"`
+	Password string `json:"password"`
 }
 
-func (as *AuthService) UpdatePassword(up *UpdatePassword) error {
+// TODO: make sure this token is deleted on success
+func (as *AuthService) UpdatePassword(
+	up *UpdatePassword,
+) (types.UserID, error) {
 	claims, err := as.ResetTokens.Claims(up.Token)
 	if err != nil {
-		return fmt.Errorf("updating password: %w", err)
+		return "", fmt.Errorf("updating password: %w", err)
 	}
 
 	// We deliberately want to return `ErrInvalidResetToken` in this case so
 	// as not to give attackers unnecessary information. See OWASP link above.
 	if err := claims.Valid(); err != nil {
-		return fmt.Errorf("updating password: %w", ErrInvalidResetToken)
+		return "", fmt.Errorf("updating password: %w", ErrInvalidResetToken)
 	}
 
 	if err := as.Creds.Upsert(&types.Credentials{
-		User:     up.User,
+		User:     claims.User,
 		Email:    claims.Email,
 		Password: up.Password,
 	}); err != nil {
-		return fmt.Errorf("updating password: %w", err)
+		return claims.User, fmt.Errorf("updating password: %w", err)
 	}
 
-	return nil
+	return claims.User, nil
 }
 
+// TODO: make sure this token is deleted on success
 func (as *AuthService) ConfirmRegistration(token, password string) error {
 	claims, err := as.ResetTokens.Claims(token)
 	if err != nil {

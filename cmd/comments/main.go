@@ -36,6 +36,11 @@ func main() {
 		log.Fatal("missing required env var: REGISTER_URL")
 	}
 
+	passwordResetURL := os.Getenv("PASSWORD_RESET_URL")
+	if passwordResetURL == "" {
+		log.Fatal("missing required env var: PASSWORD_RESET_URL")
+	}
+
 	authBaseURL := os.Getenv("AUTH_BASE_URL")
 	if authBaseURL == "" {
 		log.Fatal("missing required env var: AUTH_BASE_URL")
@@ -104,6 +109,7 @@ func main() {
 		WebServer: comments.WebServer{
 			LoginURL:         loginURL,
 			RegisterURL:      registerURL,
+			PasswordResetURL: passwordResetURL,
 			LogoutPath:       "/auth/logout",
 			BaseURL:          baseURLString,
 			Comments:         commentsService.Comments,

@@ -25,6 +25,7 @@ type logging struct {
 type WebServer struct {
 	LoginURL         string
 	RegisterURL      string
+	PasswordResetURL string
 	LogoutPath       string
 	BaseURL          string
 	Comments         CommentsModel
@@ -98,7 +99,8 @@ var repliesTemplate = html.Must(html.New("").Parse(`
 <h1>Replies</h1>
 <div id=replies>
 {{if .User}}
-    {{.User}} - <a href="{{.LogoutURL}}">logout</a>
+    {{.User}} - <a href="{{.LogoutURL}}">logout</a> |
+	<a href="{{.PasswordResetURL}}">reset password</a>
 {{else}}
     <a href="{{.LoginURL}}">login</a>
 	<a href="{{.RegisterURL}}">register</a>
@@ -139,14 +141,15 @@ func (ws *WebServer) Replies(r pz.Request) pz.Response {
 
 	return pz.Ok(
 		pz.HTMLTemplate(repliesTemplate, struct {
-			LoginURL    string          `json:"loginURL"`
-			LogoutURL   string          `json:"logoutURL"`
-			RegisterURL string          `json:"registerURL"`
-			BaseURL     string          `json:"baseURL"`
-			Post        types.PostID    `json:"post"`
-			Parent      types.CommentID `json:"parent"`
-			Replies     []*reply        `json:"replies"`
-			User        types.UserID    `json:"user"`
+			LoginURL         string          `json:"loginURL"`
+			LogoutURL        string          `json:"logoutURL"`
+			RegisterURL      string          `json:"registerURL"`
+			PasswordResetURL string          `json:"passwordResetURL"`
+			BaseURL          string          `json:"baseURL"`
+			Post             types.PostID    `json:"post"`
+			Parent           types.CommentID `json:"parent"`
+			Replies          []*reply        `json:"replies"`
+			User             types.UserID    `json:"user"`
 		}{
 			LoginURL: fmt.Sprintf(
 				"%s?%s",
@@ -168,12 +171,13 @@ func (ws *WebServer) Replies(r pz.Request) pz.Response {
 					)},
 				}.Encode(),
 			),
-			LogoutURL:   join(ws.BaseURL, ws.LogoutPath),
-			RegisterURL: ws.RegisterURL,
-			BaseURL:     ws.BaseURL,
-			Post:        post,
-			Parent:      parent,
-			User:        user,
+			LogoutURL:        join(ws.BaseURL, ws.LogoutPath),
+			RegisterURL:      ws.RegisterURL,
+			PasswordResetURL: ws.PasswordResetURL,
+			BaseURL:          ws.BaseURL,
+			Post:             post,
+			Parent:           parent,
+			User:             user,
 			Replies: replies(
 				ws.Comments.TimeFunc().UTC(),
 				comments,

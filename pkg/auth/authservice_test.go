@@ -55,7 +55,7 @@ func TestAuthService_ConfirmRegistration(t *testing.T) {
 		{
 			name:     "simple",
 			subject:  "subject",
-			token:    mustResetToken(now, "subject", "subject@example.org"),
+			token:    mustResetToken(t, "subject", "subject@example.org"),
 			email:    "subject@example.org",
 			password: goodPassword,
 			wanted: &types.Credentials{
@@ -82,7 +82,7 @@ func TestAuthService_ConfirmRegistration(t *testing.T) {
 		{
 			name:      "password validation err",
 			subject:   "user",
-			token:     mustResetToken(now, "user", "user@example.org"),
+			token:     mustResetToken(t, "user", "user@example.org"),
 			email:     "user@example.org",
 			password:  "", // invalid
 			wanted:    nil,
@@ -138,14 +138,6 @@ func TestAuthService_ConfirmRegistration(t *testing.T) {
 			}
 		})
 	}
-}
-
-func mustResetToken(now time.Time, user types.UserID, email string) string {
-	t, err := resetTokenFactory.Create(now, user, email)
-	if err != nil {
-		panic(fmt.Sprintf("creating reset token: %v", err))
-	}
-	return t
 }
 
 func TestAuthService_Login(t *testing.T) {
@@ -476,12 +468,16 @@ func TestAuthService_UpdatePassword(t *testing.T) {
 		t.Fatalf("Unexpected err: %v", err)
 	}
 
-	if err := authService.UpdatePassword(&UpdatePassword{
-		User:     "user",
+	user, err := authService.UpdatePassword(&UpdatePassword{
 		Password: password,
 		Token:    tok,
-	}); err != nil {
+	})
+	if err != nil {
 		t.Fatalf("Unexpected err: %v", err)
+	}
+
+	if user != "user" {
+		t.Fatalf("expected user `user`; found `%s`", user)
 	}
 
 	wantedCredentials := &types.Credentials{

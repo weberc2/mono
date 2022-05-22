@@ -45,6 +45,7 @@ services:
       ADDR: ":8080"
       LOGIN_URL: http://localhost:8081/login
       REGISTER_URL: http://localhost:8081/register
+      PASSWORD_RESET_URL: http://localhost:8081/password/reset
       BASE_URL: http://localhost:8080
       AUTH_BASE_URL: http://auth:8081
       BUCKET: weberc2-comments
