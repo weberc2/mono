@@ -236,6 +236,22 @@ func (ws *WebServer) RegistrationConfirmationHandlerRoute() pz.Route {
 	}
 }
 
+func (ws *WebServer) PasswordResetFormRoute() pz.Route {
+	return routePasswordResetForm
+}
+
+func (ws *WebServer) PasswordResetHandlerRoute() pz.Route {
+	return routePasswordResetHandler(ws)
+}
+
+func (ws *WebServer) PasswordResetConfirmationFormRoute() pz.Route {
+	return routePasswordResetConfirmationForm
+}
+
+func (ws *WebServer) PasswordResetConfirmationHandlerRoute() pz.Route {
+	return routePasswordResetConfirmationHandler(ws)
+}
+
 func (ws *WebServer) LoginFormPage(r pz.Request) pz.Response {
 	query := r.URL.Query()
 
@@ -297,7 +313,9 @@ func (ws *WebServer) LoginHandler(r pz.Request) pz.Response {
 					FormAction   string
 					ErrorMessage string
 				}{
-					FormAction:   ws.BaseURL + "login",
+					// Not only do we need the correct path, but we also need
+					// to preserve the query params (e.g., `callback`).
+					FormAction:   r.URL.String(),
 					ErrorMessage: "Invalid credentials",
 				}),
 				&logging{
@@ -417,4 +435,8 @@ func parseForm(r pz.Request) (url.Values, error) {
 		return nil, fmt.Errorf("parsing form data: %w", err)
 	}
 	return form, nil
+}
+
+func mustHTML(t string) *html.Template {
+	return html.Must(html.New("").Parse(t))
 }
