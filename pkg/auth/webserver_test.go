@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/dgrijalva/jwt-go"
 	pz "github.com/weberc2/httpeasy"
 	pztest "github.com/weberc2/httpeasy/testsupport"
@@ -353,7 +354,8 @@ func TestWebServer_LoginHandler(t *testing.T) {
 		redirect       string
 		stateUsers     testsupport.UserStoreFake
 		wantedStatus   int
-		wantedLocation wantedLocation
+		wantedBody     func(*goquery.Document) error
+		wantedLocation *wantedLocation
 	}{{
 		name:     "redirects with auth code",
 		username: "adam",
@@ -368,7 +370,7 @@ func TestWebServer_LoginHandler(t *testing.T) {
 			},
 		},
 		wantedStatus: http.StatusSeeOther,
-		wantedLocation: wantedLocation{
+		wantedLocation: &wantedLocation{
 			key:      &codesSigningKey.PublicKey,
 			scheme:   "https",
 			host:     "app.example.org",
@@ -376,6 +378,57 @@ func TestWebServer_LoginHandler(t *testing.T) {
 			callback: "https://app.example.org/auth/callback",
 			redirect: "https://app.example.org/users/adam/settings",
 		},
+	}, {
+		name:     "failure redirects to login page",
+		username: "adam",
+		password: "wrong password",
+		callback: "https://app.example.org/auth/callback",
+		redirect: "https://app.example.org/users/adam/settings",
+		stateUsers: testsupport.UserStoreFake{
+			"adam": {
+				User:         "adam",
+				Email:        "adam@example.org",
+				PasswordHash: hashBcrypt("password"),
+			},
+		},
+		wantedBody: func(d *goquery.Document) error {
+			form := d.Find("form")
+			if form.Length() < 1 {
+				html, err := d.Html()
+				if err != nil {
+					return fmt.Errorf(
+						"returned document has no `<form>` element (error "+
+							"rendering provided HTML: %v)",
+						err,
+					)
+				}
+				return fmt.Errorf(
+					"returned document has no `<form>` element:\n\n%s",
+					html,
+				)
+			}
+			action, exists := form.First().Attr("action")
+			if !exists {
+				return fmt.Errorf("form has no `action` attribute")
+			}
+
+			u, err := url.Parse(action)
+			if err != nil {
+				return fmt.Errorf("parsing form action: %w", err)
+			}
+			wantedCallback := "https://app.example.org/auth/callback"
+			if cb := u.Query().Get("callback"); cb != wantedCallback {
+				return fmt.Errorf(
+					"verifying form action: wanted `callback=%s`; found "+
+						"`callback=%s`",
+					wantedCallback,
+					cb,
+				)
+			}
+
+			return nil
+		},
+		wantedStatus: http.StatusUnauthorized,
 	}} {
 		jwt.TimeFunc = nowTimeFunc
 		defer func() { jwt.TimeFunc = time.Now }()
@@ -421,6 +474,23 @@ func TestWebServer_LoginHandler(t *testing.T) {
 			)
 		}
 
+		if testCase.wantedBody != nil {
+			data, err := pztest.ReadAll(rsp.Data)
+			if err != nil {
+				t.Fatalf("reading response body: %v", err)
+			}
+			d, err := goquery.NewDocumentFromReader(bytes.NewReader(data))
+			if err != nil {
+				t.Fatalf(
+					"creating an HTML document from response body: %v",
+					err,
+				)
+			}
+			if err := testCase.wantedBody(d); err != nil {
+				t.Fatalf("verifying response body: %v", err)
+			}
+		}
+
 		if err := testCase.wantedLocation.compare(
 			rsp.Headers.Get("Location"),
 		); err != nil {
@@ -439,6 +509,15 @@ type wantedLocation struct {
 }
 
 func (wanted *wantedLocation) compare(found string) error {
+	if wanted == nil {
+		if found == "" {
+			return nil
+		}
+		return fmt.Errorf(
+			"wanted no (or empty) `Location` header; found `%s`",
+			found,
+		)
+	}
 	url, err := url.Parse(found)
 	if err != nil {
 		return fmt.Errorf("parsing `found`: %w", err)

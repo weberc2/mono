@@ -297,7 +297,9 @@ func (ws *WebServer) LoginHandler(r pz.Request) pz.Response {
 					FormAction   string
 					ErrorMessage string
 				}{
-					FormAction:   ws.BaseURL + "login",
+					// Not only do we need the correct path, but we also need
+					// to preserve the query params (e.g., `callback`).
+					FormAction:   r.URL.String(),
 					ErrorMessage: "Invalid credentials",
 				}),
 				&logging{
