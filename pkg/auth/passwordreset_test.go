@@ -15,13 +15,59 @@ import (
 	"github.com/weberc2/mono/pkg/auth/types"
 )
 
+func TestWebServer_PasswordResetFormRoute(t *testing.T) {
+	notifications := testsupport.NotificationServiceFake{}
+	webServer := WebServer{
+		AuthService: AuthService{
+			Notifications: &notifications,
+			Creds:         CredStore{testsupport.UserStoreFake{}},
+			Tokens:        testsupport.TokenStoreFake{},
+			ResetTokens:   resetTokenFactory,
+			TimeFunc:      nowTimeFunc,
+		},
+		BaseURL: "https://auth.example.org",
+	}
+
+	rsp := webServer.PasswordResetHandlerRoute().Handler(pz.Request{
+		Body: strings.NewReader(""),
+	})
+
+	if rsp.Status != http.StatusAccepted {
+		if data, err := pztest.ReadAll(rsp.Data); err != nil {
+			t.Logf(
+				"error getting response body for error context: %v",
+				err,
+			)
+		} else {
+			t.Logf("Body: %s", data)
+		}
+		t.Fatalf("Response.Status: wanted `202`; found `%d`", rsp.Status)
+	}
+
+	data, err := pztest.ReadAll(rsp.Data)
+	if err != nil {
+		t.Fatalf(
+			"Response.Data: reading serializer: %v",
+			err,
+		)
+	}
+
+	if stringData := string(data); stringData != pageInitiatedPasswordReset {
+		t.Fatalf(
+			"Response.Data: wanted `%s`; found `%s`",
+			pageInitiatedPasswordReset,
+			stringData,
+		)
+	}
+}
+
 func TestWebServer_PasswordResetHandlerRoute(t *testing.T) {
 	for _, testCase := range []struct {
 		name                string
 		body                string
 		existingUsers       testsupport.UserStoreFake
 		wantedStatus        int
-		wantedBody          func(pz.Serializer) error
+		wantedBody          func([]byte) error
 		wantedNotifications []*types.Notification
 	}{
 		{
@@ -53,6 +99,12 @@ func TestWebServer_PasswordResetHandlerRoute(t *testing.T) {
 				Email: "user@example.org",
 				Token: mustResetToken(t, "user", "user@example.org"),
 			}},
+		},
+		{
+			name:          "user not found",
+			body:          url.Values{"username": []string{"user"}}.Encode(),
+			existingUsers: testsupport.UserStoreFake{},
+			wantedStatus:  http.StatusAccepted,
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -88,8 +140,18 @@ func TestWebServer_PasswordResetHandlerRoute(t *testing.T) {
 				)
 			}
 
-			if err := testCase.wantedBody(rsp.Data); err != nil {
-				t.Fatalf("Response.Data: %v", err)
+			if testCase.wantedBody != nil {
+				data, err := pztest.ReadAll(rsp.Data)
+				if err != nil {
+					t.Fatalf(
+						"Response.Data: reading serializer: %v",
+						err,
+					)
+				}
+
+				if err := testCase.wantedBody(data); err != nil {
+					t.Fatalf("Response.Data: %v", err)
+				}
 			}
 
 			if err := compareNotifications(
@@ -105,13 +167,8 @@ func TestWebServer_PasswordResetHandlerRoute(t *testing.T) {
 
 func wantedHTML(
 	callback func(*goquery.Document) error,
-) func(pz.Serializer) error {
-	return func(s pz.Serializer) error {
-		data, err := pztest.ReadAll(s)
-		if err != nil {
-			return fmt.Errorf("reading serializer: %w", err)
-		}
-
+) func([]byte) error {
+	return func(data []byte) error {
 		d, err := goquery.NewDocumentFromReader(bytes.NewReader(data))
 		if err != nil {
 			return fmt.Errorf(

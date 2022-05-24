@@ -132,6 +132,22 @@ func routePasswordResetHandler(ws *WebServer) pz.Route {
 					Message: "internal server error",
 				}
 				errors.As(err, &httpErr)
+
+				// Don't serve error information if the error is 404--we don't
+				// want to leak information about whether or not a username
+				// exists to potential attackers.
+				if httpErr.Status == http.StatusNotFound {
+					return pz.Accepted(
+						pz.String(pageInitiatedPasswordReset),
+						&logging{
+							Message: "username not found, but reporting 202 " +
+								"Accepted to caller",
+							User:      username,
+							ErrorType: fmt.Sprintf("%T", err),
+							Error:     err.Error(),
+						},
+					)
+				}
 				ctx := struct {
 					FormAction string `json:"formAction"`
 
