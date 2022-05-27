@@ -3,6 +3,7 @@ package auth
 import (
 	"bytes"
 	"fmt"
+	html "html/template"
 	"net/http"
 	"net/url"
 	"strings"
@@ -15,6 +16,26 @@ import (
 	"github.com/weberc2/mono/pkg/auth/types"
 	"golang.org/x/crypto/bcrypt"
 )
+
+func TestWebServer_PasswordResetConfirmationFormRoute(t *testing.T) {
+	logs, err := testFormRoute(
+		(*WebServer).PasswordResetConfirmationFormRoute,
+		templatePasswordResetConfirmationForm,
+		struct {
+			FormAction   string
+			Token        string
+			ErrorMessage string
+		}{
+			FormAction: pathPasswordResetConfirmation,
+		},
+	)
+	for _, log := range logs {
+		t.Log(log)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestWebServer_PasswordResetConfirmationHandlerRoute(t *testing.T) {
 	for _, testCase := range []struct {
@@ -110,48 +131,21 @@ func TestWebServer_PasswordResetConfirmationHandlerRoute(t *testing.T) {
 }
 
 func TestWebServer_PasswordResetFormRoute(t *testing.T) {
-	notifications := testsupport.NotificationServiceFake{}
-	webServer := WebServer{
-		AuthService: AuthService{
-			Notifications: &notifications,
-			Creds:         CredStore{testsupport.UserStoreFake{}},
-			Tokens:        testsupport.TokenStoreFake{},
-			ResetTokens:   resetTokenFactory,
-			TimeFunc:      nowTimeFunc,
+	logs, err := testFormRoute(
+		(*WebServer).PasswordResetFormRoute,
+		templatePasswordResetForm,
+		struct {
+			FormAction   string
+			ErrorMessage string
+		}{
+			FormAction: pathPasswordReset,
 		},
-		BaseURL: "https://auth.example.org",
+	)
+	for _, log := range logs {
+		t.Log(log)
 	}
-
-	rsp := webServer.PasswordResetHandlerRoute().Handler(pz.Request{
-		Body: strings.NewReader(""),
-	})
-
-	if rsp.Status != http.StatusAccepted {
-		if data, err := pztest.ReadAll(rsp.Data); err != nil {
-			t.Logf(
-				"error getting response body for error context: %v",
-				err,
-			)
-		} else {
-			t.Logf("Body: %s", data)
-		}
-		t.Fatalf("Response.Status: wanted `202`; found `%d`", rsp.Status)
-	}
-
-	data, err := pztest.ReadAll(rsp.Data)
 	if err != nil {
-		t.Fatalf(
-			"Response.Data: reading serializer: %v",
-			err,
-		)
-	}
-
-	if stringData := string(data); stringData != pageInitiatedPasswordReset {
-		t.Fatalf(
-			"Response.Data: wanted `%s`; found `%s`",
-			pageInitiatedPasswordReset,
-			stringData,
-		)
+		t.Fatal(err)
 	}
 }
 
@@ -257,6 +251,64 @@ func TestWebServer_PasswordResetHandlerRoute(t *testing.T) {
 			}
 		})
 	}
+}
+
+func testFormRoute(
+	route func(*WebServer) pz.Route,
+	wantedTemplate *html.Template,
+	wantedTemplateParams interface{},
+) ([]string, error) {
+	notifications := testsupport.NotificationServiceFake{}
+	webServer := WebServer{
+		AuthService: AuthService{
+			Notifications: &notifications,
+			Creds:         CredStore{testsupport.UserStoreFake{}},
+			Tokens:        testsupport.TokenStoreFake{},
+			ResetTokens:   resetTokenFactory,
+			TimeFunc:      nowTimeFunc,
+		},
+		BaseURL: "https://auth.example.org",
+	}
+
+	rsp := route(&webServer).Handler(pz.Request{
+		Body: strings.NewReader(""),
+		URL:  &url.URL{},
+	})
+
+	if rsp.Status != http.StatusOK {
+		var logs []string
+		if data, err := pztest.ReadAll(rsp.Data); err != nil {
+			logs = append(logs, fmt.Sprintf(
+				"error getting response body for error context: %v",
+				err,
+			))
+		} else {
+			logs = append(logs, fmt.Sprintf("Body: %s", data))
+		}
+		return logs, fmt.Errorf(
+			"Response.Status: wanted `202`; found `%d`",
+			rsp.Status,
+		)
+	}
+
+	data, err := pztest.ReadAll(rsp.Data)
+	if err != nil {
+		return nil, fmt.Errorf("Response.Data: reading serializer: %w", err)
+	}
+
+	var sb strings.Builder
+	if err := wantedTemplate.Execute(&sb, wantedTemplateParams); err != nil {
+		return nil, fmt.Errorf("unexpected error executing template: %w", err)
+	}
+	if stringData := string(data); stringData != sb.String() {
+		return nil, fmt.Errorf(
+			"Response.Data: wanted `%s`; found `%s`",
+			sb.String(),
+			stringData,
+		)
+	}
+
+	return nil, nil
 }
 
 func wantedHTML(
