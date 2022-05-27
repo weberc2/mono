@@ -13,7 +13,101 @@ import (
 	pztest "github.com/weberc2/httpeasy/testsupport"
 	"github.com/weberc2/mono/pkg/auth/testsupport"
 	"github.com/weberc2/mono/pkg/auth/types"
+	"golang.org/x/crypto/bcrypt"
 )
+
+func TestWebServer_PasswordResetConfirmationHandlerRoute(t *testing.T) {
+	for _, testCase := range []struct {
+		name          string
+		body          string
+		existingUsers testsupport.UserStoreFake
+		wantedStatus  int
+		wantedUsers   []types.Credentials
+	}{
+		{
+			name: "success",
+			body: url.Values{
+				"token": []string{mustResetToken(
+					t,
+					"user",
+					"user@example.org",
+				)},
+				"password": []string{goodPassword},
+			}.Encode(),
+			existingUsers: testsupport.UserStoreFake{
+				"user": &types.UserEntry{
+					User:    "user",
+					Email:   "user@example.org",
+					Created: now,
+					PasswordHash: func() []byte {
+						hash, err := bcrypt.GenerateFromPassword(
+							[]byte("password"),
+							bcrypt.DefaultCost,
+						)
+						if err != nil {
+							t.Fatal("failed to hash password: password")
+						}
+						return hash
+					}(),
+				},
+			},
+			wantedStatus: http.StatusSeeOther,
+			wantedUsers: []types.Credentials{{
+				User:     "user",
+				Email:    "user@example.org",
+				Password: goodPassword,
+			}},
+		},
+		{
+			name: "bad token",
+			body: url.Values{
+				"token":    []string{"bad token"},
+				"password": []string{goodPassword},
+			}.Encode(),
+			existingUsers: testsupport.UserStoreFake{},
+			wantedStatus:  http.StatusBadRequest,
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			webServer := WebServer{
+				AuthService: AuthService{
+					Notifications: &testsupport.NotificationServiceFake{},
+					Creds:         CredStore{testCase.existingUsers},
+					Tokens:        testsupport.TokenStoreFake{},
+					ResetTokens:   resetTokenFactory,
+					TimeFunc:      nowTimeFunc,
+				},
+				BaseURL: "https://auth.example.org",
+			}
+
+			rsp := webServer.PasswordResetConfirmationHandlerRoute().Handler(
+				pz.Request{Body: strings.NewReader(testCase.body)},
+			)
+
+			if rsp.Status != testCase.wantedStatus {
+				if data, err := pztest.ReadAll(rsp.Data); err != nil {
+					t.Logf(
+						"error getting response body for error context: %v",
+						err,
+					)
+				} else {
+					t.Logf("Body: %s", data)
+				}
+				t.Fatalf(
+					"Response.Status: wanted `%d`; found `%d`",
+					testCase.wantedStatus,
+					rsp.Status,
+				)
+			}
+
+			if err := testCase.existingUsers.ExpectUsers(
+				testCase.wantedUsers,
+			); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
 
 func TestWebServer_PasswordResetFormRoute(t *testing.T) {
 	notifications := testsupport.NotificationServiceFake{}

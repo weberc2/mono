@@ -168,10 +168,7 @@ func routePasswordResetHandler(ws *WebServer) pz.Route {
 			}
 			return pz.Accepted(
 				pz.String(pageInitiatedPasswordReset),
-				&logging{
-					Message: "kicked off password reset",
-					User:    username,
-				},
+				&logging{Message: "kicked off password reset", User: username},
 			)
 		},
 	}
@@ -200,7 +197,7 @@ func routePasswordResetConfirmationHandler(ws *WebServer) pz.Route {
 				Password: form.Get("password"),
 			})
 			if err != nil {
-				httpErr := &pz.HTTPError{
+				var httpErr pz.Error = &pz.HTTPError{
 					Status:  http.StatusInternalServerError,
 					Message: "internal server error",
 				}
@@ -227,12 +224,12 @@ func routePasswordResetConfirmationHandler(ws *WebServer) pz.Route {
 					FormAction:   pathRegistrationConfirmationForm,
 					User:         user,
 					Token:        form.Get("token"),
-					ErrorMessage: httpErr.Message,
+					ErrorMessage: httpErr.HTTPError().Message,
 					PrivateError: err.Error(),
 					ErrorType:    fmt.Sprintf("%T", err),
 				}
 				return pz.Response{
-					Status: httpErr.Status,
+					Status: httpErr.HTTPError().Status,
 					Data: pz.HTMLTemplate(
 						templatePasswordResetConfirmationForm,
 						&ctx,

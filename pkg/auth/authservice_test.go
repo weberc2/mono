@@ -71,13 +71,12 @@ func TestAuthService_ConfirmRegistration(t *testing.T) {
 			email:    "user@example.org",
 			password: goodPassword,
 			wanted:   nil,
-			wantedErr: TokenClaimsParseErr(fmt.Errorf(
-				"parsing claims from token: %v",
+			wantedErr: InvalidRefreshTokenErr(
 				jwt.NewValidationError(
 					"token contains an invalid number of segments",
 					jwt.ValidationErrorMalformed,
 				),
-			)),
+			),
 		},
 		{
 			name:      "password validation err",

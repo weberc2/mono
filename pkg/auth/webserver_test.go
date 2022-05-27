@@ -107,19 +107,10 @@ func TestWebServer_RegistrationConfirmationHandlerRoute(t *testing.T) {
 				)
 			}
 
-			found := testCase.existingUsers.List()
-			if len(found) != len(testCase.wantedUsers) {
-				t.Fatalf(
-					"len(UserStore): wanted `%d`; found `%d`",
-					len(testCase.wantedUsers),
-					len(found),
-				)
-			}
-
-			for i, creds := range testCase.wantedUsers {
-				if err := creds.CompareUserEntry(found[i]); err != nil {
-					t.Fatalf("UserStore[%d]: %v", i, err)
-				}
+			if err := testCase.existingUsers.ExpectUsers(
+				testCase.wantedUsers,
+			); err != nil {
+				t.Fatal(err)
 			}
 		})
 	}
