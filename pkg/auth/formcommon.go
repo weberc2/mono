@@ -16,17 +16,7 @@ const (
 	pathRegistrationConfirmation  = "/confirm"
 	pathPasswordReset             = "/password/reset"
 	pathPasswordResetConfirmation = "/password/confirm-reset"
-	pageInitiatedPasswordReset    = `<html>
-<head>
-	<title>Initiated Password Reset</title>
-<body>
-<h1>Initiated Password Reset</h1>
-<p>An email has been sent to the email address corresponding to the provided
-username. Please check your email for a confirmation link.</p>
-</body>
-</head>
-</html>`
-	pageInitiatedRegistration = `<html>
+	pageInitiatedRegistration     = `<html>
 <head>
 	<title>Registration Accepted</title>
 <body>
@@ -38,19 +28,19 @@ email for a confirmation link.</p>
 </body>
 </head>
 </html>`
+	pageInitiatedPasswordReset = `<html>
+<head>
+	<title>Initiated Password Reset</title>
+<body>
+<h1>Initiated Password Reset</h1>
+<p>An email has been sent to the email address corresponding to the provided
+username. Please check your email for a confirmation link.</p>
+</body>
+</head>
+</html>`
 )
 
 var (
-	routePasswordResetForm = formRoute(
-		pathPasswordReset,
-		templatePasswordResetForm,
-	)
-
-	routePasswordResetConfirmationForm = formRoute(
-		pathPasswordResetConfirmation,
-		templatePasswordResetConfirmationForm,
-	)
-
 	routeRegistrationForm = formRoute(
 		pathRegistration,
 		templateRegistrationForm,
@@ -61,36 +51,15 @@ var (
 		templateRegistrationConfirmationForm,
 	)
 
-	templatePasswordResetForm = mustHTML(`<html>
-<head>
-	<title>Password Reset</title>
-</head>
-<body>
-<h1>Password Reset</h1>
-{{ if .ErrorMessage }}<p id="error-message">{{ .ErrorMessage }}</p>{{ end }}
-<form action="{{ .FormAction }}" method="POST">
-	<label for="username">Username</label>
-	<input type="text" id="username" name="username"><br><br>
-	<input type="submit" value="Submit">
-</form>
-</body>
-</html>`)
+	routePasswordResetForm = formRoute(
+		pathPasswordReset,
+		templatePasswordResetForm,
+	)
 
-	templatePasswordResetConfirmationForm = mustHTML(`<html>
-<head>
-	<title>Confirm Password Reset</title>
-</head>
-<body>
-<h1>Confirm Password Reset</h1>
-{{ if .ErrorMessage }}<p id="error-message">{{ .ErrorMessage }}</p>{{ end }}
-<form action="{{ .FormAction }}" method="POST">
-	<label for="password">Password</label>
-	<input type="password" id="password" name="password"><br><br>
-	<input type="hidden" id="token" name="token" value="{{.Token}}">
-	<input type="submit" value="Submit">
-</form>
-</body>
-</html>`)
+	routePasswordResetConfirmationForm = formRoute(
+		pathPasswordResetConfirmation,
+		templatePasswordResetConfirmationForm,
+	)
 
 	templateRegistrationForm = mustHTML(
 		`<html>
@@ -116,6 +85,37 @@ var (
 </head>
 <body>
 <h1>Confirm Registration<h1>
+{{ if .ErrorMessage }}<p id="error-message">{{ .ErrorMessage }}</p>{{ end }}
+<form action="{{ .FormAction }}" method="POST">
+	<label for="password">Password</label>
+	<input type="password" id="password" name="password"><br><br>
+	<input type="hidden" id="token" name="token" value="{{.Token}}">
+	<input type="submit" value="Submit">
+</form>
+</body>
+</html>`)
+
+	templatePasswordResetForm = mustHTML(`<html>
+<head>
+	<title>Password Reset</title>
+</head>
+<body>
+<h1>Password Reset</h1>
+{{ if .ErrorMessage }}<p id="error-message">{{ .ErrorMessage }}</p>{{ end }}
+<form action="{{ .FormAction }}" method="POST">
+	<label for="username">Username</label>
+	<input type="text" id="username" name="username"><br><br>
+	<input type="submit" value="Submit">
+</form>
+</body>
+</html>`)
+
+	templatePasswordResetConfirmationForm = mustHTML(`<html>
+<head>
+	<title>Confirm Password Reset</title>
+</head>
+<body>
+<h1>Confirm Password Reset</h1>
 {{ if .ErrorMessage }}<p id="error-message">{{ .ErrorMessage }}</p>{{ end }}
 <form action="{{ .FormAction }}" method="POST">
 	<label for="password">Password</label>
