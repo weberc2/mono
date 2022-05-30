@@ -1,10 +1,11 @@
 package auth
 
 import (
-	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	pz "github.com/weberc2/httpeasy"
 	"github.com/weberc2/mono/pkg/auth/types"
 )
 
@@ -48,7 +49,15 @@ func (rtf *ResetTokenFactory) Claims(token string) (*Claims, error) {
 			return &rtf.SigningKey.PublicKey, nil
 		},
 	); err != nil {
-		return nil, fmt.Errorf("parsing claims from token: %w", err)
+		return nil, InvalidRefreshTokenErr(err)
 	}
 	return &claims, nil
+}
+
+func InvalidRefreshTokenErr(err error) *pz.HTTPError {
+	return &pz.HTTPError{
+		Status:  http.StatusBadRequest,
+		Message: "invalid password reset token",
+		Cause_:  err,
+	}
 }

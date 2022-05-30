@@ -163,15 +163,12 @@ func (c *Config) Run() error {
 			Notifications: &auth.SESNotificationService{
 				Client: ses.New(sess),
 				Sender: c.NotificationSender,
-				TokenURL: func(tok string) string {
-					return fmt.Sprintf(
-						"https://%s/confirm?t=%s",
-						c.HostName,
-						tok,
-					)
-				},
-				RegistrationSettings:   auth.DefaultRegistrationSettings,
-				ForgotPasswordSettings: auth.DefaultForgotPasswordSettings,
+				RegistrationSettings: auth.DefaultRegistrationSettings(
+					"https://" + strings.TrimRight(c.HostName, "/"),
+				),
+				ForgotPasswordSettings: auth.DefaultForgotPasswordSettings(
+					"https://" + strings.TrimRight(c.HostName, "/"),
+				),
 			},
 			TokenDetails: auth.TokenDetailsFactory{
 				AccessTokens: auth.TokenFactory{
@@ -220,6 +217,10 @@ func (c *Config) Run() error {
 				webServer.RegistrationHandlerRoute(),
 				webServer.RegistrationConfirmationFormRoute(),
 				webServer.RegistrationConfirmationHandlerRoute(),
+				webServer.PasswordResetFormRoute(),
+				webServer.PasswordResetHandlerRoute(),
+				webServer.PasswordResetConfirmationFormRoute(),
+				webServer.PasswordResetConfirmationHandlerRoute(),
 			)...,
 		),
 	); err != nil {

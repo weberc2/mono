@@ -290,16 +290,16 @@ func (ahs *AuthHTTPService) UpdatePasswordRoute() pz.Route {
 				return pz.BadRequest(nil, &logging{
 					Message: "updating password",
 					Error:   err.Error(),
-					User:    payload.User,
 				})
 			}
 
-			if err := ahs.UpdatePassword(&payload); err != nil {
+			user, err := ahs.UpdatePassword(&payload)
+			if err != nil {
 				l := logging{
 					Message:   "updating password",
 					Error:     err.Error(),
 					ErrorType: fmt.Sprintf("%T", err),
-					User:      payload.User,
+					User:      user,
 				}
 				if errors.Is(err, ErrInvalidResetToken) {
 					return pz.NotFound(
@@ -312,7 +312,7 @@ func (ahs *AuthHTTPService) UpdatePasswordRoute() pz.Route {
 
 			return pz.Ok(pz.String("Password updated"), &logging{
 				Message: "updated password",
-				User:    payload.User,
+				User:    user,
 			})
 		},
 	}

@@ -1,6 +1,10 @@
 package testsupport
 
-import "github.com/weberc2/mono/pkg/auth/types"
+import (
+	"fmt"
+
+	"github.com/weberc2/mono/pkg/auth/types"
+)
 
 type UserStoreFake map[types.UserID]*types.UserEntry
 
@@ -27,4 +31,33 @@ func (usf UserStoreFake) List() []*types.UserEntry {
 		entries = append(entries, entry)
 	}
 	return entries
+}
+
+func (usf UserStoreFake) ExpectUsers(wanted []types.Credentials) error {
+	if len(usf) != len(wanted) {
+		return fmt.Errorf(
+			"validating users: length mismatch: wanted `%d` users; found `%d`",
+			len(wanted),
+			len(usf),
+		)
+	}
+
+	for _, creds := range wanted {
+		entry, ok := usf[creds.User]
+		if !ok {
+			return fmt.Errorf(
+				"validating users: missing expected user: `%s`",
+				creds.User,
+			)
+		}
+		if err := creds.CompareUserEntry(entry); err != nil {
+			return fmt.Errorf(
+				"validating users: mismatch for user `%s`: %w",
+				creds.User,
+				err,
+			)
+		}
+	}
+
+	return nil
 }
