@@ -338,13 +338,8 @@ func TestAuthService_Register(t *testing.T) {
 		TimeFunc: func() time.Time { return now },
 	}
 
-	user, err := authService.Register("user", "user@example.org")
-	if err != nil {
+	if err := authService.Register("user", "user@example.org"); err != nil {
 		t.Fatalf("Unexpected err: %v", err)
-	}
-
-	if user != "user" {
-		t.Fatalf("wanted `user`; found `%s`", user)
 	}
 
 	wantedToken := &types.Notification{
@@ -372,8 +367,7 @@ func TestAuthService_Register_UserNameExists(t *testing.T) {
 		}},
 	}
 
-	user, err := authService.Register("user", "user@example.org")
-	if err != nil {
+	if err := authService.Register("user", "user@example.org"); err != nil {
 		if !errors.Is(err, ErrUserExists) {
 			t.Fatalf(
 				"Wanted error '%s'; found '%s'",
@@ -382,20 +376,14 @@ func TestAuthService_Register_UserNameExists(t *testing.T) {
 			)
 		}
 		return
-	} else {
-		t.Fatal("Wanted `ErrUserExists`; found `<nil>`")
 	}
-
-	if user != "user" {
-		t.Fatalf("wanted `user`; found `%s`", user)
-	}
-
+	t.Fatal("Wanted `ErrUserExists`; found `<nil>`")
 }
 
 func TestAuthService_Register_InvalidEmailAddress(t *testing.T) {
 	authService := AuthService{}
 	for _, email := range []string{"", "nodomain@", "noatsign"} {
-		if _, err := authService.Register("user", email); err != nil {
+		if err := authService.Register("user", email); err != nil {
 			if errors.Is(err, ErrInvalidEmail) {
 				continue
 			}
@@ -443,7 +431,7 @@ func TestAuthService_ForgotPassword(t *testing.T) {
 		TimeFunc: func() time.Time { return now },
 	}
 
-	if _, err := authService.ForgotPassword("user"); err != nil {
+	if err := authService.ForgotPassword("user"); err != nil {
 		t.Fatalf("Unexpected err: %v", err)
 	}
 

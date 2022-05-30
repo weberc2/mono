@@ -159,10 +159,8 @@ func routeRegistrationHandler(ws *WebServer) pz.Route {
 		successPage: pageInitiatedRegistration,
 		template:    templateRegistrationForm,
 		callback: func(auth *AuthService, f url.Values) (types.UserID, error) {
-			return auth.Register(
-				types.UserID(f.Get("username")),
-				f.Get("email"),
-			)
+			user := types.UserID(f.Get("username"))
+			return user, auth.Register(user, f.Get("email"))
 		},
 	})
 }
@@ -174,7 +172,8 @@ func routePasswordResetHandler(ws *WebServer) pz.Route {
 		successPage: pageInitiatedPasswordReset,
 		template:    templatePasswordResetForm,
 		callback: func(auth *AuthService, f url.Values) (types.UserID, error) {
-			return auth.ForgotPassword(types.UserID(f.Get("username")))
+			user := types.UserID(f.Get("username"))
+			return user, auth.ForgotPassword(user)
 		},
 	})
 }

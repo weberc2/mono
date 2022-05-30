@@ -144,29 +144,26 @@ func (as *AuthService) Refresh(refreshToken string) (string, error) {
 	return as.TokenDetails.AccessToken(claims.Subject)
 }
 
-func (as *AuthService) Register(
-	user types.UserID,
-	email string,
-) (types.UserID, error) {
+func (as *AuthService) Register(user types.UserID, email string) error {
 	parser := mail.AddressParser{}
 	if _, err := parser.Parse(email); err != nil {
-		return "", fmt.Errorf("registering user: %w", ErrInvalidEmail)
+		return fmt.Errorf("registering user: %w", ErrInvalidEmail)
 	}
 
-	if u, err := as.Creds.Users.Get(user); err != nil {
+	if _, err := as.Creds.Users.Get(user); err != nil {
 		if !errors.Is(err, types.ErrUserNotFound) {
-			return "", fmt.Errorf("registering user: %w", err)
+			return fmt.Errorf("registering user: %w", err)
 		}
 	} else {
 		// if the error is nil, it means the user was found--return
 		// `ErrUserExists`.
-		return u.User, fmt.Errorf("registering user: %w", ErrUserExists)
+		return fmt.Errorf("registering user: %w", ErrUserExists)
 	}
 
 	// TODO: Error if email already exists
 	token, err := as.ResetTokens.Create(as.TimeFunc(), user, email)
 	if err != nil {
-		return user, fmt.Errorf("registering user: %w", err)
+		return fmt.Errorf("registering user: %w", err)
 	}
 
 	if err := as.Notifications.Notify(&types.Notification{
@@ -175,26 +172,21 @@ func (as *AuthService) Register(
 		Email: email,
 		Token: token,
 	}); err != nil {
-		return user, fmt.Errorf(
-			"notifying registration reset token: %w",
-			err,
-		)
+		return fmt.Errorf("notifying registration reset token: %w", err)
 	}
 
-	return user, nil
+	return nil
 }
 
-func (as *AuthService) ForgotPassword(
-	user types.UserID,
-) (types.UserID, error) {
+func (as *AuthService) ForgotPassword(user types.UserID) error {
 	u, err := as.Creds.Users.Get(user)
 	if err != nil {
-		return "", fmt.Errorf("fetching user: %w", err)
+		return fmt.Errorf("fetching user: %w", err)
 	}
 
 	token, err := as.ResetTokens.Create(as.TimeFunc(), user, u.Email)
 	if err != nil {
-		return u.User, fmt.Errorf(
+		return fmt.Errorf(
 			"preparing forgot-password notification: %w",
 			err,
 		)
@@ -206,13 +198,13 @@ func (as *AuthService) ForgotPassword(
 		Email: u.Email,
 		Token: token,
 	}); err != nil {
-		return u.User, fmt.Errorf(
+		return fmt.Errorf(
 			"notifying forgot-password reset token: %w",
 			err,
 		)
 	}
 
-	return u.User, nil
+	return nil
 }
 
 type UpdatePassword struct {
