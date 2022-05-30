@@ -186,10 +186,7 @@ func (as *AuthService) ForgotPassword(user types.UserID) error {
 
 	token, err := as.ResetTokens.Create(as.TimeFunc(), user, u.Email)
 	if err != nil {
-		return fmt.Errorf(
-			"preparing forgot-password notification: %w",
-			err,
-		)
+		return fmt.Errorf("preparing forgot-password notification: %w", err)
 	}
 
 	if err := as.Notifications.Notify(&types.Notification{
@@ -198,10 +195,7 @@ func (as *AuthService) ForgotPassword(user types.UserID) error {
 		Email: u.Email,
 		Token: token,
 	}); err != nil {
-		return fmt.Errorf(
-			"notifying forgot-password reset token: %w",
-			err,
-		)
+		return fmt.Errorf("notifying forgot-password reset token: %w", err)
 	}
 
 	return nil
