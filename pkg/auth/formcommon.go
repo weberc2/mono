@@ -270,6 +270,7 @@ func routeRegistrationConfirmationHandler(ws *WebServer) pz.Route {
 		activity: "registration",
 		path:     pathRegistrationConfirmation,
 		create:   true,
+		template: templateRegistrationConfirmationForm,
 	})
 }
 
@@ -278,6 +279,7 @@ func routePasswordResetConfirmationHandler(ws *WebServer) pz.Route {
 		activity: "password reset",
 		path:     pathPasswordResetConfirmation,
 		create:   false,
+		template: templatePasswordResetConfirmationForm,
 	})
 }
 
