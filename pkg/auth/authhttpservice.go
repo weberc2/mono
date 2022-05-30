@@ -194,7 +194,8 @@ func (ahs *AuthHTTPService) ForgotPasswordRoute() pz.Route {
 				})
 			}
 
-			if err := ahs.ForgotPassword(payload.User); err != nil {
+			user, err := ahs.ForgotPassword(payload.User)
+			if err != nil {
 				// If the user doesn't exist, we still report success so as to
 				// not give away information to potential attackers.
 				if errors.Is(err, types.ErrUserNotFound) {
@@ -215,7 +216,7 @@ func (ahs *AuthHTTPService) ForgotPasswordRoute() pz.Route {
 
 			return pz.Ok(nil, &logging{
 				Message: "password reset notification sent",
-				User:    payload.User,
+				User:    user,
 			})
 		},
 	}
@@ -237,10 +238,11 @@ func (ahs *AuthHTTPService) RegisterRoute() pz.Route {
 				})
 			}
 
-			if err := ahs.Register(payload.User, payload.Email); err != nil {
+			user, err := ahs.Register(payload.User, payload.Email)
+			if err != nil {
 				if errors.Is(err, ErrInvalidEmail) {
 					return pz.BadRequest(
-						pz.String("Invalid email address"),
+						pz.String("invalid email address"),
 						struct {
 							Error string
 						}{
@@ -250,7 +252,7 @@ func (ahs *AuthHTTPService) RegisterRoute() pz.Route {
 				}
 				if errors.Is(err, ErrUserExists) {
 					return pz.Conflict(
-						pz.String("User already exists"),
+						pz.String("user already exists"),
 						struct {
 							Message, Error string
 							User           types.UserID
@@ -269,12 +271,12 @@ func (ahs *AuthHTTPService) RegisterRoute() pz.Route {
 				})
 			}
 
-			return pz.Created(pz.String("Created user"), struct {
+			return pz.Created(pz.String("created user"), struct {
 				Message string
 				User    types.UserID
 			}{
 				Message: "created user",
-				User:    payload.User,
+				User:    user,
 			})
 		},
 	}

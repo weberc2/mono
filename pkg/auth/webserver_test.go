@@ -136,8 +136,8 @@ func TestWebServer_RegistrationHandlerRoute(t *testing.T) {
 		{
 			name:         "simple",
 			body:         regForm("user", "user@example.org"),
-			wantedStatus: http.StatusCreated,
-			wantedData:   wantedString(registrationSuccessPage),
+			wantedStatus: http.StatusAccepted,
+			wantedData:   wantedString(pageInitiatedRegistration),
 			wantedNotifications: []*types.Notification{{
 				Type:  types.NotificationTypeRegister,
 				User:  "user",
@@ -162,9 +162,10 @@ func TestWebServer_RegistrationHandlerRoute(t *testing.T) {
 			body:         regForm("user", "user@example.org"),
 			wantedStatus: http.StatusConflict,
 			wantedData: &wantedTemplate{
-				tmpl: registrationForm,
-				values: registrationFormContext{
-					FormAction:   pathRegistrationForm,
+				tmpl: templateRegistrationForm,
+				values: formContext{
+					FormAction: "https://auth.example.org" +
+						pathRegistration,
 					ErrorMessage: ErrUserExists.Message,
 				},
 			},

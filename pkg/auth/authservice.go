@@ -144,26 +144,29 @@ func (as *AuthService) Refresh(refreshToken string) (string, error) {
 	return as.TokenDetails.AccessToken(claims.Subject)
 }
 
-func (as *AuthService) Register(user types.UserID, email string) error {
+func (as *AuthService) Register(
+	user types.UserID,
+	email string,
+) (types.UserID, error) {
 	parser := mail.AddressParser{}
 	if _, err := parser.Parse(email); err != nil {
-		return fmt.Errorf("registering user: %w", ErrInvalidEmail)
+		return "", fmt.Errorf("registering user: %w", ErrInvalidEmail)
 	}
 
-	if _, err := as.Creds.Users.Get(user); err != nil {
+	if u, err := as.Creds.Users.Get(user); err != nil {
 		if !errors.Is(err, types.ErrUserNotFound) {
-			return fmt.Errorf("registering user: %w", err)
+			return "", fmt.Errorf("registering user: %w", err)
 		}
 	} else {
 		// if the error is nil, it means the user was found--return
 		// `ErrUserExists`.
-		return fmt.Errorf("registering user: %w", ErrUserExists)
+		return u.User, fmt.Errorf("registering user: %w", ErrUserExists)
 	}
 
 	// TODO: Error if email already exists
 	token, err := as.ResetTokens.Create(as.TimeFunc(), user, email)
 	if err != nil {
-		return fmt.Errorf("registering user: %w", err)
+		return user, fmt.Errorf("registering user: %w", err)
 	}
 
 	if err := as.Notifications.Notify(&types.Notification{
@@ -172,21 +175,29 @@ func (as *AuthService) Register(user types.UserID, email string) error {
 		Email: email,
 		Token: token,
 	}); err != nil {
-		return fmt.Errorf("notifying registration reset token: %w", err)
+		return user, fmt.Errorf(
+			"notifying registration reset token: %w",
+			err,
+		)
 	}
 
-	return nil
+	return user, nil
 }
 
-func (as *AuthService) ForgotPassword(user types.UserID) error {
+func (as *AuthService) ForgotPassword(
+	user types.UserID,
+) (types.UserID, error) {
 	u, err := as.Creds.Users.Get(user)
 	if err != nil {
-		return fmt.Errorf("fetching user: %w", err)
+		return "", fmt.Errorf("fetching user: %w", err)
 	}
 
 	token, err := as.ResetTokens.Create(as.TimeFunc(), user, u.Email)
 	if err != nil {
-		return fmt.Errorf("preparing forgot-password notification: %w", err)
+		return u.User, fmt.Errorf(
+			"preparing forgot-password notification: %w",
+			err,
+		)
 	}
 
 	if err := as.Notifications.Notify(&types.Notification{
@@ -195,18 +206,21 @@ func (as *AuthService) ForgotPassword(user types.UserID) error {
 		Email: u.Email,
 		Token: token,
 	}); err != nil {
-		return fmt.Errorf("notifying forgot-password reset token: %w", err)
+		return u.User, fmt.Errorf(
+			"notifying forgot-password reset token: %w",
+			err,
+		)
 	}
 
-	return nil
+	return u.User, nil
 }
 
 type UpdatePassword struct {
+	Create   bool   `json:"create"`
 	Token    string `json:"token"`
 	Password string `json:"password"`
 }
 
-// TODO: make sure this token is deleted on success
 func (as *AuthService) UpdatePassword(
 	up *UpdatePassword,
 ) (types.UserID, error) {
@@ -218,42 +232,26 @@ func (as *AuthService) UpdatePassword(
 	// We deliberately want to return `ErrInvalidResetToken` in this case so
 	// as not to give attackers unnecessary information. See OWASP link above.
 	if err := claims.Valid(); err != nil {
-		return "", fmt.Errorf("updating password: %w", ErrInvalidResetToken)
+		return "", ErrInvalidResetToken
 	}
 
-	if err := as.Creds.Upsert(&types.Credentials{
-		User:     claims.User,
-		Email:    claims.Email,
-		Password: up.Password,
-	}); err != nil {
-		return claims.User, fmt.Errorf("updating password: %w", err)
+	cb := (*CredStore).Create
+	if !up.Create {
+		cb = (*CredStore).Upsert
+	}
+
+	if err := cb(
+		&as.Creds,
+		&types.Credentials{
+			User:     claims.User,
+			Email:    claims.Email,
+			Password: up.Password,
+		},
+	); err != nil {
+		return claims.User, err
 	}
 
 	return claims.User, nil
-}
-
-// TODO: make sure this token is deleted on success
-func (as *AuthService) ConfirmRegistration(token, password string) error {
-	claims, err := as.ResetTokens.Claims(token)
-	if err != nil {
-		return fmt.Errorf("confirming registration: %w", err)
-	}
-
-	// We deliberately want to return `ErrInvalidResetToken` in this case so
-	// as not to give attackers unnecessary information. See OWASP link above.
-	if err := claims.Valid(); err != nil {
-		return fmt.Errorf("confirming registration: %w", ErrInvalidResetToken)
-	}
-
-	if err := as.Creds.Create(&types.Credentials{
-		User:     claims.User,
-		Email:    claims.Email,
-		Password: password,
-	}); err != nil {
-		return fmt.Errorf("confirming registration: %w", err)
-	}
-
-	return nil
 }
 
 func (as *AuthService) Exchange(code string) (*TokenDetails, error) {
