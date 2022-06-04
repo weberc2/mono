@@ -11,15 +11,10 @@ import (
 	"github.com/weberc2/mono/pkg/auth/types"
 )
 
-type form interface {
-	formRoute() pz.Route
-	handlerRoute(string, *WebServer) pz.Route
-}
-
 type confirmationFlow struct {
 	activity     string
-	main         mainForm
-	confirmation mainForm
+	main         form
+	confirmation form
 }
 
 func (flow *confirmationFlow) routeMainForm() pz.Route {
@@ -40,14 +35,14 @@ func (flow *confirmationFlow) routeConfirmationHandler(
 	return flow.confirmation.handlerRoute(flow.activity, ws)
 }
 
-type mainForm struct {
+type form struct {
 	path     string
 	template *html.Template
 	callback callback
 	success  success
 }
 
-func (form *mainForm) formRoute() pz.Route {
+func (form *form) formRoute() pz.Route {
 	return pz.Route{
 		Method: "GET",
 		Path:   form.path,
@@ -69,7 +64,7 @@ func (form *mainForm) formRoute() pz.Route {
 	}
 }
 
-func (form *mainForm) handlerRoute(activity string, ws *WebServer) pz.Route {
+func (form *form) handlerRoute(activity string, ws *WebServer) pz.Route {
 	return pz.Route{
 		Method: "POST",
 		Path:   form.path,

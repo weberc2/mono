@@ -9,7 +9,7 @@ import (
 var (
 	flowRegistration = confirmationFlow{
 		activity: "registration",
-		main: mainForm{
+		main: form{
 			path: "/registration",
 			template: mustHTML(
 				`<html>
@@ -37,7 +37,7 @@ var (
 			},
 			success: successAccepted(registrationAckPage),
 		},
-		confirmation: mainForm{
+		confirmation: form{
 			path: "/registration/confirmation",
 			template: mustHTML(`<html>
 <head>

@@ -9,7 +9,7 @@ import (
 var (
 	flowPasswordReset = confirmationFlow{
 		activity: "password reset",
-		main: mainForm{
+		main: form{
 			path: "/password-reset",
 			template: mustHTML(`<html>
 <head>
@@ -43,7 +43,7 @@ username. Please check your email for a confirmation link.</p>
 </head>
 </html>`),
 		},
-		confirmation: mainForm{
+		confirmation: form{
 			path: "/password-reset/confirmation",
 			template: mustHTML(`<html>
 <head>
