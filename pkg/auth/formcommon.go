@@ -11,129 +11,46 @@ import (
 	"github.com/weberc2/mono/pkg/auth/types"
 )
 
-const (
-	pathRegistration              = "/register"
-	pathRegistrationConfirmation  = "/confirm"
-	pathPasswordReset             = "/password/reset"
-	pathPasswordResetConfirmation = "/password/confirm-reset"
-	pageInitiatedRegistration     = `<html>
-<head>
-	<title>Registration Accepted</title>
-<body>
-<h1>
-Registration Accepted
-</h1>
-<p>An email has been sent to the email address provided. Please check your
-email for a confirmation link.</p>
-</body>
-</head>
-</html>`
-	pageInitiatedPasswordReset = `<html>
-<head>
-	<title>Initiated Password Reset</title>
-<body>
-<h1>Initiated Password Reset</h1>
-<p>An email has been sent to the email address corresponding to the provided
-username. Please check your email for a confirmation link.</p>
-</body>
-</head>
-</html>`
-)
+type form interface {
+	formRoute() pz.Route
+	handlerRoute(string, *WebServer) pz.Route
+}
 
-var (
-	routeRegistrationForm = formRoute(
-		pathRegistration,
-		templateRegistrationForm,
-	)
+type confirmationFlow struct {
+	activity     string
+	main         mainForm
+	confirmation mainForm
+}
 
-	routeRegistrationConfirmationForm = formRoute(
-		pathRegistrationConfirmation,
-		templateRegistrationConfirmationForm,
-	)
+func (flow *confirmationFlow) routeMainForm() pz.Route {
+	return flow.main.formRoute()
+}
 
-	routePasswordResetForm = formRoute(
-		pathPasswordReset,
-		templatePasswordResetForm,
-	)
+func (flow *confirmationFlow) routeConfirmationForm() pz.Route {
+	return flow.confirmation.formRoute()
+}
 
-	routePasswordResetConfirmationForm = formRoute(
-		pathPasswordResetConfirmation,
-		templatePasswordResetConfirmationForm,
-	)
+func (flow *confirmationFlow) routeMainHandler(ws *WebServer) pz.Route {
+	return flow.main.handlerRoute(flow.activity, ws)
+}
 
-	templateRegistrationForm = mustHTML(
-		`<html>
-<head>
-	<title>Register</title>
-</head>
-<body>
-<h1>Register</h1>
-{{ if .ErrorMessage }}<p id="error-message">{{ .ErrorMessage }}</p>{{ end }}
-<form action="{{ .FormAction }}" method="POST">
-	<label for="username">Username</label>
-	<input type="text" id="username" name="username"><br><br>
-	<label for="email">Email</label>
-	<input type="text" id="email" name="email"><br><br>
-	<input type="submit" value="Submit">
-</form>
-</body>
-</html>`)
-
-	templateRegistrationConfirmationForm = mustHTML(`<html>
-<head>
-	<title>Confirm Registration</title>
-</head>
-<body>
-<h1>Confirm Registration<h1>
-{{ if .ErrorMessage }}<p id="error-message">{{ .ErrorMessage }}</p>{{ end }}
-<form action="{{ .FormAction }}" method="POST">
-	<label for="password">Password</label>
-	<input type="password" id="password" name="password"><br><br>
-	<input type="hidden" id="token" name="token" value="{{.Token}}">
-	<input type="submit" value="Submit">
-</form>
-</body>
-</html>`)
-
-	templatePasswordResetForm = mustHTML(`<html>
-<head>
-	<title>Password Reset</title>
-</head>
-<body>
-<h1>Password Reset</h1>
-{{ if .ErrorMessage }}<p id="error-message">{{ .ErrorMessage }}</p>{{ end }}
-<form action="{{ .FormAction }}" method="POST">
-	<label for="username">Username</label>
-	<input type="text" id="username" name="username"><br><br>
-	<input type="submit" value="Submit">
-</form>
-</body>
-</html>`)
-
-	templatePasswordResetConfirmationForm = mustHTML(`<html>
-<head>
-	<title>Confirm Password Reset</title>
-</head>
-<body>
-<h1>Confirm Password Reset</h1>
-{{ if .ErrorMessage }}<p id="error-message">{{ .ErrorMessage }}</p>{{ end }}
-<form action="{{ .FormAction }}" method="POST">
-	<label for="password">Password</label>
-	<input type="password" id="password" name="password"><br><br>
-	<input type="hidden" id="token" name="token" value="{{.Token}}">
-	<input type="submit" value="Submit">
-</form>
-</body>
-</html>`)
-)
-
-func formRoute(
-	path string,
-	template *html.Template,
+func (flow *confirmationFlow) routeConfirmationHandler(
+	ws *WebServer,
 ) pz.Route {
+	return flow.confirmation.handlerRoute(flow.activity, ws)
+}
+
+type mainForm struct {
+	path     string
+	template *html.Template
+	callback callback
+	success  success
+}
+
+func (form *mainForm) formRoute() pz.Route {
 	return pz.Route{
 		Method: "GET",
-		Path:   path,
+		Path:   form.path,
 		Handler: func(r pz.Request) pz.Response {
 			ctx := struct {
 				FormAction string `json:"formAction"`
@@ -144,54 +61,20 @@ func formRoute(
 				// error at runtime).
 				ErrorMessage string `json:"errorMessage,omitempty"`
 			}{
-				FormAction: path,
+				FormAction: form.path,
 				Token:      r.URL.Query().Get("t"),
 			}
-			return pz.Ok(pz.HTMLTemplate(template, ctx), ctx)
+			return pz.Ok(pz.HTMLTemplate(form.template, ctx), ctx)
 		},
 	}
 }
 
-func routeRegistrationHandler(ws *WebServer) pz.Route {
-	return routeHandler(ws, &handlerParams{
-		activity:    "registration",
-		path:        pathRegistration,
-		successPage: pageInitiatedRegistration,
-		template:    templateRegistrationForm,
-		callback: func(auth *AuthService, f url.Values) (types.UserID, error) {
-			user := types.UserID(f.Get("username"))
-			return user, auth.Register(user, f.Get("email"))
-		},
-	})
-}
-
-func routePasswordResetHandler(ws *WebServer) pz.Route {
-	return routeHandler(ws, &handlerParams{
-		activity:    "password reset",
-		path:        pathPasswordReset,
-		successPage: pageInitiatedPasswordReset,
-		template:    templatePasswordResetForm,
-		callback: func(auth *AuthService, f url.Values) (types.UserID, error) {
-			user := types.UserID(f.Get("username"))
-			return user, auth.ForgotPassword(user)
-		},
-	})
-}
-
-type handlerParams struct {
-	activity    string
-	path        string
-	successPage string
-	template    *html.Template
-	callback    func(*AuthService, url.Values) (types.UserID, error)
-}
-
-func routeHandler(ws *WebServer, params *handlerParams) pz.Route {
+func (form *mainForm) handlerRoute(activity string, ws *WebServer) pz.Route {
 	return pz.Route{
 		Method: "POST",
-		Path:   params.path,
+		Path:   form.path,
 		Handler: func(r pz.Request) pz.Response {
-			form, err := parseForm(r)
+			f, err := parseForm(r)
 			if err != nil {
 				return pz.HandleError(
 					"error parsing form data",
@@ -199,7 +82,7 @@ func routeHandler(ws *WebServer, params *handlerParams) pz.Route {
 					&logging{
 						Message: fmt.Sprintf(
 							"%s: parsing form data",
-							params.activity,
+							activity,
 						),
 						ErrorType: fmt.Sprintf("%T", err),
 						Error:     err.Error(),
@@ -207,7 +90,7 @@ func routeHandler(ws *WebServer, params *handlerParams) pz.Route {
 				)
 			}
 
-			user, err := params.callback(&ws.AuthService, form)
+			user, err := form.callback(&ws.AuthService, f)
 			if err != nil {
 				httpErr := &pz.HTTPError{
 					Status:  http.StatusInternalServerError,
@@ -223,132 +106,35 @@ func routeHandler(ws *WebServer, params *handlerParams) pz.Route {
 				// be returned when updating a user password (user-not-found
 				// is the happy path for user registration).
 				if httpErr.Status == http.StatusNotFound {
-					return pz.Accepted(
-						pz.String(params.successPage),
-						&logging{
-							Message: "username not found, but reporting 202 " +
-								"Accepted to caller",
-							User:      user,
-							ErrorType: fmt.Sprintf("%T", err),
-							Error:     err.Error(),
-						},
-					)
-				}
-				ctx := formContext{
-					FormAction:   ws.BaseURL + params.path,
-					ErrorMessage: httpErr.Message,
-					PrivateError: err.Error(),
-				}
-				return pz.Response{
-					Status: httpErr.Status,
-					Data:   pz.HTMLTemplate(params.template, &ctx),
-				}.WithLogging(&ctx)
-			}
-			return pz.Accepted(
-				pz.String(params.successPage),
-				&logging{
-					Message: fmt.Sprintf("kicked off %s", params.activity),
-					User:    user,
-				},
-			)
-		},
-	}
-}
-
-type formContext struct {
-	FormAction string `json:"formAction"`
-
-	// for html template
-	ErrorMessage string `json:"errorMessage,omitempty"`
-
-	// logging only
-	PrivateError string `json:"privateError,omitempty"`
-}
-
-func routeRegistrationConfirmationHandler(ws *WebServer) pz.Route {
-	return routeConfirmation(ws, &confirmationParams{
-		activity: "registration",
-		path:     pathRegistrationConfirmation,
-		create:   true,
-		template: templateRegistrationConfirmationForm,
-	})
-}
-
-func routePasswordResetConfirmationHandler(ws *WebServer) pz.Route {
-	return routeConfirmation(ws, &confirmationParams{
-		activity: "password reset",
-		path:     pathPasswordResetConfirmation,
-		create:   false,
-		template: templatePasswordResetConfirmationForm,
-	})
-}
-
-func routeConfirmation(ws *WebServer, params *confirmationParams) pz.Route {
-	return pz.Route{
-		Method: "POST",
-		Path:   params.path,
-		Handler: func(r pz.Request) pz.Response {
-			form, err := parseForm(r)
-			if err != nil {
-				return pz.HandleError(
-					"error parsing form data",
-					ErrParsingFormData,
-					&logging{
-						Message:   "parsing password reset confirmation form",
+					return form.success(ws).WithLogging(&logging{
+						Message: "username not found, but reporting 202 " +
+							"Accepted to caller",
+						User:      user,
 						ErrorType: fmt.Sprintf("%T", err),
 						Error:     err.Error(),
-					},
-				)
-			}
-
-			user, err := ws.AuthService.UpdatePassword(&UpdatePassword{
-				Create:   params.create,
-				Token:    form.Get("token"),
-				Password: form.Get("password"),
-			})
-			if err != nil {
-				var httpErr pz.Error = &pz.HTTPError{
-					Status:  http.StatusInternalServerError,
-					Message: "internal server error",
+					})
 				}
-				_ = errors.As(err, &httpErr)
 				ctx := struct {
 					FormAction string `json:"formAction"`
-
-					// The user whose password we're attempting to update. May
-					// be empty if the token is invalid.
-					User types.UserID `json:"user"`
-
-					// hidden form field
-					Token string `json:"-"` // don't log secrets
 
 					// for html template
 					ErrorMessage string `json:"errorMessage,omitempty"`
 
 					// logging only
 					PrivateError string `json:"privateError,omitempty"`
-
-					// Type of PrivateError
-					ErrorType string `json:"errorType,omitempty"`
 				}{
-					FormAction:   params.path,
-					User:         user,
-					Token:        form.Get("token"),
-					ErrorMessage: httpErr.HTTPError().Message,
+					FormAction:   ws.BaseURL + form.path,
+					ErrorMessage: httpErr.Message,
 					PrivateError: err.Error(),
-					ErrorType:    fmt.Sprintf("%T", err),
 				}
 				return pz.Response{
-					Status: httpErr.HTTPError().Status,
-					Data:   pz.HTMLTemplate(params.template, &ctx),
+					Status: httpErr.Status,
+					Data:   pz.HTMLTemplate(form.template, &ctx),
 				}.WithLogging(&ctx)
 			}
-			return pz.SeeOther(ws.DefaultRedirectLocation, &struct {
-				User    types.UserID `json:"user"`
-				Message string       `json:"message"`
-			}{
+			return form.success(ws).WithLogging(&logging{
+				Message: fmt.Sprintf("%s: success", activity),
 				User:    user,
-				Message: fmt.Sprintf("%s: success", params.activity),
 			})
 		},
 	}
@@ -359,9 +145,26 @@ var ErrParsingFormData = &pz.HTTPError{
 	Message: "error parsing form data",
 }
 
-type confirmationParams struct {
-	activity string
-	path     string
-	create   bool
-	template *html.Template
+func successDefaultRedirect(ws *WebServer) pz.Response {
+	return pz.SeeOther(ws.DefaultRedirectLocation)
 }
+
+func successAccepted(body string) func(*WebServer) pz.Response {
+	return func(*WebServer) pz.Response {
+		return pz.Accepted(pz.String(body))
+	}
+}
+
+type callback func(*AuthService, url.Values) (types.UserID, error)
+
+func callbackUpdatePassword(create bool) callback {
+	return func(auth *AuthService, f url.Values) (types.UserID, error) {
+		return auth.UpdatePassword(&UpdatePassword{
+			Create:   create,
+			Token:    f.Get("token"),
+			Password: f.Get("password"),
+		})
+	}
+}
+
+type success func(*WebServer) pz.Response

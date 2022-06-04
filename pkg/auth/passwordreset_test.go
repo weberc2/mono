@@ -20,13 +20,13 @@ import (
 func TestWebServer_PasswordResetConfirmationFormRoute(t *testing.T) {
 	logs, err := testFormRoute(
 		(*WebServer).PasswordResetConfirmationFormRoute,
-		templatePasswordResetConfirmationForm,
+		flowPasswordReset.confirmation.template,
 		struct {
 			FormAction   string
 			Token        string
 			ErrorMessage string
 		}{
-			FormAction: pathPasswordResetConfirmation,
+			FormAction: flowPasswordReset.confirmation.path,
 		},
 	)
 	for _, log := range logs {
@@ -133,12 +133,13 @@ func TestWebServer_PasswordResetConfirmationHandlerRoute(t *testing.T) {
 func TestWebServer_PasswordResetFormRoute(t *testing.T) {
 	logs, err := testFormRoute(
 		(*WebServer).PasswordResetFormRoute,
-		templatePasswordResetForm,
+		flowPasswordReset.main.template,
 		struct {
 			FormAction   string
+			Token        string
 			ErrorMessage string
 		}{
-			FormAction: pathPasswordReset,
+			FormAction: flowPasswordReset.main.path,
 		},
 	)
 	for _, log := range logs {

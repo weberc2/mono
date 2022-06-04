@@ -55,35 +55,35 @@ func (ws *WebServer) LoginFormPage(r pz.Request) pz.Response {
 }
 
 func (ws *WebServer) RegistrationFormRoute() pz.Route {
-	return routeRegistrationForm
+	return flowRegistration.routeMainForm()
 }
 
 func (ws *WebServer) RegistrationHandlerRoute() pz.Route {
-	return routeRegistrationHandler(ws)
+	return flowRegistration.routeMainHandler(ws)
 }
 
 func (ws *WebServer) RegistrationConfirmationFormRoute() pz.Route {
-	return routeRegistrationConfirmationForm
+	return flowRegistration.routeConfirmationForm()
 }
 
 func (ws *WebServer) RegistrationConfirmationHandlerRoute() pz.Route {
-	return routeRegistrationConfirmationHandler(ws)
+	return flowRegistration.routeConfirmationHandler(ws)
 }
 
 func (ws *WebServer) PasswordResetFormRoute() pz.Route {
-	return routePasswordResetForm
+	return flowPasswordReset.routeMainForm()
 }
 
 func (ws *WebServer) PasswordResetHandlerRoute() pz.Route {
-	return routePasswordResetHandler(ws)
+	return flowPasswordReset.routeMainHandler(ws)
 }
 
 func (ws *WebServer) PasswordResetConfirmationFormRoute() pz.Route {
-	return routePasswordResetConfirmationForm
+	return flowPasswordReset.routeConfirmationForm()
 }
 
 func (ws *WebServer) PasswordResetConfirmationHandlerRoute() pz.Route {
-	return routePasswordResetConfirmationHandler(ws)
+	return flowPasswordReset.routeConfirmationHandler(ws)
 }
 
 var loginForm = html.Must(html.New("").Parse(`<html>

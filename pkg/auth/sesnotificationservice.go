@@ -29,7 +29,7 @@ Someone has attempted to register an account with this email address. If this wa
 
 Someone has attempted to register an account with this email address. If this was not you, please disregard this message. If this was intentional, please enter the following URL into your web browser to finish creating your account: {{ .TokenURL }}`)),
 		TokenURL: strings.TrimRight(baseURL, "/") +
-			pathRegistrationConfirmation,
+			flowRegistration.confirmation.path,
 	}
 }
 
@@ -44,7 +44,7 @@ Someone has attempted to reset your password. If this was not you, please disreg
 		TextTemplate: text.Must(text.New("").Parse(`Hello {{ .User }},
 Someone has attempted to reset your password. If this was not you, please disregard this message. If this was intentional, please enter the following URL into your web browser to reset your password: {{ .TokenURL }}`)),
 		TokenURL: strings.TrimRight(baseURL, "/") +
-			pathPasswordResetConfirmation,
+			flowPasswordReset.confirmation.path,
 	}
 }
 
