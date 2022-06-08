@@ -203,24 +203,7 @@ func (c *Config) Run() error {
 			pz.JSONLog(os.Stderr),
 			append(
 				authService.Routes(),
-				pz.Route{
-					Path:    "/login",
-					Method:  "GET",
-					Handler: webServer.LoginFormPage,
-				},
-				pz.Route{
-					Path:    "/login",
-					Method:  "POST",
-					Handler: webServer.LoginHandler,
-				},
-				webServer.RegistrationFormRoute(),
-				webServer.RegistrationHandlerRoute(),
-				webServer.RegistrationConfirmationFormRoute(),
-				webServer.RegistrationConfirmationHandlerRoute(),
-				webServer.PasswordResetFormRoute(),
-				webServer.PasswordResetHandlerRoute(),
-				webServer.PasswordResetConfirmationFormRoute(),
-				webServer.PasswordResetConfirmationHandlerRoute(),
+				webServer.Routes()...,
 			)...,
 		),
 	); err != nil {

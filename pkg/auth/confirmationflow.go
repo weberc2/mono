@@ -6,10 +6,92 @@ import (
 	html "html/template"
 	"net/http"
 	"net/url"
+	"strings"
 
 	pz "github.com/weberc2/httpeasy"
 	"github.com/weberc2/mono/pkg/auth/types"
 )
+
+type confirmationFlowParams struct {
+	activity     string
+	basePath     string
+	fields       []field
+	mainCallback callback
+	create       bool
+}
+
+func newConfirmationFlow(
+	params *confirmationFlowParams,
+) (*confirmationFlow, error) {
+	var sb strings.Builder
+	if err := ackPageTemplate.Execute(
+		&sb,
+		&struct{ Activity string }{params.activity},
+	); err != nil {
+		return nil, fmt.Errorf(
+			"confirmation flow `%s`: making ack page: %w",
+			params.activity,
+			err,
+		)
+	}
+
+	mainTemplate, err := formHTML(
+		params.activity,
+		params.basePath,
+		params.fields...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"confirmation flow `%s`: making main form template: %w",
+			params.activity,
+			err,
+		)
+	}
+
+	confirmationPath := params.basePath + "/confirm"
+	confirmationTemplate, err := formHTML(
+		"Confirm "+params.activity,
+		confirmationPath,
+		field{ID: "password", Label: "Password"},
+		field{ID: "token", Hidden: true, Value: "{{.Token}}"},
+	)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"confirmation flow `%s`: making confirmation form template: %w",
+			params.activity,
+			err,
+		)
+	}
+
+	return &confirmationFlow{
+		activity: params.activity,
+		main: form{
+			path:     params.basePath,
+			template: mainTemplate,
+			callback: params.mainCallback,
+			success: func(*WebServer) pz.Response {
+				return pz.Accepted(pz.String(sb.String()))
+			},
+		},
+		confirmation: form{
+			path:     confirmationPath,
+			template: confirmationTemplate,
+			callback: func(
+				auth *AuthService,
+				f url.Values,
+			) (types.UserID, error) {
+				return auth.UpdatePassword(&UpdatePassword{
+					Create:   params.create,
+					Token:    f.Get("token"),
+					Password: f.Get("password"),
+				})
+			},
+			success: func(ws *WebServer) pz.Response {
+				return pz.SeeOther(ws.DefaultRedirectLocation)
+			},
+		},
+	}, nil
+}
 
 type confirmationFlow struct {
 	activity     string
@@ -39,7 +121,7 @@ type form struct {
 	path     string
 	template *html.Template
 	callback callback
-	success  success
+	success  func(*WebServer) pz.Response
 }
 
 func (form *form) formRoute() pz.Route {
@@ -68,23 +150,7 @@ func (form *form) handlerRoute(activity string, ws *WebServer) pz.Route {
 	return pz.Route{
 		Method: "POST",
 		Path:   form.path,
-		Handler: func(r pz.Request) pz.Response {
-			f, err := parseForm(r)
-			if err != nil {
-				return pz.HandleError(
-					"error parsing form data",
-					ErrParsingFormData,
-					&logging{
-						Message: fmt.Sprintf(
-							"%s: parsing form data",
-							activity,
-						),
-						ErrorType: fmt.Sprintf("%T", err),
-						Error:     err.Error(),
-					},
-				)
-			}
-
+		Handler: formHandler(func(f url.Values) pz.Response {
 			user, err := form.callback(&ws.AuthService, f)
 			if err != nil {
 				httpErr := &pz.HTTPError{
@@ -131,35 +197,28 @@ func (form *form) handlerRoute(activity string, ws *WebServer) pz.Route {
 				Message: fmt.Sprintf("%s: success", activity),
 				User:    user,
 			})
-		},
-	}
-}
-
-var ErrParsingFormData = &pz.HTTPError{
-	Status:  http.StatusBadRequest,
-	Message: "error parsing form data",
-}
-
-func successDefaultRedirect(ws *WebServer) pz.Response {
-	return pz.SeeOther(ws.DefaultRedirectLocation)
-}
-
-func successAccepted(body string) func(*WebServer) pz.Response {
-	return func(*WebServer) pz.Response {
-		return pz.Accepted(pz.String(body))
+		}),
 	}
 }
 
 type callback func(*AuthService, url.Values) (types.UserID, error)
 
-func callbackUpdatePassword(create bool) callback {
-	return func(auth *AuthService, f url.Values) (types.UserID, error) {
-		return auth.UpdatePassword(&UpdatePassword{
-			Create:   create,
-			Token:    f.Get("token"),
-			Password: f.Get("password"),
-		})
-	}
+var ackPageTemplate = must(template(`<html>
+<head><title>Initiated {{.Activity}}</title></head>
+<body>
+<h1>Initiated {{.Activity}}</h1>
+<p>An email has been sent to the email address provided. Please check your
+email for a confirmation link.</p>
+</body>
+</html>`))
+
+func template(template string) (*html.Template, error) {
+	return html.New("").Parse(template)
 }
 
-type success func(*WebServer) pz.Response
+func must[T any](t T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return t
+}
