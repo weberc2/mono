@@ -46,7 +46,7 @@ jobs:
       - name: Fmt
         id: fmt
         run: |
-            go install github.com/segmentio/golines@v0.7.0
+            go install github.com/segmentio/golines@v0.10.0
             output="$(golines -m 79 --shorten-comments --dry-run .)"
             if [ -n "$output" ]; then
                 echo "$output"
