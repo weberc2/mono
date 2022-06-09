@@ -306,13 +306,6 @@ func mustParseKey(keyString string) *ecdsa.PrivateKey {
 	return key
 }
 
-func must(s *types.Token, err error) *types.Token {
-	if err != nil {
-		panic(err)
-	}
-	return s
-}
-
 type Wanted interface {
 	Compare(data []byte) error
 }
