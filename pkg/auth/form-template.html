@@ -9,13 +9,13 @@
     </body>
     <form action="{{.Action}}" method="POST">
     {{- range .Fields }}
-    	{{- if .Hidden }}
-    	<input type="hidden" name="{{.ID}}" value="{{.Value}}" />
-    	{{- else }}
-    	<label for="{{.ID}}">{{.Label}}</label>
+        {{- if .Hidden }}
+        <input type="hidden" name="{{.ID}}" value="{{.Value}}" />
+        {{- else }}
+        <label for="{{.ID}}">{{.Label}}</label>
         <input type="{{if .Type}}{{.Type}}{{else}}text{{end}}" name="{{.ID}}" />
-    	{{- end }}
+        {{- end }}
     {{- end }}
-    	<input type="submit" value="Submit" />
+        <input type="submit" value="Submit" />
     </form>
 </html>
