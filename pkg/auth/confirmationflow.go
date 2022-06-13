@@ -35,7 +35,7 @@ func newConfirmationFlow(
 		)
 	}
 
-	mainTemplate, err := formHTML(
+	mainTemplate, err := formHTMLEscape(
 		params.activity,
 		params.basePath,
 		params.fields...,
@@ -49,7 +49,7 @@ func newConfirmationFlow(
 	}
 
 	confirmationPath := params.basePath + "/confirm"
-	confirmationTemplate, err := formHTML(
+	confirmationTemplate, err := formHTMLEscape(
 		"Confirm "+params.activity,
 		confirmationPath,
 		field{ID: "password", Label: "Password"},
@@ -129,18 +129,7 @@ func (form *form) formRoute() pz.Route {
 		Method: "GET",
 		Path:   form.path,
 		Handler: func(r pz.Request) pz.Response {
-			ctx := struct {
-				FormAction string `json:"formAction"`
-				Token      string `json:"-"` // don't log the token (security)
-
-				// Need to include this for the template even though we don't
-				// pass anything (if this isn't present, the template will
-				// error at runtime).
-				ErrorMessage string `json:"errorMessage,omitempty"`
-			}{
-				FormAction: form.path,
-				Token:      r.URL.Query().Get("t"),
-			}
+			ctx := formData{Token: r.URL.Query().Get("t")}
 			return pz.Ok(pz.HTMLTemplate(form.template, ctx), ctx)
 		},
 	}
@@ -175,16 +164,7 @@ func (form *form) handlerRoute(activity string, ws *WebServer) pz.Route {
 						Error:     err.Error(),
 					})
 				}
-				ctx := struct {
-					FormAction string `json:"formAction"`
-
-					// for html template
-					ErrorMessage string `json:"errorMessage,omitempty"`
-
-					// logging only
-					PrivateError string `json:"privateError,omitempty"`
-				}{
-					FormAction:   ws.BaseURL + form.path,
+				ctx := formData{
 					ErrorMessage: httpErr.Message,
 					PrivateError: err.Error(),
 				}
@@ -211,10 +191,6 @@ var ackPageTemplate = must(template(`<html>
 email for a confirmation link.</p>
 </body>
 </html>`))
-
-func template(template string) (*html.Template, error) {
-	return html.New("").Parse(template)
-}
 
 func must[T any](t T, err error) T {
 	if err != nil {

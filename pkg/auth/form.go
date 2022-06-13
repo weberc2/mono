@@ -3,7 +3,6 @@ package auth
 import (
 	_ "embed"
 	"fmt"
-	pz "github.com/weberc2/httpeasy"
 	html "html/template"
 	"io"
 	"io/ioutil"
@@ -11,6 +10,8 @@ import (
 	"net/url"
 	"reflect"
 	"strings"
+
+	pz "github.com/weberc2/httpeasy"
 )
 
 type field struct {
@@ -21,18 +22,25 @@ type field struct {
 	Value  string
 }
 
-func formHTML(title, action string, fields ...field) (*html.Template, error) {
-	fmt.Printf("%v", fields)
+func formHTMLEscape(
+	title string,
+	action string,
+	fields ...field,
+) (*html.Template, error) {
+	return formHTMLNoEscape(title, html.HTMLEscapeString(action), fields...)
+}
+
+func formHTMLNoEscape(
+	title string,
+	action string,
+	fields ...field,
+) (*html.Template, error) {
 	var sb strings.Builder
 	if err := formTemplate.Execute(
 		&sb,
-		&struct {
-			Title  string
-			Action string
-			Fields []field
-		}{
+		&genericFormData{
 			Title:  title,
-			Action: action,
+			Action: html.HTMLAttr("action=" + action),
 			Fields: fields,
 		},
 	); err != nil {
@@ -55,9 +63,7 @@ func formHTML(title, action string, fields ...field) (*html.Template, error) {
 }
 
 func formHandler(next func(url.Values) pz.Response) pz.Handler {
-	return func(r pz.Request) pz.Response {
-		return handleForm(r, next)
-	}
+	return func(r pz.Request) pz.Response { return handleForm(r, next) }
 }
 
 func handleForm(r pz.Request, next func(url.Values) pz.Response) pz.Response {
@@ -102,6 +108,24 @@ func formParseErr(err error) *pz.HTTPError {
 	}
 }
 
+type genericFormData struct {
+	Title  string
+	Action html.HTMLAttr
+	Fields []field
+}
+
+type formData struct {
+	Token        string `json:"-"`                      // don't log the token
+	ErrorMessage string `json:"errorMessage,omitempty"` // for html template
+	PrivateError string `json:"privateError,omitempty"` // logging only
+}
+
 //go:embed form-template.html
 var formTemplate_ string
 var formTemplate = must(template(formTemplate_))
+
+func template(template string) (*html.Template, error) {
+	return html.New("").Funcs(html.FuncMap{
+		"noescape": func(s string) html.HTML { return html.HTML(s) },
+	}).Parse(template)
+}

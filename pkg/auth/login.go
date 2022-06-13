@@ -169,7 +169,7 @@ func loginFormHandler(baseURL string) pz.Handler {
 }
 
 var (
-	loginForm = must(formHTML(
+	loginForm = must(formHTMLNoEscape(
 		"Login",
 		"{{.FormAction}}",
 		field{ID: "username", Label: "Username"},

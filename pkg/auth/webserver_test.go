@@ -137,7 +137,10 @@ func TestWebServer_RegistrationHandlerRoute(t *testing.T) {
 			name:         "simple",
 			body:         regForm("user", "user@example.org"),
 			wantedStatus: http.StatusAccepted,
-			wantedData:   wantedString(registrationAckPage),
+			wantedData: wantedString(must(templateString(
+				ackPageTemplate,
+				struct{ Activity string }{"Registration"},
+			))),
 			wantedNotifications: []*types.Notification{{
 				Type:  types.NotificationTypeRegister,
 				User:  "user",
@@ -149,7 +152,7 @@ func TestWebServer_RegistrationHandlerRoute(t *testing.T) {
 			name:         "invalid form data",
 			body:         ";", // invalid form data
 			wantedStatus: http.StatusBadRequest,
-			wantedData:   ErrParsingFormData,
+			wantedData:   formParseErr(nil),
 		},
 		{
 			name: "username exists",
@@ -163,9 +166,7 @@ func TestWebServer_RegistrationHandlerRoute(t *testing.T) {
 			wantedStatus: http.StatusConflict,
 			wantedData: &wantedTemplate{
 				tmpl: flowRegistration.main.template,
-				values: struct{ FormAction, ErrorMessage string }{
-					FormAction: "https://auth.example.org" +
-						flowRegistration.main.path,
+				values: formData{
 					ErrorMessage: ErrUserExists.Message,
 				},
 			},
@@ -221,6 +222,12 @@ func TestWebServer_RegistrationHandlerRoute(t *testing.T) {
 			}
 		})
 	}
+}
+
+func templateString(t *html.Template, data interface{}) (string, error) {
+	var sb strings.Builder
+	err := t.Execute(&sb, data)
+	return sb.String(), err
 }
 
 func compareNotifications(
@@ -445,7 +452,7 @@ func TestWebServer_LoginHandler(t *testing.T) {
 			DefaultRedirectLocation: "https://app.example.org/default/",
 		}
 
-		rsp := webServer.LoginHandler(pz.Request{
+		rsp := webServer.LoginHandlerRoute().Handler(pz.Request{
 			Body: strings.NewReader(
 				url.Values{
 					"username": []string{testCase.username},
@@ -486,6 +493,7 @@ func TestWebServer_LoginHandler(t *testing.T) {
 				)
 			}
 			if err := testCase.wantedBody(d); err != nil {
+				t.Logf("HTML:\n\n%s", data)
 				t.Fatalf("verifying response body: %v", err)
 			}
 		}

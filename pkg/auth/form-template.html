@@ -3,19 +3,17 @@
         <title>{{.Title}}</title>
     </head>
     <body>
-        {{`{{-if .ErrorMessage }}
-        <p id="error-message">{{.ErrorMessage}}</p>
-        {{- end }}`}}
-    </body>
-    <form action="{{.Action}}" method="POST">
-    {{- range .Fields }}
-        {{- if .Hidden }}
-        <input type="hidden" name="{{.ID}}" value="{{.Value}}" />
-        {{- else }}
-        <label for="{{.ID}}">{{.Label}}</label>
-        <input type="{{if .Type}}{{.Type}}{{else}}text{{end}}" name="{{.ID}}" />
+        {{noescape `{{if .ErrorMessage }}<p id="error-message">{{.ErrorMessage}}</p>{{end}}`}}
+        <form {{.Action}} method="POST">
+        {{- range .Fields }}
+            {{- if .Hidden }}
+            <input type="hidden" name="{{.ID}}" value="{{.Value}}" />
+            {{- else }}
+            <label for="{{.ID}}">{{.Label}}</label>
+            <input type="{{if .Type}}{{.Type}}{{else}}text{{end}}" name="{{.ID}}" />
+            {{- end }}
         {{- end }}
-    {{- end }}
-        <input type="submit" value="Submit" />
-    </form>
+            <input type="submit" value="Submit" />
+        </form>
+    </body>
 </html>
