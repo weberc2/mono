@@ -223,7 +223,7 @@ func (as *AuthService) UpdatePassword(
 
 	cb := (*CredStore).Create
 	if !up.Create {
-		cb = (*CredStore).Upsert
+		cb = (*CredStore).Update
 	}
 
 	if err := cb(

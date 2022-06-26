@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"net/url"
 
 	pz "github.com/weberc2/httpeasy"
@@ -117,7 +118,22 @@ var (
 			f url.Values,
 		) (types.UserID, error) {
 			user := types.UserID(f.Get("username"))
-			return user, auth.ForgotPassword(user)
+			if err := auth.ForgotPassword(user); err != nil {
+				// Don't serve error information if the error is 404--we don't
+				// want to leak information about whether or not a username
+				// exists to potential attackers. A not-found error should only
+				// be returned when updating a user password (user-not-found
+				// is the happy path for user registration).
+				if errors.Is(err, types.ErrUserNotFound) {
+					return user, &successSentinelErr{
+						message: "username not found, but reporting 202 " +
+							"Accepted to caller",
+						err: err,
+					}
+				}
+				return user, err
+			}
+			return user, nil
 		},
 		create: false,
 	}))

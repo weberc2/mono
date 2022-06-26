@@ -73,7 +73,7 @@ func CompareUserEntries(wanted, found []*UserEntry) error {
 type UserStore interface {
 	Get(UserID) (*UserEntry, error)
 	Insert(*UserEntry) error
-	Upsert(*UserEntry) error
+	Update(*UserEntry) error
 }
 
 var (

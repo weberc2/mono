@@ -22,6 +22,7 @@ type field struct {
 	Value  string
 }
 
+// formHTMLEscape creates a new form with the `action` parameter HTML-escaped.
 func formHTMLEscape(
 	title string,
 	action string,
@@ -30,6 +31,8 @@ func formHTMLEscape(
 	return formHTMLNoEscape(title, html.HTMLEscapeString(action), fields...)
 }
 
+// formHTMLNoEscape creates a new form without HTML-escaping the `action`
+// parameter.
 func formHTMLNoEscape(
 	title string,
 	action string,

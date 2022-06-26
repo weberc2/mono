@@ -42,11 +42,10 @@ func TestWebServer_PasswordResetConfirmationHandlerRoute(t *testing.T) {
 		{
 			name: "success",
 			body: url.Values{
-				"token": []string{mustResetToken(
-					t,
+				"token": []string{must(resetToken(
 					"user",
 					"user@example.org",
-				)},
+				))},
 				"password": []string{goodPassword},
 			}.Encode(),
 			existingUsers: testsupport.UserStoreFake{
@@ -174,7 +173,7 @@ func TestWebServer_PasswordResetHandlerRoute(t *testing.T) {
 				Type:  types.NotificationTypeForgotPassword,
 				User:  "user",
 				Email: "user@example.org",
-				Token: mustResetToken(t, "user", "user@example.org"),
+				Token: must(resetToken("user", "user@example.org")),
 			}},
 		},
 		{

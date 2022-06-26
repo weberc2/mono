@@ -6,6 +6,7 @@ import (
 	html "html/template"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strings"
 
 	pz "github.com/weberc2/httpeasy"
@@ -52,7 +53,7 @@ func newConfirmationFlow(
 	confirmationTemplate, err := formHTMLEscape(
 		"Confirm "+params.activity,
 		confirmationPath,
-		field{ID: "password", Label: "Password"},
+		field{ID: "password", Type: "password", Label: "Password"},
 		field{ID: "token", Hidden: true, Value: "{{.Token}}"},
 	)
 	if err != nil {
@@ -142,6 +143,21 @@ func (form *form) handlerRoute(activity string, ws *WebServer) pz.Route {
 		Handler: formHandler(func(f url.Values) pz.Response {
 			user, err := form.callback(&ws.AuthService, f)
 			if err != nil {
+				// In certain cases, the callback might want to succeed with
+				// logging information, for example, a form for resetting a
+				// user's password might want to report success to the user
+				// while logging that the provided username didn't exist. To
+				// do so, they can return a `*successSentinelErr`.
+				var errWithLogging *successSentinelErr
+				if errors.As(err, &errWithLogging) {
+					return form.success(ws).WithLogging(&logging{
+						Message:   errWithLogging.message,
+						User:      user,
+						ErrorType: reflect.TypeOf(errWithLogging.err).String(),
+						Error:     errWithLogging.err.Error(),
+					})
+				}
+
 				httpErr := &pz.HTTPError{
 					Status:  http.StatusInternalServerError,
 					Message: "internal server error",
@@ -150,20 +166,6 @@ func (form *form) handlerRoute(activity string, ws *WebServer) pz.Route {
 				// return value doesn't matter
 				_ = errors.As(err, &httpErr)
 
-				// Don't serve error information if the error is 404--we don't
-				// want to leak information about whether or not a username
-				// exists to potential attackers. A not-found error should only
-				// be returned when updating a user password (user-not-found
-				// is the happy path for user registration).
-				if httpErr.Status == http.StatusNotFound {
-					return form.success(ws).WithLogging(&logging{
-						Message: "username not found, but reporting 202 " +
-							"Accepted to caller",
-						User:      user,
-						ErrorType: fmt.Sprintf("%T", err),
-						Error:     err.Error(),
-					})
-				}
 				ctx := formData{
 					ErrorMessage: httpErr.Message,
 					PrivateError: err.Error(),
@@ -181,12 +183,21 @@ func (form *form) handlerRoute(activity string, ws *WebServer) pz.Route {
 	}
 }
 
+type successSentinelErr struct {
+	message string
+	err     error
+}
+
+func (err *successSentinelErr) Error() string {
+	panic("`(*successSentinelErr).Error() should never be invoked!")
+}
+
 type callback func(*AuthService, url.Values) (types.UserID, error)
 
 var ackPageTemplate = must(template(`<html>
 <head><title>Initiated {{.Activity}}</title></head>
 <body>
-<h1>Initiated {{.Activity}}</h1>
+<h1 id="title">Initiated {{.Activity}}</h1>
 <p>An email has been sent to the email address provided. Please check your
 email for a confirmation link.</p>
 </body>

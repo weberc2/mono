@@ -20,9 +20,12 @@ func (usf UserStoreFake) Insert(entry *types.UserEntry) error {
 	return nil
 }
 
-func (usf UserStoreFake) Upsert(entry *types.UserEntry) error {
-	usf[entry.User] = entry
-	return nil
+func (usf UserStoreFake) Update(entry *types.UserEntry) error {
+	if _, ok := usf[entry.User]; ok {
+		usf[entry.User] = entry
+		return nil
+	}
+	return types.ErrUserNotFound
 }
 
 func (usf UserStoreFake) List() []*types.UserEntry {

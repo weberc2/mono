@@ -3,11 +3,12 @@
         <title>{{.Title}}</title>
     </head>
     <body>
+        <h1 id="title">{{.Title}}</h1>
         {{noescape `{{if .ErrorMessage }}<p id="error-message">{{.ErrorMessage}}</p>{{end}}`}}
         <form {{.Action}} method="POST">
         {{- range .Fields }}
             {{- if .Hidden }}
-            <input type="hidden" name="{{.ID}}" value="{{.Value}}" />
+            <input type="hidden" id="{{.ID}}" name="{{.ID}}" value="{{.Value}}" />
             {{- else }}
             <label for="{{.ID}}">{{.Label}}</label>
             <input type="{{if .Type}}{{.Type}}{{else}}text{{end}}" name="{{.ID}}" />

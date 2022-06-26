@@ -33,7 +33,7 @@ func TestWebServer_RegistrationConfirmationHandlerRoute(t *testing.T) {
 		{
 			name: "simple",
 			body: confirmationForm(
-				mustResetToken(t, "user", "user@example.org"),
+				must(resetToken("user", "user@example.org")),
 				goodPassword,
 			),
 			wantedStatus:   http.StatusSeeOther,
@@ -52,7 +52,7 @@ func TestWebServer_RegistrationConfirmationHandlerRoute(t *testing.T) {
 		{
 			name: "missing password",
 			body: confirmationForm(
-				mustResetToken(t, "user", "user@example.org"),
+				must(resetToken("user", "user@example.org")),
 				"", // password
 			),
 			wantedStatus: http.StatusBadRequest,
@@ -116,21 +116,13 @@ func TestWebServer_RegistrationConfirmationHandlerRoute(t *testing.T) {
 	}
 }
 
-func mustResetToken(t *testing.T, user types.UserID, email string) string {
-	tok, err := resetTokenFactory.Create(now, user, email)
-	if err != nil {
-		t.Fatalf("unexpected error creating reset token: %v", err)
-	}
-	return tok
-}
-
 func TestWebServer_RegistrationHandlerRoute(t *testing.T) {
 	for _, testCase := range []struct {
 		name                string
 		existingUsers       testsupport.UserStoreFake
 		body                string
 		wantedStatus        int
-		wantedData          pztest.WantedData
+		wantedData          wantedBody
 		wantedNotifications []*types.Notification
 	}{
 		{
@@ -145,14 +137,14 @@ func TestWebServer_RegistrationHandlerRoute(t *testing.T) {
 				Type:  types.NotificationTypeRegister,
 				User:  "user",
 				Email: "user@example.org",
-				Token: mustResetToken(t, "user", "user@example.org"),
+				Token: must(resetToken("user", "user@example.org")),
 			}},
 		},
 		{
 			name:         "invalid form data",
 			body:         ";", // invalid form data
 			wantedStatus: http.StatusBadRequest,
-			wantedData:   formParseErr(nil),
+			wantedData:   wantedHTTPError(formParseErr(nil)),
 		},
 		{
 			name: "username exists",
@@ -164,12 +156,10 @@ func TestWebServer_RegistrationHandlerRoute(t *testing.T) {
 			},
 			body:         regForm("user", "user@example.org"),
 			wantedStatus: http.StatusConflict,
-			wantedData: &wantedTemplate{
-				tmpl: flowRegistration.main.template,
-				values: formData{
-					ErrorMessage: ErrUserExists.Message,
-				},
-			},
+			wantedData: wantedTemplate(
+				flowRegistration.main.template,
+				&formData{ErrorMessage: ErrUserExists.Message},
+			),
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -206,10 +196,7 @@ func TestWebServer_RegistrationHandlerRoute(t *testing.T) {
 				)
 			}
 
-			if err := pztest.CompareSerializer(
-				testCase.wantedData,
-				rsp.Data,
-			); err != nil {
+			if err := testCase.wantedData(rsp.Data); err != nil {
 				t.Fatal(err)
 			}
 
@@ -222,6 +209,10 @@ func TestWebServer_RegistrationHandlerRoute(t *testing.T) {
 			}
 		})
 	}
+}
+
+func resetToken(user types.UserID, email string) (string, error) {
+	return resetTokenFactory.Create(now, user, email)
 }
 
 func templateString(t *html.Template, data interface{}) (string, error) {
@@ -587,36 +578,11 @@ func (wanted *wantedLocation) compare(found string) error {
 	return nil
 }
 
-type wantedString string
-
-func (ws wantedString) CompareData(data []byte) error {
-	if ws != wantedString(data) {
-		return fmt.Errorf("wanted `%s`; found `%s`", ws, data)
-	}
-	return nil
-}
-
-func (ws wantedString) CompareErr(err error) error {
-	if err == nil || err.Error() != string(ws) {
-		return fmt.Errorf("wanted `%s`; found `%v`", ws, err)
-	}
-	return nil
-}
-
-type wantedTemplate struct {
-	tmpl   *html.Template
-	values interface{}
-}
-
-func (wt *wantedTemplate) CompareData(data []byte) error {
-	var buf bytes.Buffer
-	if err := wt.tmpl.Execute(&buf, wt.values); err != nil {
-		return fmt.Errorf("executing HTML template: %w", err)
-	}
-
-	if wanted, found := buf.String(), string(data); wanted != found {
-		return fmt.Errorf("wanted `%s`; found `%s`", wanted, found)
-	}
-
-	return nil
+func wantedString(wanted string) wantedBody {
+	return wantedData(func(data []byte) error {
+		if found := string(data); wanted != found {
+			return fmt.Errorf("wanted `%s`; found `%s`", wanted, found)
+		}
+		return nil
+	})
 }

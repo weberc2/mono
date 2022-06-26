@@ -17,7 +17,6 @@ import (
 
 type userStoreMock struct {
 	get    func(types.UserID) (*types.UserEntry, error)
-	upsert func(*types.UserEntry) error
 	insert func(*types.UserEntry) error
 }
 
@@ -28,11 +27,8 @@ func (usm *userStoreMock) Get(u types.UserID) (*types.UserEntry, error) {
 	return usm.get(u)
 }
 
-func (usm *userStoreMock) Upsert(entry *types.UserEntry) error {
-	if usm.upsert == nil {
-		panic("userStoreMock: missing `upsert` hook")
-	}
-	return usm.upsert(entry)
+func (usm *userStoreMock) Update(entry *types.UserEntry) error {
+	panic("`userStoreMock.Update()` method not defined")
 }
 
 func (usm *userStoreMock) Insert(entry *types.UserEntry) error {
@@ -57,7 +53,7 @@ func TestAuthService_UpdatePassword(t *testing.T) {
 		{
 			name:     "simple",
 			subject:  "subject",
-			token:    mustResetToken(t, "subject", "subject@example.org"),
+			token:    must(resetToken("subject", "subject@example.org")),
 			email:    "subject@example.org",
 			password: goodPassword,
 			create:   true,
@@ -85,7 +81,7 @@ func TestAuthService_UpdatePassword(t *testing.T) {
 		{
 			name:      "password validation err",
 			subject:   "user",
-			token:     mustResetToken(t, "user", "user@example.org"),
+			token:     must(resetToken("user", "user@example.org")),
 			email:     "user@example.org",
 			password:  "", // invalid
 			create:    true,
@@ -95,7 +91,7 @@ func TestAuthService_UpdatePassword(t *testing.T) {
 		{
 			name:     "update",
 			subject:  "user",
-			token:    mustResetToken(t, "user", "user@example.org"),
+			token:    must(resetToken("user", "user@example.org")),
 			email:    "user@example.org",
 			password: goodPassword,
 			create:   false,
