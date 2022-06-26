@@ -9,7 +9,7 @@ import (
 	"github.com/weberc2/mono/pkg/auth/types"
 )
 
-func TestPGUserStore_Upsert(t *testing.T) {
+func TestPGUserStore_Update(t *testing.T) {
 	for _, testCase := range []struct {
 		name        string
 		state       []types.UserEntry
@@ -18,22 +18,7 @@ func TestPGUserStore_Upsert(t *testing.T) {
 		wantedErr   types.WantedError
 	}{
 		{
-			name: "create",
-			input: &types.UserEntry{
-				User:         "user",
-				Email:        "user@example.org",
-				PasswordHash: []byte("passwordhash"),
-				Created:      now,
-			},
-			wantedState: []*types.UserEntry{{
-				User:         "user",
-				Email:        "user@example.org",
-				PasswordHash: []byte("passwordhash"),
-				Created:      now,
-			}},
-		},
-		{
-			name: "username exists",
+			name: "simple",
 			state: []types.UserEntry{{
 				User:         "user",
 				Email:        "somethingelse@example.org",
@@ -56,6 +41,11 @@ func TestPGUserStore_Upsert(t *testing.T) {
 		{
 			name: "email exists",
 			state: []types.UserEntry{{
+				User:         "user",
+				Email:        "blah@example.org",
+				PasswordHash: []byte("anything"),
+				Created:      now,
+			}, {
 				User:         "somethingelse",
 				Email:        "user@example.org",
 				PasswordHash: []byte("anything"),
@@ -68,6 +58,11 @@ func TestPGUserStore_Upsert(t *testing.T) {
 				Created:      now,
 			},
 			wantedState: []*types.UserEntry{{
+				User:         "user",
+				Email:        "blah@example.org",
+				PasswordHash: []byte("anything"),
+				Created:      now,
+			}, {
 				User:         "somethingelse",
 				Email:        "user@example.org",
 				PasswordHash: []byte("anything"),
@@ -85,7 +80,7 @@ func TestPGUserStore_Upsert(t *testing.T) {
 				testCase.wantedErr = types.NilError{}
 			}
 			if err := testCase.wantedErr.CompareErr(
-				store.Upsert(testCase.input),
+				store.Update(testCase.input),
 			); err != nil {
 				t.Fatal(err)
 			}
