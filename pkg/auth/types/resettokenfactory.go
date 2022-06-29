@@ -1,4 +1,4 @@
-package auth
+package types
 
 import (
 	"net/http"
@@ -6,11 +6,10 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	pz "github.com/weberc2/httpeasy"
-	"github.com/weberc2/mono/pkg/auth/types"
 )
 
 type Claims struct {
-	User  types.UserID
+	User  UserID
 	Email string
 	jwt.StandardClaims
 }
@@ -19,7 +18,7 @@ type ResetTokenFactory TokenFactory
 
 func (rtf *ResetTokenFactory) Create(
 	now time.Time,
-	user types.UserID,
+	user UserID,
 	email string,
 ) (string, error) {
 	token := jwt.NewWithClaims(

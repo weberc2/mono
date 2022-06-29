@@ -59,7 +59,7 @@ func TestUpdate(t *testing.T) {
 		&types.Credentials{
 			User:     "user",
 			Email:    "user@example.org",
-			Password: goodPassword,
+			Password: testsupport.GoodPassword,
 		},
 	); err != nil {
 		t.Fatalf("Unexpected err: %v", err)
@@ -68,7 +68,7 @@ func TestUpdate(t *testing.T) {
 	if err := users.ExpectUsers([]types.Credentials{{
 		User:     "user",
 		Email:    "user@example.org",
-		Password: goodPassword,
+		Password: testsupport.GoodPassword,
 	}}); err != nil {
 		t.Fatal(err)
 	}

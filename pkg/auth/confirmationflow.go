@@ -11,6 +11,8 @@ import (
 
 	pz "github.com/weberc2/httpeasy"
 	"github.com/weberc2/mono/pkg/auth/types"
+
+	. "github.com/weberc2/mono/pkg/prelude"
 )
 
 type confirmationFlowParams struct {
@@ -24,11 +26,8 @@ type confirmationFlowParams struct {
 func newConfirmationFlow(
 	params *confirmationFlowParams,
 ) (*confirmationFlow, error) {
-	var sb strings.Builder
-	if err := ackPageTemplate.Execute(
-		&sb,
-		&struct{ Activity string }{params.activity},
-	); err != nil {
+	ackPage, err := ackPage(params.activity)
+	if err != nil {
 		return nil, fmt.Errorf(
 			"confirmation flow `%s`: making ack page: %w",
 			params.activity,
@@ -71,7 +70,7 @@ func newConfirmationFlow(
 			template: mainTemplate,
 			callback: params.mainCallback,
 			success: func(*WebServer) pz.Response {
-				return pz.Accepted(pz.String(sb.String()))
+				return pz.Accepted(pz.String(ackPage))
 			},
 		},
 		confirmation: form{
@@ -140,7 +139,7 @@ func (form *form) handlerRoute(activity string, ws *WebServer) pz.Route {
 	return pz.Route{
 		Method: "POST",
 		Path:   form.path,
-		Handler: formHandler(func(f url.Values) pz.Response {
+		Handler: formHandler(form.template, func(f url.Values) pz.Response {
 			user, err := form.callback(&ws.AuthService, f)
 			if err != nil {
 				// In certain cases, the callback might want to succeed with
@@ -194,7 +193,18 @@ func (err *successSentinelErr) Error() string {
 
 type callback func(*AuthService, url.Values) (types.UserID, error)
 
-var ackPageTemplate = must(template(`<html>
+func ackPage(activity string) (string, error) {
+	var sb strings.Builder
+	if err := ackPageTemplate.Execute(
+		&sb,
+		&struct{ Activity string }{activity},
+	); err != nil {
+		return "", fmt.Errorf("executing ack page template: %w", err)
+	}
+	return sb.String(), nil
+}
+
+var ackPageTemplate = Must(template(`<html>
 <head><title>Initiated {{.Activity}}</title></head>
 <body>
 <h1 id="title">Initiated {{.Activity}}</h1>
@@ -202,10 +212,3 @@ var ackPageTemplate = must(template(`<html>
 email for a confirmation link.</p>
 </body>
 </html>`))
-
-func must[T any](t T, err error) T {
-	if err != nil {
-		panic(err)
-	}
-	return t
-}

@@ -1,6 +1,8 @@
 package testsupport
 
-import "github.com/weberc2/mono/pkg/auth/types"
+import (
+	"github.com/weberc2/mono/pkg/auth/types"
+)
 
 type NotificationServiceFake struct {
 	Notifications []*types.Notification

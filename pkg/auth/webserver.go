@@ -6,6 +6,7 @@ import (
 
 	pz "github.com/weberc2/httpeasy"
 	"github.com/weberc2/mono/pkg/auth/types"
+	. "github.com/weberc2/mono/pkg/prelude"
 )
 
 type Code struct {
@@ -92,7 +93,7 @@ func (ws *WebServer) LoginHandlerRoute() pz.Route {
 }
 
 var (
-	flowRegistration = must(newConfirmationFlow(&confirmationFlowParams{
+	flowRegistration = Must(newConfirmationFlow(&confirmationFlowParams{
 		activity: "Registration",
 		basePath: "/registration",
 		fields: []field{
@@ -109,7 +110,7 @@ var (
 		create: true,
 	}))
 
-	flowPasswordReset = must(newConfirmationFlow(&confirmationFlowParams{
+	flowPasswordReset = Must(newConfirmationFlow(&confirmationFlowParams{
 		activity: "Password Reset",
 		basePath: "/password-reset",
 		fields:   []field{{ID: "username", Label: "Username"}},

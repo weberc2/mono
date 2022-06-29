@@ -2,16 +2,18 @@ package auth
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	html "html/template"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"reflect"
 	"strings"
 
 	pz "github.com/weberc2/httpeasy"
+
+	. "github.com/weberc2/mono/pkg/prelude"
 )
 
 type field struct {
@@ -65,28 +67,41 @@ func formHTMLNoEscape(
 	return t, nil
 }
 
-func formHandler(next func(url.Values) pz.Response) pz.Handler {
-	return func(r pz.Request) pz.Response { return handleForm(r, next) }
-}
-
-func handleForm(r pz.Request, next func(url.Values) pz.Response) pz.Response {
-	form, err := parseForm(r)
-	if err != nil {
-		return handleError("error parsing form data", "parsing form data", err)
+func formHandler(
+	form *html.Template,
+	next func(url.Values) pz.Response,
+) pz.Handler {
+	return func(r pz.Request) pz.Response {
+		return handleForm(form, r, next)
 	}
-	return next(form)
 }
 
-func handleError(publicMessage, privateMessage string, err error) pz.Response {
-	return pz.HandleError(
-		publicMessage,
-		err,
-		&logging{
-			Message:   privateMessage,
-			ErrorType: reflect.TypeOf(err).String(),
-			Error:     err.Error(),
-		},
-	)
+func handleForm(
+	form *html.Template,
+	r pz.Request,
+	next func(url.Values) pz.Response,
+) pz.Response {
+	f, err := parseForm(r)
+	if err != nil {
+		return formError(form, err)
+	}
+	return next(f)
+}
+
+func formError(form *html.Template, err error) pz.Response {
+	httpErr := &pz.HTTPError{
+		Status:  http.StatusInternalServerError,
+		Message: "internal server error; please try again later",
+	}
+
+	// return value doesn't matter; if true, then `httpErr` will be updated
+	// appropriately, otherwise it will remain with the `HTTP 500` content.
+	_ = errors.As(err, &httpErr)
+	ctx := formData{ErrorMessage: httpErr.Message, PrivateError: err.Error()}
+	return pz.Response{
+		Status: httpErr.Status,
+		Data:   pz.HTMLTemplate(form, &ctx),
+	}.WithLogging(&ctx)
 }
 
 func parseForm(r pz.Request) (url.Values, error) {
@@ -125,7 +140,7 @@ type formData struct {
 
 //go:embed form-template.html
 var formTemplate_ string
-var formTemplate = must(template(formTemplate_))
+var formTemplate = Must(template(formTemplate_))
 
 func template(template string) (*html.Template, error) {
 	return html.New("").Funcs(html.FuncMap{

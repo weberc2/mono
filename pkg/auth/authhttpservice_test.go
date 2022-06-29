@@ -2,9 +2,7 @@ package auth
 
 import (
 	"crypto/ecdsa"
-	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"log"
 	"strings"
@@ -16,6 +14,7 @@ import (
 	pztest "github.com/weberc2/httpeasy/testsupport"
 	"github.com/weberc2/mono/pkg/auth/testsupport"
 	"github.com/weberc2/mono/pkg/auth/types"
+	. "github.com/weberc2/mono/pkg/prelude"
 )
 
 func TestAuthHTTPService(t *testing.T) {
@@ -35,7 +34,7 @@ func TestAuthHTTPService(t *testing.T) {
 			existingUsers: []types.UserEntry{{
 				User:         "user",
 				Email:        "user@example.org",
-				PasswordHash: hashBcrypt("password"),
+				PasswordHash: Must(testsupport.HashBcrypt("password")),
 			}},
 			existingTokens: testsupport.TokenStoreFake{},
 			input:          `{"user": "user"}`,
@@ -59,17 +58,20 @@ func TestAuthHTTPService(t *testing.T) {
 			// provided.
 			name: "refresh",
 			existingTokens: testsupport.TokenStoreFake{
-				refreshToken.Token: refreshToken.Expires,
+				testsupport.RefreshToken.Token: testsupport.RefreshToken.
+					Expires,
 			},
 			input: fmt.Sprintf(
 				`{"refreshToken": "%s"}`,
-				refreshToken.Token,
+				testsupport.RefreshToken.Token,
 			),
 			route:          (*AuthHTTPService).RefreshRoute,
-			validationTime: now.Add(2 * time.Second),
+			validationTime: testsupport.Now.Add(2 * time.Second),
 			wantedStatus:   200,
-			wantedPayload:  &RefreshResponse{AccessToken: accessToken.Token},
-			wantedTokens:   []types.Token{*refreshToken},
+			wantedPayload: &RefreshResponse{
+				AccessToken: testsupport.AccessToken.Token,
+			},
+			wantedTokens: []types.Token{testsupport.RefreshToken},
 		},
 		{
 			// Expect an error when an invalid refresh token is provided. The
@@ -80,7 +82,7 @@ func TestAuthHTTPService(t *testing.T) {
 			existingTokens: testsupport.TokenStoreFake{},
 			input:          `{"refreshToken": "foobar"}`,
 			route:          (*AuthHTTPService).RefreshRoute,
-			validationTime: now.Add(2 * time.Second),
+			validationTime: testsupport.Now.Add(2 * time.Second),
 			wantedStatus:   401,
 			wantedPayload:  ErrInvalidRefreshToken,
 		},
@@ -93,10 +95,10 @@ func TestAuthHTTPService(t *testing.T) {
 			existingTokens: testsupport.TokenStoreFake{},
 			input: fmt.Sprintf(
 				`{"refreshToken": "%s"}`,
-				refreshToken.Token,
+				testsupport.RefreshToken.Token,
 			),
 			route:          (*AuthHTTPService).RefreshRoute,
-			validationTime: now.Add(30 * 24 * time.Hour),
+			validationTime: testsupport.Now.Add(30 * 24 * time.Hour),
 			wantedStatus:   401,
 			wantedPayload:  ErrInvalidRefreshToken,
 		},
@@ -107,36 +109,40 @@ func TestAuthHTTPService(t *testing.T) {
 			existingTokens: testsupport.TokenStoreFake{},
 			input: fmt.Sprintf(
 				`{"refreshToken": "%s"}`,
-				refreshToken.Token,
+				testsupport.RefreshToken.Token,
 			),
 			route:          (*AuthHTTPService).RefreshRoute,
-			validationTime: now.Add(2 * time.Second),
+			validationTime: testsupport.Now.Add(2 * time.Second),
 			wantedStatus:   401,
 			wantedPayload:  types.ErrTokenNotFound,
 		},
 		{
 			// Expect tokens returned in exchange for a valid auth code.
-			name:           "exchange auth code",
-			input:          fmt.Sprintf(`{"code": "%s"}`, authCode.Token),
+			name: "exchange auth code",
+			input: fmt.Sprintf(
+				`{"code": "%s"}`,
+				testsupport.AuthCode.Token,
+			),
 			route:          (*AuthHTTPService).ExchangeRoute,
 			existingTokens: testsupport.TokenStoreFake{},
-			validationTime: now,
+			validationTime: testsupport.Now,
 			wantedStatus:   200,
 			wantedPayload: &TokenDetails{
-				AccessToken:  *accessToken,
-				RefreshToken: *refreshToken,
+				AccessToken:  testsupport.AccessToken,
+				RefreshToken: testsupport.RefreshToken,
 			},
-			wantedTokens: []types.Token{*refreshToken},
+			wantedTokens: []types.Token{testsupport.RefreshToken},
 		},
 		{
 			name: "logout",
 			existingTokens: testsupport.TokenStoreFake{
-				refreshToken.Token: refreshToken.Expires,
+				testsupport.RefreshToken.Token: testsupport.RefreshToken.
+					Expires,
 			},
 			route: (*AuthHTTPService).LogoutRoute,
 			input: fmt.Sprintf(
 				`{"refreshToken": "%s"}`,
-				refreshToken.Token,
+				testsupport.RefreshToken.Token,
 			),
 			wantedStatus: 200,
 			wantedPayload: &LogoutResponse{
@@ -146,7 +152,7 @@ func TestAuthHTTPService(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			vtime := now
+			vtime := testsupport.Now
 			if testCase.validationTime != (time.Time{}) {
 				vtime = testCase.validationTime
 			}
@@ -176,14 +182,14 @@ func TestAuthHTTPService(t *testing.T) {
 							return nil
 						},
 					},
-					Codes:       codesTokenFactory,
-					ResetTokens: resetTokenFactory,
+					Codes:       testsupport.CodesTokenFactory,
+					ResetTokens: testsupport.ResetTokenFactory,
 					TokenDetails: TokenDetailsFactory{
-						AccessTokens:  accessTokenFactory,
-						RefreshTokens: refreshTokenFactory,
-						TimeFunc:      nowTimeFunc,
+						AccessTokens:  testsupport.AccessTokenFactory,
+						RefreshTokens: testsupport.RefreshTokenFactory,
+						TimeFunc:      testsupport.NowTimeFunc,
 					},
-					TimeFunc: nowTimeFunc,
+					TimeFunc: testsupport.NowTimeFunc,
 				},
 			}
 
@@ -216,7 +222,7 @@ func TestAuthHTTPService(t *testing.T) {
 
 			found, _ := testCase.existingTokens.List()
 			if err := compareManyTokens(
-				&refreshTokenFactory.SigningKey.PublicKey,
+				&testsupport.RefreshTokenFactory.SigningKey.PublicKey,
 				testCase.wantedTokens,
 				found,
 			); err != nil {
@@ -224,90 +230,6 @@ func TestAuthHTTPService(t *testing.T) {
 			}
 		})
 	}
-}
-
-const (
-	accessSigningKeyString = `-----BEGIN PRIVATE KEY-----
-MIHcAgEBBEIBb4gjfi9dZnm6jypDJ1/44jUYYPaAizXv7QQPG14aj9W1pwoULDuM
-ni71Zi68U8NJhB/dfHgvviK8a8289lysux+gBwYFK4EEACOhgYkDgYYABACD5lbL
-9RtF/WKFyUpn8FBJ1QZHvsxcfgpSlvGPyJa3pP9NbofkFL5Xuh9Yd5oFp40xQhJv
-f9MBqFs4XHv363V+egB5HQFk0oQeiwl8kNfCgTsZzM4CMytyVQZty2zM9CKXG5m7
-EjWmjtDDCSEnLodzVVtL89VNxPI97T4P5QFolAMezg==
------END PRIVATE KEY-----`
-	refreshSigningKeyString = `-----BEGIN PRIVATE KEY-----
-MIHcAgEBBEIANg/VI7PQKRnNeBz4WKfQWFrQUOfuelQeNMTh9ItWpCKqHB5yb5ba
-DMJo4lEXjtduf/vvjPNqWurHGuEAW3aM3n+gBwYFK4EEACOhgYkDgYYABAGidC1I
-tlhV5Xgs4xb+co5TI2YIA2huX47u18zZNs8wCmGxwPZ6fQlZW5SCekdNS4K6rocr
-TkOM9C1EWEA18dyYngDcIurK/D5Pia3FaorX14KMxduUafX/hhOmWChBrIcK3FWW
-gpjZ21DFCBpFh83l3tCrfD+yDXElY9EAg8Xur3vSfg==
------END PRIVATE KEY-----`
-	resetSigningKeyString = `-----BEGIN PRIVATE KEY-----
-MIHcAgEBBEIBteoGMRxbAQSI2z9nhD/GBcMVfecuyG58swlqZZDRQ8aUTcmaL371
-+9cSBTI6AFNRWl6Fh0/kD4Kyg8UR+4R8fdWgBwYFK4EEACOhgYkDgYYABAEuc5pj
-bi3AWn/XJ8xxVn8cDuvnqXEWec+/oiFkJkvlqe0YTA/mz/lmoIgQget6nMVAXUa0
-C0Gwvg5hxJ6EF7+ZWwFLFgcyCWW2tezZyNqi7BBW6dAlRGOun6VrldPAJFW96cl8
-i5q05kD3gwd3T6OmOv0gCoVYvDhHwZLNuVOUHYVUjg==
------END PRIVATE KEY-----`
-	codesSigningKeyString = `-----BEGIN PRIVATE KEY-----
-MIHcAgEBBEIAPCYJluF6sic9MEGZAl+h3D+heZpBL4+KdBeofuVkjVjA+FYghsPI
-7sOsI8t005xekngXMtL6rUlUvDx7wU7WU8+gBwYFK4EEACOhgYkDgYYABAB5BZdD
-RrGMdKPeQ7qVOF0Vx8da49z0a49rM18+9lbStPXaLiGmJGNajBrcUSydL6bn52Fw
-2fwSJOoPX2blD/ijlAFaKrER8VYzy98B7heWO5RHACE2ZW+DYuBBAMdGXpO+HfJu
-zEBS0EsiFH2M/MoLWgvkBmeC+TdCsr761bHQYYVDMw==
------END PRIVATE KEY-----`
-)
-
-func nowTimeFunc() time.Time { return now }
-
-var (
-	now                = time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
-	user               = types.UserID("user")
-	accessSigningKey   = mustParseKey(accessSigningKeyString)
-	refreshSigningKey  = mustParseKey(refreshSigningKeyString)
-	resetSigningKey    = mustParseKey(resetSigningKeyString)
-	codesSigningKey    = mustParseKey(codesSigningKeyString)
-	accessTokenFactory = TokenFactory{
-		Issuer:        "issuer",
-		Audience:      "audience",
-		TokenValidity: 15 * time.Minute,
-		SigningKey:    accessSigningKey,
-	}
-	refreshTokenFactory = TokenFactory{
-		Issuer:        "issuer",
-		Audience:      "audience",
-		TokenValidity: 7 * 24 * time.Hour,
-		SigningKey:    refreshSigningKey,
-	}
-	resetTokenFactory = ResetTokenFactory{
-		Issuer:        "issuer",
-		Audience:      "audience",
-		TokenValidity: 1 * time.Hour,
-		SigningKey:    resetSigningKey,
-	}
-	codesTokenFactory = TokenFactory{
-		Issuer:        "issuer",
-		Audience:      "audience",
-		TokenValidity: time.Minute,
-		SigningKey:    codesSigningKey,
-	}
-	accessToken  = must(accessTokenFactory.Create(now, string(user)))
-	refreshToken = must(refreshTokenFactory.Create(now, string(user)))
-	authCode     = must(codesTokenFactory.Create(now, string(user)))
-)
-
-func mustParseKey(keyString string) *ecdsa.PrivateKey {
-	block, _ := pem.Decode([]byte(keyString))
-
-	key, err := x509.ParseECPrivateKey(block.Bytes)
-	if err != nil {
-		log.Fatalf("parsing x509 EC private key: %v", err)
-	}
-
-	return key
-}
-
-type Wanted interface {
-	Compare(data []byte) error
 }
 
 func compareManyTokens(
@@ -344,7 +266,7 @@ func compareManyTokens(
 }
 
 func compareTokens(key *ecdsa.PublicKey, wanted, found string) error {
-	var wantedClaims Claims
+	var wantedClaims types.Claims
 	if _, err := jwt.ParseWithClaims(
 		wanted,
 		&wantedClaims,
@@ -353,7 +275,7 @@ func compareTokens(key *ecdsa.PublicKey, wanted, found string) error {
 		return fmt.Errorf("parsing 'wanted' token: %w", err)
 	}
 
-	var foundClaims Claims
+	var foundClaims types.Claims
 	if _, err := jwt.ParseWithClaims(
 		found,
 		&foundClaims,
@@ -384,7 +306,7 @@ func (wanted *RefreshResponse) CompareData(data []byte) error {
 	}
 
 	if err := compareTokens(
-		&accessSigningKey.PublicKey,
+		&testsupport.AccessSigningKey.PublicKey,
 		wanted.AccessToken,
 		found.AccessToken,
 	); err != nil {
@@ -404,7 +326,7 @@ func (wanted *TokenDetails) CompareData(data []byte) error {
 	}
 
 	if err := compareTokens(
-		&accessSigningKey.PublicKey,
+		&testsupport.AccessSigningKey.PublicKey,
 		wanted.AccessToken.Token,
 		found.AccessToken.Token,
 	); err != nil {
@@ -417,7 +339,7 @@ func (wanted *TokenDetails) CompareData(data []byte) error {
 	}
 
 	if err := compareTokens(
-		&refreshSigningKey.PublicKey,
+		&testsupport.RefreshSigningKey.PublicKey,
 		wanted.RefreshToken.Token,
 		found.RefreshToken.Token,
 	); err != nil {

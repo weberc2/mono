@@ -9,11 +9,13 @@ import (
 
 	pz "github.com/weberc2/httpeasy"
 	"github.com/weberc2/mono/pkg/auth/types"
+
+	. "github.com/weberc2/mono/pkg/prelude"
 )
 
 func loginHandler(ws *WebServer) pz.Handler {
 	return func(r pz.Request) pz.Response {
-		return handleForm(r, func(form url.Values) pz.Response {
+		return handleForm(loginForm, r, func(form url.Values) pz.Response {
 			return handleLogin(ws, r, form)
 		})
 	}
@@ -169,7 +171,7 @@ func loginFormHandler(baseURL string) pz.Handler {
 }
 
 var (
-	loginForm = must(formHTMLNoEscape(
+	loginForm = Must(formHTMLNoEscape(
 		"Login",
 		"{{.FormAction}}",
 		field{ID: "username", Label: "Username"},

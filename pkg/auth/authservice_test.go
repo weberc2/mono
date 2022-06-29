@@ -12,7 +12,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/weberc2/mono/pkg/auth/testsupport"
 	"github.com/weberc2/mono/pkg/auth/types"
-	"golang.org/x/crypto/bcrypt"
+	. "github.com/weberc2/mono/pkg/prelude"
 )
 
 type userStoreMock struct {
@@ -52,26 +52,26 @@ func TestAuthService_UpdatePassword(t *testing.T) {
 	}{
 		{
 			name:     "simple",
-			subject:  "subject",
-			token:    must(resetToken("subject", "subject@example.org")),
-			email:    "subject@example.org",
-			password: goodPassword,
+			subject:  testsupport.User,
+			token:    testsupport.ResetToken,
+			email:    testsupport.Email,
+			password: testsupport.GoodPassword,
 			create:   true,
 			wanted: &types.Credentials{
-				User:     "subject",
-				Email:    "subject@example.org",
-				Password: goodPassword,
+				User:     testsupport.User,
+				Email:    testsupport.Email,
+				Password: testsupport.GoodPassword,
 			},
 		},
 		{
 			name:     "token parse err",
-			subject:  "user",
+			subject:  testsupport.User,
 			token:    "",
-			email:    "user@example.org",
-			password: goodPassword,
+			email:    testsupport.Email,
+			password: testsupport.GoodPassword,
 			create:   true,
 			wanted:   nil,
-			wantedErr: InvalidRefreshTokenErr(
+			wantedErr: types.InvalidRefreshTokenErr(
 				jwt.NewValidationError(
 					"token contains an invalid number of segments",
 					jwt.ValidationErrorMalformed,
@@ -80,9 +80,9 @@ func TestAuthService_UpdatePassword(t *testing.T) {
 		},
 		{
 			name:      "password validation err",
-			subject:   "user",
-			token:     must(resetToken("user", "user@example.org")),
-			email:     "user@example.org",
+			subject:   testsupport.User,
+			token:     testsupport.ResetToken,
+			email:     testsupport.Email,
 			password:  "", // invalid
 			create:    true,
 			wanted:    nil,
@@ -90,48 +90,36 @@ func TestAuthService_UpdatePassword(t *testing.T) {
 		},
 		{
 			name:     "update",
-			subject:  "user",
-			token:    must(resetToken("user", "user@example.org")),
-			email:    "user@example.org",
-			password: goodPassword,
+			subject:  testsupport.User,
+			token:    testsupport.ResetToken,
+			email:    testsupport.Email,
+			password: testsupport.GoodPassword,
 			create:   false,
 			existingUsers: testsupport.UserStoreFake{
-				"user": &types.UserEntry{
-					User:  "user",
-					Email: "user@example.org",
+				testsupport.User: &types.UserEntry{
+					User:  testsupport.User,
+					Email: testsupport.Email,
 				},
 			},
 			wanted: &types.Credentials{
-				User:     "user",
-				Email:    "user@example.org",
-				Password: goodPassword,
+				User:     testsupport.User,
+				Email:    testsupport.Email,
+				Password: testsupport.GoodPassword,
 			},
 			wantedErr: nil,
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			jwt.TimeFunc = func() time.Time { return now }
+			jwt.TimeFunc = testsupport.NowTimeFunc
 			defer func() { jwt.TimeFunc = time.Now }()
 			if testCase.existingUsers == nil {
 				testCase.existingUsers = testsupport.UserStoreFake{}
 			}
 
-			authService := AuthService{
-				Creds:  CredStore{testCase.existingUsers},
-				Tokens: testsupport.TokenStoreFake{},
-				TokenDetails: TokenDetailsFactory{
-					AccessTokens:  accessTokenFactory,
-					RefreshTokens: refreshTokenFactory,
-					TimeFunc:      func() time.Time { return now },
-				},
-				Codes:         codesTokenFactory,
-				ResetTokens:   resetTokenFactory,
-				TimeFunc:      func() time.Time { return now },
-				Notifications: &testsupport.NotificationServiceFake{},
-			}
 			if testCase.wantedErr == nil {
 				testCase.wantedErr = types.NilError{}
 			}
+			authService := testAuthService(testCase.existingUsers, nil)
 			_, err := authService.UpdatePassword(&UpdatePassword{
 				true,
 				testCase.token,
@@ -172,13 +160,14 @@ func TestAuthService_Login(t *testing.T) {
 		t.Fatalf("Unexpected err: %v", err)
 	}
 	const password = "pass"
-	hashed := hashBcrypt(password)
+	hashed := Must(testsupport.HashBcrypt(password))
 	if err != nil {
 		t.Fatalf("Unexpected err: %v", err)
 	}
 
-	now := time.Date(2022, 01, 01, 0, 0, 0, 0, time.UTC)
-	jwt.TimeFunc = func() time.Time { return now.Add(1 * time.Second) }
+	jwt.TimeFunc = func() time.Time {
+		return testsupport.Now.Add(1 * time.Second)
+	}
 	tokenStore := testsupport.TokenStoreFake{}
 	authService := AuthService{
 		Creds: CredStore{&userStoreMock{
@@ -194,19 +183,19 @@ func TestAuthService_Login(t *testing.T) {
 		}},
 		Tokens: tokenStore,
 		TokenDetails: TokenDetailsFactory{
-			AccessTokens: TokenFactory{
+			AccessTokens: types.TokenFactory{
 				Issuer:        "issuer",
 				Audience:      "*.example.org",
 				TokenValidity: 15 * time.Minute,
 				SigningKey:    accessKey,
 			},
-			RefreshTokens: TokenFactory{
+			RefreshTokens: types.TokenFactory{
 				Issuer:        "issuer",
 				Audience:      "*.example.org",
 				TokenValidity: 7 * 24 * time.Hour,
 				SigningKey:    refreshKey,
 			},
-			TimeFunc: func() time.Time { return now },
+			TimeFunc: testsupport.NowTimeFunc,
 		},
 	}
 
@@ -225,9 +214,9 @@ func TestAuthService_Login(t *testing.T) {
 	}
 
 	if wanted := (jwt.StandardClaims{
-		ExpiresAt: now.Add(15 * time.Minute).Unix(),
-		IssuedAt:  now.Unix(),
-		NotBefore: now.Unix(),
+		ExpiresAt: testsupport.Now.Add(15 * time.Minute).Unix(),
+		IssuedAt:  testsupport.Now.Unix(),
+		NotBefore: testsupport.Now.Unix(),
 		Issuer:    "issuer",
 		Subject:   "user",
 		Audience:  "*.example.org",
@@ -241,9 +230,9 @@ func TestAuthService_Login(t *testing.T) {
 	}
 
 	if wanted := (jwt.StandardClaims{
-		ExpiresAt: now.Add(7 * 24 * time.Hour).Unix(),
-		IssuedAt:  now.Unix(),
-		NotBefore: now.Unix(),
+		ExpiresAt: testsupport.Now.Add(7 * 24 * time.Hour).Unix(),
+		IssuedAt:  testsupport.Now.Unix(),
+		NotBefore: testsupport.Now.Unix(),
 		Issuer:    "issuer",
 		Subject:   "user",
 		Audience:  "*.example.org",
@@ -307,7 +296,6 @@ func (nsm *notificationServiceMock) Notify(rt *types.Notification) error {
 func TestAuthService_Register(t *testing.T) {
 	var (
 		notifyCalledWithToken *types.Notification
-		now                   = time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
 	)
 	resetKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
@@ -319,7 +307,7 @@ func TestAuthService_Register(t *testing.T) {
 				return nil, types.ErrUserNotFound
 			},
 		}},
-		ResetTokens: ResetTokenFactory{
+		ResetTokens: types.ResetTokenFactory{
 			Issuer:        "issuer",
 			Audience:      "audience",
 			TokenValidity: 5 * time.Minute,
@@ -331,7 +319,7 @@ func TestAuthService_Register(t *testing.T) {
 				return nil
 			},
 		},
-		TimeFunc: func() time.Time { return now },
+		TimeFunc: testsupport.NowTimeFunc,
 	}
 
 	if err := authService.Register("user", "user@example.org"); err != nil {
@@ -357,7 +345,7 @@ func TestAuthService_Register_UserNameExists(t *testing.T) {
 				return &types.UserEntry{
 					User:         u,
 					Email:        "user@example.org",
-					PasswordHash: hashBcrypt("password"),
+					PasswordHash: Must(testsupport.HashBcrypt("password")),
 				}, nil
 			},
 		}},
@@ -393,7 +381,6 @@ func TestAuthService_ForgotPassword(t *testing.T) {
 	var (
 		getCalledWithUser     types.UserID
 		notifyCalledWithToken *types.Notification
-		now                   = time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
 		validity              = 5 * time.Minute
 	)
 	resetKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
@@ -418,13 +405,13 @@ func TestAuthService_ForgotPassword(t *testing.T) {
 				return nil
 			},
 		},
-		ResetTokens: ResetTokenFactory{
+		ResetTokens: types.ResetTokenFactory{
 			Issuer:        "issuer",
 			Audience:      "audience",
 			TokenValidity: validity,
 			SigningKey:    resetKey,
 		},
-		TimeFunc: func() time.Time { return now },
+		TimeFunc: testsupport.NowTimeFunc,
 	}
 
 	if err := authService.ForgotPassword("user"); err != nil {
@@ -460,7 +447,7 @@ func TestAuthService_Logout(t *testing.T) {
 	}{
 		{
 			name:         "simple",
-			state:        testsupport.TokenStoreFake{"token": now},
+			state:        testsupport.TokenStoreFake{"token": testsupport.Now},
 			refreshToken: "token",
 		},
 		{
@@ -492,16 +479,3 @@ func TestAuthService_Logout(t *testing.T) {
 		})
 	}
 }
-
-func hashBcrypt(password string) []byte {
-	hash, err := bcrypt.GenerateFromPassword(
-		[]byte(password),
-		bcrypt.DefaultCost,
-	)
-	if err != nil {
-		panic(fmt.Sprintf("bcrypt-hashing password '%s': %v", password, err))
-	}
-	return hash
-}
-
-var goodPassword = ";oasdfipas#@#$OPYODF:;asdf"
