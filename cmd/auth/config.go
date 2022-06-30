@@ -18,6 +18,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	pz "github.com/weberc2/httpeasy"
 	"github.com/weberc2/mono/pkg/auth"
+	"github.com/weberc2/mono/pkg/auth/types"
 	"github.com/weberc2/mono/pkg/pgtokenstore"
 	"github.com/weberc2/mono/pkg/pguserstore"
 	"gopkg.in/yaml.v2"
@@ -148,13 +149,13 @@ func (c *Config) Run() error {
 		AuthService: auth.AuthService{
 			Tokens: tokenStore,
 			Creds:  auth.CredStore{Users: userStore},
-			Codes: auth.TokenFactory{
+			Codes: types.TokenFactory{
 				Issuer:        c.Issuer,
 				Audience:      c.Audience,
 				TokenValidity: time.Minute,
 				SigningKey:    c.CodeSigningKey.Std(),
 			},
-			ResetTokens: auth.ResetTokenFactory{
+			ResetTokens: types.ResetTokenFactory{
 				Issuer:        c.Issuer,
 				Audience:      c.Audience,
 				TokenValidity: 1 * time.Hour,
@@ -171,13 +172,13 @@ func (c *Config) Run() error {
 				),
 			},
 			TokenDetails: auth.TokenDetailsFactory{
-				AccessTokens: auth.TokenFactory{
+				AccessTokens: types.TokenFactory{
 					Issuer:        c.Issuer,
 					Audience:      c.Audience,
 					TokenValidity: 15 * time.Minute,
 					SigningKey:    c.AccessSigningKey.Std(),
 				},
-				RefreshTokens: auth.TokenFactory{
+				RefreshTokens: types.TokenFactory{
 					Issuer:        c.Issuer,
 					Audience:      c.Audience,
 					TokenValidity: 7 * 24 * time.Hour,
@@ -203,24 +204,7 @@ func (c *Config) Run() error {
 			pz.JSONLog(os.Stderr),
 			append(
 				authService.Routes(),
-				pz.Route{
-					Path:    "/login",
-					Method:  "GET",
-					Handler: webServer.LoginFormPage,
-				},
-				pz.Route{
-					Path:    "/login",
-					Method:  "POST",
-					Handler: webServer.LoginHandler,
-				},
-				webServer.RegistrationFormRoute(),
-				webServer.RegistrationHandlerRoute(),
-				webServer.RegistrationConfirmationFormRoute(),
-				webServer.RegistrationConfirmationHandlerRoute(),
-				webServer.PasswordResetFormRoute(),
-				webServer.PasswordResetHandlerRoute(),
-				webServer.PasswordResetConfirmationFormRoute(),
-				webServer.PasswordResetConfirmationHandlerRoute(),
+				webServer.Routes()...,
 			)...,
 		),
 	); err != nil {

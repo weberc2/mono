@@ -50,12 +50,10 @@ func (pgus *PGUserStore) Insert(user *types.UserEntry) error {
 	return Table.Insert((*sql.DB)(pgus), (*userEntry)(user))
 }
 
-// Insert adds a record to the `users` Postgres table. If a record already
-// exists with the same ID, the record is updated provided there are no other
-// constraint violations. If the provided ID is novel, but the provided email
-// already exists, `types.ErrEmailExists` is returned.
-func (pgus *PGUserStore) Upsert(user *types.UserEntry) error {
-	return Table.Upsert((*sql.DB)(pgus), (*userEntry)(user))
+// Update updates a record in the `users` Postgres table. If a record doesn't
+// exists with the provided ID, `types.ErrUserNotFound` is returned.
+func (pgus *PGUserStore) Update(user *types.UserEntry) error {
+	return Table.Update((*sql.DB)(pgus), (*userEntry)(user))
 }
 
 // Get returns the record corresponding to the provided user ID. If no such

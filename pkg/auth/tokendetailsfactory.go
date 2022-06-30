@@ -13,8 +13,8 @@ type TokenDetails struct {
 }
 
 type TokenDetailsFactory struct {
-	AccessTokens  TokenFactory
-	RefreshTokens TokenFactory
+	AccessTokens  types.TokenFactory
+	RefreshTokens types.TokenFactory
 	TimeFunc      func() time.Time
 }
 

@@ -14,6 +14,7 @@ import (
 	pztest "github.com/weberc2/httpeasy/testsupport"
 	"github.com/weberc2/mono/pkg/auth"
 	"github.com/weberc2/mono/pkg/auth/testsupport"
+	"github.com/weberc2/mono/pkg/auth/types"
 )
 
 func TestWebServerApp_Logout(t *testing.T) {
@@ -180,7 +181,7 @@ func TestWebServerApp_AuthCodeCallback(t *testing.T) {
 		subject         = "user"
 		audience        = "audience"
 		authCodeKey     = mustP521Key()
-		authCodeFactory = auth.TokenFactory{
+		authCodeFactory = types.TokenFactory{
 			Issuer:        issuer,
 			Audience:      audience,
 			TokenValidity: time.Minute,

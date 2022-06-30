@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"log"
@@ -37,43 +36,13 @@ var (
 	}
 )
 
-type TokenFactory struct {
-	Issuer        string
-	Audience      string
-	TokenValidity time.Duration
-	SigningKey    *ecdsa.PrivateKey
-}
-
-func (tf *TokenFactory) Create(
-	now time.Time,
-	subject string,
-) (*types.Token, error) {
-	expires := now.Add(tf.TokenValidity)
-	token := jwt.NewWithClaims(
-		jwt.SigningMethodES512,
-		jwt.StandardClaims{
-			Subject:   subject,
-			Audience:  tf.Audience,
-			Issuer:    tf.Issuer,
-			IssuedAt:  now.Unix(),
-			ExpiresAt: expires.Unix(),
-			NotBefore: now.Unix(),
-		},
-	)
-	t, err := token.SignedString(tf.SigningKey)
-	if err != nil {
-		return nil, fmt.Errorf("signing token: %w", err)
-	}
-	return &types.Token{Token: t, Expires: expires}, nil
-}
-
 type AuthService struct {
 	Creds         CredStore
 	Tokens        types.TokenStore
 	Notifications types.NotificationService
-	ResetTokens   ResetTokenFactory
+	ResetTokens   types.ResetTokenFactory
 	TokenDetails  TokenDetailsFactory
-	Codes         TokenFactory
+	Codes         types.TokenFactory
 	TimeFunc      func() time.Time
 }
 
@@ -202,11 +171,11 @@ func (as *AuthService) ForgotPassword(user types.UserID) error {
 }
 
 type UpdatePassword struct {
+	Create   bool   `json:"create"`
 	Token    string `json:"token"`
 	Password string `json:"password"`
 }
 
-// TODO: make sure this token is deleted on success
 func (as *AuthService) UpdatePassword(
 	up *UpdatePassword,
 ) (types.UserID, error) {
@@ -218,46 +187,30 @@ func (as *AuthService) UpdatePassword(
 	// We deliberately want to return `ErrInvalidResetToken` in this case so
 	// as not to give attackers unnecessary information. See OWASP link above.
 	if err := claims.Valid(); err != nil {
-		return "", fmt.Errorf("updating password: %w", ErrInvalidResetToken)
+		return "", ErrInvalidResetToken
 	}
 
-	if err := as.Creds.Upsert(&types.Credentials{
-		User:     claims.User,
-		Email:    claims.Email,
-		Password: up.Password,
-	}); err != nil {
-		return claims.User, fmt.Errorf("updating password: %w", err)
+	cb := (*CredStore).Create
+	if !up.Create {
+		cb = (*CredStore).Update
+	}
+
+	if err := cb(
+		&as.Creds,
+		&types.Credentials{
+			User:     claims.User,
+			Email:    claims.Email,
+			Password: up.Password,
+		},
+	); err != nil {
+		return claims.User, err
 	}
 
 	return claims.User, nil
 }
 
-// TODO: make sure this token is deleted on success
-func (as *AuthService) ConfirmRegistration(token, password string) error {
-	claims, err := as.ResetTokens.Claims(token)
-	if err != nil {
-		return fmt.Errorf("confirming registration: %w", err)
-	}
-
-	// We deliberately want to return `ErrInvalidResetToken` in this case so
-	// as not to give attackers unnecessary information. See OWASP link above.
-	if err := claims.Valid(); err != nil {
-		return fmt.Errorf("confirming registration: %w", ErrInvalidResetToken)
-	}
-
-	if err := as.Creds.Create(&types.Credentials{
-		User:     claims.User,
-		Email:    claims.Email,
-		Password: password,
-	}); err != nil {
-		return fmt.Errorf("confirming registration: %w", err)
-	}
-
-	return nil
-}
-
 func (as *AuthService) Exchange(code string) (*TokenDetails, error) {
-	var claims Claims
+	var claims types.Claims
 	if _, err := jwt.ParseWithClaims(
 		code,
 		&claims,

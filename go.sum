@@ -48,6 +48,8 @@ github.com/weberc2/httpeasy v0.0.26 h1:BXfdW4nxEQlLB7v0GXJlAj67YcIlbB5WuBa1xYzPt
 github.com/weberc2/httpeasy v0.0.26/go.mod h1:vjZmTmHJEPKRm2tITDQyIneHOAJvyk3KhFox6MvT/2Y=
 github.com/weberc2/httpeasy v0.0.27 h1:yeqKOpXn+wBgdmMprRz5ix+Ej2HLoojJ8+Q/df1uYnc=
 github.com/weberc2/httpeasy v0.0.27/go.mod h1:vjZmTmHJEPKRm2tITDQyIneHOAJvyk3KhFox6MvT/2Y=
+github.com/weberc2/httpeasy v0.0.28 h1:ttQ+h2KIKrRYAaFWhopRSQ9XXvpiQKk7a6C9R54Bdf8=
+github.com/weberc2/httpeasy v0.0.28/go.mod h1:vjZmTmHJEPKRm2tITDQyIneHOAJvyk3KhFox6MvT/2Y=
 golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3 h1:0es+/5331RGQPcXlMfP+WrnIIS6dNnNRe0WB02W0F4M=
 golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
 golang.org/x/net v0.0.0-20210916014120-12bc252f5db8/go.mod h1:9nx3DQGgdP8bBQD5qxJ1jj9UTztislL4KSBs9R2vV5Y=

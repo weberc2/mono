@@ -187,13 +187,13 @@ func testAuthService(options *authServiceOptions) (auth.AuthService, error) {
 		Notifications: &testsupport.NotificationServiceFake{},
 		Codes:         *options.authCodeFactory,
 		TokenDetails: auth.TokenDetailsFactory{
-			AccessTokens: auth.TokenFactory{
+			AccessTokens: types.TokenFactory{
 				Issuer:        "issuer",
 				Audience:      "audience",
 				TokenValidity: 15 * time.Minute,
 				SigningKey:    accessKey,
 			},
-			RefreshTokens: auth.TokenFactory{
+			RefreshTokens: types.TokenFactory{
 				Issuer:        "issuer",
 				Audience:      "audience",
 				TokenValidity: 15 * time.Minute,
@@ -206,12 +206,12 @@ func testAuthService(options *authServiceOptions) (auth.AuthService, error) {
 
 type authServiceOptions struct {
 	userStore       testsupport.UserStoreFake
-	authCodeFactory *auth.TokenFactory
+	authCodeFactory *types.TokenFactory
 	tokenStore      testsupport.TokenStoreFake
 }
 
-func defaultAuthCodeFactory() *auth.TokenFactory {
-	return &auth.TokenFactory{
+func defaultAuthCodeFactory() *types.TokenFactory {
+	return &types.TokenFactory{
 		Issuer:        "issuer",
 		Audience:      "audience",
 		TokenValidity: time.Minute,

@@ -240,7 +240,7 @@ func (ahs *AuthHTTPService) RegisterRoute() pz.Route {
 			if err := ahs.Register(payload.User, payload.Email); err != nil {
 				if errors.Is(err, ErrInvalidEmail) {
 					return pz.BadRequest(
-						pz.String("Invalid email address"),
+						pz.String("invalid email address"),
 						struct {
 							Error string
 						}{
@@ -250,7 +250,7 @@ func (ahs *AuthHTTPService) RegisterRoute() pz.Route {
 				}
 				if errors.Is(err, ErrUserExists) {
 					return pz.Conflict(
-						pz.String("User already exists"),
+						pz.String("user already exists"),
 						struct {
 							Message, Error string
 							User           types.UserID
@@ -269,7 +269,7 @@ func (ahs *AuthHTTPService) RegisterRoute() pz.Route {
 				})
 			}
 
-			return pz.Created(pz.String("Created user"), struct {
+			return pz.Created(pz.String("created user"), struct {
 				Message string
 				User    types.UserID
 			}{

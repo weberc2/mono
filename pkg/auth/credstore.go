@@ -84,14 +84,14 @@ func (cs *CredStore) Create(creds *types.Credentials) error {
 	return nil
 }
 
-func (cs *CredStore) Upsert(creds *types.Credentials) error {
+func (cs *CredStore) Update(creds *types.Credentials) error {
 	entry, err := makeUserEntry(creds)
 	if err != nil {
 		return fmt.Errorf("creating user entry: %w", err)
 	}
 
-	if err := cs.Users.Upsert(entry); err != nil {
-		return fmt.Errorf("upserting user store: %w", err)
+	if err := cs.Users.Update(entry); err != nil {
+		return fmt.Errorf("updating user store: %w", err)
 	}
 
 	return nil

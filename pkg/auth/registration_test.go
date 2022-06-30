@@ -12,22 +12,26 @@ import (
 	. "github.com/weberc2/mono/pkg/prelude"
 )
 
-func TestWebServer_PasswordReset(t *testing.T) {
+func TestWebServer_Registration(t *testing.T) {
 	for _, testCase := range []*routeTestCase{
 		{
 			name: "main-form",
 			route: func(ws *WebServer) pz.Handler {
-				return ws.PasswordResetFormRoute().Handler
+				return ws.RegistrationFormRoute().Handler
 			},
 			wantedResponse: response{
 				status: http.StatusOK,
 				body: wantedFormDocument(&formDocument{
-					title:  "Password Reset",
-					action: "/password-reset",
+					title:  "Registration",
+					action: "/registration",
 					fields: []input{{
 						name:  "username",
 						type_: "text",
 						label: "Username",
+					}, {
+						name:  "email",
+						type_: "text",
+						label: "Email",
 					}},
 				}),
 			},
@@ -35,7 +39,28 @@ func TestWebServer_PasswordReset(t *testing.T) {
 		{
 			name: "main-handler",
 			route: func(ws *WebServer) pz.Handler {
-				return ws.PasswordResetHandlerRoute().Handler
+				return ws.RegistrationHandlerRoute().Handler
+			},
+			request: pz.Request{
+				Body: strings.NewReader(encodeForm(
+					kv{"username", string(testsupport.User)},
+					kv{"email", testsupport.Email},
+				)),
+			},
+			wantedResponse: response{
+				status: http.StatusAccepted,
+				body: testsupport.WantedString(Must(ackPage(
+					"Registration",
+				))),
+			},
+			wantedNotifications: []*types.Notification{
+				&testsupport.RegistrationNotification,
+			},
+		},
+		{
+			name: "main-handler-exists",
+			route: func(ws *WebServer) pz.Handler {
+				return ws.RegistrationHandlerRoute().Handler
 			},
 			users: testsupport.UserStoreFake{
 				testsupport.User: &types.UserEntry{
@@ -45,48 +70,33 @@ func TestWebServer_PasswordReset(t *testing.T) {
 				},
 			},
 			request: pz.Request{
-				Body: strings.NewReader(encodeForm(kv{
-					"username",
-					string(testsupport.User),
-				})),
+				Body: strings.NewReader(encodeForm(
+					kv{"username", string(testsupport.User)},
+					kv{"email", testsupport.Email},
+				)),
 			},
 			wantedResponse: response{
-				status: http.StatusAccepted,
-				body: testsupport.WantedString(Must(ackPage(
-					"Password Reset",
-				))),
+				status: http.StatusConflict,
+				body: wantedFormDocument(&formDocument{
+					title:        "Registration",
+					action:       "/registration",
+					errorMessage: "user already exists",
+					fields: []input{{
+						name:  "username",
+						type_: "text",
+						label: "Username",
+					}, {
+						name:  "email",
+						type_: "text",
+						label: "Email",
+					}},
+				}),
 			},
 			wantedUsers: []types.Credentials{{
 				User:     testsupport.User,
 				Email:    testsupport.Email,
 				Password: testsupport.GoodPassword,
 			}},
-			wantedNotifications: []*types.Notification{
-				&testsupport.PasswordResetNotification,
-			},
-		},
-		{
-			name: "main-handler-not-found",
-			route: func(ws *WebServer) pz.Handler {
-				return ws.PasswordResetHandlerRoute().Handler
-			},
-			request: pz.Request{
-				Body: strings.NewReader(encodeForm(kv{
-					"username",
-					string(testsupport.User),
-				})),
-			},
-
-			// if we're trying to reset the password for a user which doesn't
-			// exist, then we want to send the same response pack to the user
-			// that we would have sent if the user did exist, but we won't
-			// send a notification.
-			wantedResponse: response{
-				status: http.StatusAccepted,
-				body: testsupport.WantedString(Must(ackPage(
-					"Password Reset",
-				))),
-			},
 			wantedNotifications: []*types.Notification{},
 		},
 		{
@@ -95,13 +105,13 @@ func TestWebServer_PasswordReset(t *testing.T) {
 				URL: Must(url.Parse("https://auth.example.org?t=<token>")),
 			},
 			route: func(ws *WebServer) pz.Handler {
-				return ws.PasswordResetConfirmationFormRoute().Handler
+				return ws.RegistrationConfirmationFormRoute().Handler
 			},
 			wantedResponse: response{
 				status: http.StatusOK,
 				body: wantedFormDocument(&formDocument{
-					title:  "Confirm Password Reset",
-					action: "/password-reset/confirm",
+					title:  "Confirm Registration",
+					action: "/registration/confirm",
 					fields: []input{{
 						name:  "password",
 						type_: "password",
@@ -116,18 +126,12 @@ func TestWebServer_PasswordReset(t *testing.T) {
 		},
 		{
 			name: "confirmation-handler",
-			users: testsupport.UserStoreFake{
-				"user": &types.UserEntry{
-					User:  "user",
-					Email: "user@example.org",
-				},
-			},
 			route: func(ws *WebServer) pz.Handler {
-				return ws.PasswordResetConfirmationHandlerRoute().Handler
+				return ws.RegistrationConfirmationHandlerRoute().Handler
 			},
 			request: pz.Request{
 				URL: Must(url.Parse(
-					"https://auth.example.org/password-reset/confirm",
+					"https://auth.example.org/registration/confirm",
 				)),
 				Body: strings.NewReader(encodeForm(
 					kv{"password", testsupport.GoodPassword},
@@ -142,8 +146,8 @@ func TestWebServer_PasswordReset(t *testing.T) {
 				},
 			},
 			wantedUsers: []types.Credentials{{
-				User:     "user",
-				Email:    "user@example.org",
+				User:     testsupport.User,
+				Email:    testsupport.Email,
 				Password: testsupport.GoodPassword,
 			}},
 		},
