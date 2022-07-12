@@ -1,4 +1,4 @@
-FROM weberc2/futhorc:0.1.7
+FROM weberc2/futhorc:0.1.10
 
 WORKDIR /workspace
 
