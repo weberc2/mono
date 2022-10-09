@@ -1,4 +1,4 @@
-:80 {
+https://blog.weberc2.com {
     # Set this path to your site's directory.
     root * /usr/share/caddy
 
