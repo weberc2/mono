@@ -64,8 +64,8 @@ Description=Caddy
 Restart=always
 ExecStartPre=/usr/bin/docker pull weberc2/blog:latest
 ExecStart=/usr/bin/docker run --rm -p 80:80 -p 443:443 weberc2/blog
-StandardOutput=file:/var/log/blog.log
-StandardError=file:/var/log/blog.log
+StandardOutput=append:/var/log/blog.log
+StandardError=append:/var/log/blog.log
 
 # Restart every >5 seconds to avoid StartLimitInterval failure
 RestartSec=5
@@ -95,6 +95,11 @@ as discussed below. Ideally our log exporter would be able to pull them
 directly from `journald` (the logging complement to systemd), but the agent I
 chose seems not to support that. There might be a better way to export logs
 than writing them to a file, but I couldn't figure it out for my log exporter.
+
+Note that the `append:` prefix. Systemd also has a `file:` prefix, but if your
+service is restarted, systemd will silently stop writing logs to the specified
+file. Append behaves correctly, and I can't imagine why anyone would want the
+`file:` behavior.
 
 # Logging and Monitoring
 
@@ -279,8 +284,8 @@ order of keys):
     Restart=always
     ExecStartPre=/usr/bin/docker pull weberc2/blog:latest
     ExecStart=/usr/bin/docker run --rm -p 80:80 -p 443:443 weberc2/blog
-    StandardOutput=file:/var/log/blog.log
-    StandardError=file:/var/log/blog.log
+    StandardOutput=append:/var/log/blog.log
+    StandardError=append:/var/log/blog.log
 
     # Restart every >5 seconds to avoid StartLimitInterval failure
     RestartSec=5
@@ -580,8 +585,8 @@ Description=${x.description}
 Restart=always
 %{if x.exec_start_pre != ""}ExecStartPre=${x.exec_start_pre}%{endif}
 ExecStart=${x.exec_start}
-StandardOutput=file:/var/log/${x.name}.log
-StandardError=file:/var/log/${x.name}.log
+StandardOutput=append:/var/log/${x.name}.log
+StandardError=append:/var/log/${x.name}.log
 
 # Restart every >5 seconds to avoid StartLimitInterval failure
 RestartSec=5
