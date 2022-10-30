@@ -84,14 +84,15 @@ type Builder struct {
 	Prefix string
 }
 
-type BuildResponse struct {
-	Key string `json:"key"`
+type Response struct {
+	Bucket string `json:"bucket"`
+	Key    string `json:"key"`
 }
 
 func (builder *Builder) Build(
 	ctx context.Context,
 	payload *Payload,
-) (*BuildResponse, error) {
+) (*Response, error) {
 	log.WithField("payload", payload).Infof("building Go project")
 
 	if err := payload.Validate(); err != nil {
@@ -152,7 +153,7 @@ func (builder *Builder) Build(
 	}
 	log.Infof("pushed zipped binary to s3://%s/%s", builder.Bucket, key)
 
-	return &BuildResponse{Key: key}, nil
+	return &Response{Bucket: builder.Bucket, Key: key}, nil
 }
 
 func compileGoProject(dir string, goarch Architecture) error {
