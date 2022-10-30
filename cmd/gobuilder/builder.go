@@ -1,4 +1,4 @@
-package golanglambdabuilder
+package main
 
 import (
 	"archive/tar"
@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"hash/adler32"
@@ -60,8 +61,9 @@ type Payload struct {
 	// `arm64`.
 	Architecture Architecture `json:"architecture"`
 
-	// Archive contains the tar.gz data containing the source code.
-	Archive []byte `json:"archive"`
+	// Archive contains the base64-encoded tar.gz data containing the source
+	// code.
+	Archive string `json:"archive"`
 }
 
 func (p *Payload) Validate() error {
@@ -82,16 +84,25 @@ type Builder struct {
 	Prefix string
 }
 
-func (builder *Builder) Build(ctx context.Context, payload *Payload) error {
+type BuildResponse struct {
+	Key string `json:"key"`
+}
+
+func (builder *Builder) Build(
+	ctx context.Context,
+	payload *Payload,
+) (*BuildResponse, error) {
+	log.WithField("payload", payload).Infof("building Go project")
+
 	if err := payload.Validate(); err != nil {
-		return fmt.Errorf("building lambda: %w", err)
+		return nil, fmt.Errorf("building lambda: %w", err)
 	}
 	log.Infof("validated payload")
 
 	// provision temporary working directory
 	tmpDir, err := ioutil.TempDir("", "")
 	if err != nil {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"building lambda `%s`: creating temporary directory: %w",
 			payload.Name,
 			err,
@@ -112,48 +123,55 @@ func (builder *Builder) Build(ctx context.Context, payload *Payload) error {
 
 	// extract the source archive to the temporary working directory
 	if err := extract(payload.Archive, tmpDir); err != nil {
-		return fmt.Errorf("building lambda `%s`: %w", payload.Name, err)
+		return nil, fmt.Errorf("building lambda `%s`: %w", payload.Name, err)
 	}
 	log.Infof("extracted source archive")
 
 	// run the build inside the temporary working directory
 	if err := compileGoProject(tmpDir, payload.Architecture); err != nil {
-		return fmt.Errorf("building lambda `%s`: %w", payload.Name, err)
+		return nil, fmt.Errorf("building lambda `%s`: %w", payload.Name, err)
 	}
 	log.Infof("compiled source code")
 
 	// zip the executable
 	zipped, err := mkzip(tmpDir, "main")
 	if err != nil {
-		return fmt.Errorf("building lambda `%s`: %w", payload.Name, err)
+		return nil, fmt.Errorf("building lambda `%s`: %w", payload.Name, err)
 	}
 	log.Infof("zipped binary executable")
 
 	// push the zipped executable to s3
-	key, err := builder.pushToS3(ctx, payload.Name, zipped)
+	key, err := builder.pushToS3(
+		ctx,
+		payload.Name,
+		payload.Architecture,
+		zipped,
+	)
 	if err != nil {
-		return fmt.Errorf("building lambda `%s`: %w", payload.Name, err)
+		return nil, fmt.Errorf("building lambda `%s`: %w", payload.Name, err)
 	}
 	log.Infof("pushed zipped binary to s3://%s/%s", builder.Bucket, key)
 
-	return nil
+	return &BuildResponse{Key: key}, nil
 }
 
 func compileGoProject(dir string, goarch Architecture) error {
-	var buildLogs bytes.Buffer
-	cmd := exec.Command("go", "build", "-o", "main")
+	cmd := exec.Command("go", "build", "-v", "-o", "main")
 	cmd.Env = append(
 		cmd.Env,
 		"GOOS=linux",
 		fmt.Sprintf("GOARCH=%s", goarch),
 		fmt.Sprintf("GOPATH=%s", os.Getenv("GOPATH")),
+		fmt.Sprintf("GOMODCACHE=%s", "/tmp/gomodcache"),
+		fmt.Sprintf("GOCACHE=%s", "/tmp/gocache"),
 		fmt.Sprintf("HOME=%s", os.Getenv("HOME")),
 	)
-	cmd.Stdout = &buildLogs
-	cmd.Stderr = &buildLogs
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	cmd.Dir = dir
 	if err := cmd.Run(); err != nil {
-		log.WithField("buildLogs", buildLogs.String()).Infof("build failed")
+		log.WithField("err", err.Error()).Infof("build failed")
 		return fmt.Errorf("compiling Go project: %w", err)
 	}
 
@@ -163,11 +181,13 @@ func compileGoProject(dir string, goarch Architecture) error {
 func (builder *Builder) pushToS3(
 	ctx context.Context,
 	payloadName string,
+	architecture Architecture,
 	data []byte,
 ) (string, error) {
 	key := path.Join(
 		builder.Prefix,
 		payloadName,
+		string(architecture),
 		fmt.Sprintf("%s.zip", checksum(data)),
 	)
 
@@ -250,8 +270,11 @@ func mkzip(exeDir, exeName string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func extract(archive []byte, dir string) error {
-	gzr, err := gzip.NewReader(bytes.NewReader(archive))
+func extract(archive string, dir string) error {
+	log.WithField("archive", string(archive)).Infof("extracting archive")
+	gzr, err := gzip.NewReader(
+		base64.NewDecoder(base64.StdEncoding, strings.NewReader(archive)),
+	)
 	if err != nil {
 		return fmt.Errorf("constructing gzip reader: %w", err)
 	}
