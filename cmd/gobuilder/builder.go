@@ -1,10 +1,8 @@
 package main
 
 import (
-	"archive/tar"
 	"archive/zip"
 	"bytes"
-	"compress/gzip"
 	"context"
 	"encoding/base64"
 	"encoding/hex"
@@ -61,8 +59,7 @@ type Payload struct {
 	// `arm64`.
 	Architecture Architecture `json:"architecture"`
 
-	// Archive contains the base64-encoded tar.gz data containing the source
-	// code.
+	// Archive contains the base64-encoded zip data containing the source code.
 	Archive string `json:"archive"`
 }
 
@@ -87,6 +84,7 @@ type Builder struct {
 type Response struct {
 	Bucket string `json:"bucket"`
 	Key    string `json:"key"`
+	Hash   string `json:"hash"`
 }
 
 func (builder *Builder) Build(
@@ -142,18 +140,20 @@ func (builder *Builder) Build(
 	log.Infof("zipped binary executable")
 
 	// push the zipped executable to s3
+	checksum := checksum(zipped)
 	key, err := builder.pushToS3(
 		ctx,
 		payload.Name,
 		payload.Architecture,
 		zipped,
+		checksum,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("building lambda `%s`: %w", payload.Name, err)
 	}
 	log.Infof("pushed zipped binary to s3://%s/%s", builder.Bucket, key)
 
-	return &Response{Bucket: builder.Bucket, Key: key}, nil
+	return &Response{Bucket: builder.Bucket, Key: key, Hash: checksum}, nil
 }
 
 func compileGoProject(dir string, goarch Architecture) error {
@@ -184,12 +184,13 @@ func (builder *Builder) pushToS3(
 	payloadName string,
 	architecture Architecture,
 	data []byte,
+	checksum string,
 ) (string, error) {
 	key := path.Join(
 		builder.Prefix,
 		payloadName,
 		string(architecture),
-		fmt.Sprintf("%s.zip", checksum(data)),
+		fmt.Sprintf("%s.zip", checksum),
 	)
 
 	if _, err := builder.Client.PutObjectWithContext(
@@ -273,70 +274,69 @@ func mkzip(exeDir, exeName string) ([]byte, error) {
 
 func extract(archive string, dir string) error {
 	log.WithField("archive", string(archive)).Infof("extracting archive")
-	gzr, err := gzip.NewReader(
-		base64.NewDecoder(base64.StdEncoding, strings.NewReader(archive)),
-	)
+	data, err := base64.StdEncoding.DecodeString(archive)
 	if err != nil {
-		return fmt.Errorf("constructing gzip reader: %w", err)
+		return fmt.Errorf("base64-decoding archive: %w", err)
 	}
-	r := tar.NewReader(gzr)
-	for {
-		hdr, err := r.Next()
-		if err != nil {
-			if err == io.EOF {
-				return nil
-			}
-			return fmt.Errorf("fetching next entry in tar file: %w", err)
-		}
+	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	if err != nil {
+		return fmt.Errorf("constructing zip reader: %w", err)
+	}
 
-		switch hdr.Typeflag {
-		case tar.TypeDir:
+	for _, f := range zr.File {
+		if f.FileInfo().IsDir() {
 			if err := os.MkdirAll(
-				filepath.Join(dir, hdr.Name),
+				filepath.Join(dir, f.Name),
 				0755,
 			); err != nil {
 				return fmt.Errorf(
-					"extracting tarball: creating directory `%s` inside "+
+					"extracting archive: creating directory `%s` inside "+
 						"directory `%s`: %w",
-					hdr.Name,
+					f.Name,
 					dir,
 					err,
 				)
 			}
-		case tar.TypeReg:
-			path := filepath.Join(dir, hdr.Name)
+		} else {
+			path := filepath.Join(dir, f.Name)
 			if err := func() error {
-				f, err := os.Create(path)
+				dst, err := os.Create(path)
 				if err != nil {
-					return fmt.Errorf("opening file `%s`: %w", path, err)
+					return fmt.Errorf("opening dst file `%s`: %w", path, err)
 				}
 				defer func() {
-					if err := f.Close(); err != nil {
-						log.Errorf("closing file `%s`: %v", path, err)
+					if err := dst.Close(); err != nil {
+						log.Errorf("closing dst file `%s`: %v", path, err)
 					}
 				}()
 
-				if _, err := io.Copy(f, r); err != nil {
+				src, err := f.Open()
+				if err != nil {
 					return fmt.Errorf(
-						"writing to `%s`: %w",
-						path,
+						"opening src file `%s` from archive: %w",
+						f.Name,
 						err,
 					)
+				}
+				defer func() {
+					if err := src.Close(); err != nil {
+						log.Errorf("closing archive file `%s`: %v", path, err)
+					}
+				}()
+
+				if _, err := io.Copy(dst, src); err != nil {
+					return fmt.Errorf("writing to `%s`: %w", path, err)
 				}
 				return nil
 			}(); err != nil {
 				return fmt.Errorf(
-					"extracting tarball: extracting file `%s`: %w",
-					hdr.Name,
+					"extracting zip file: extracting file `%s`: %w",
+					f.Name,
 					err,
 				)
 			}
-		default:
-			return fmt.Errorf(
-				"extracting tarball: unexpected typeflag `%b` for entry `%s`",
-				hdr.Typeflag,
-				hdr.Name,
-			)
 		}
 	}
+
+	return nil
 }
