@@ -74,7 +74,51 @@ type Image struct {
 
 	// The build arguments.
 	Args map[string]string
+
+	Registry Registry
 }
+
+func (i *Image) SetECRRegistry(secretPrefix string) *Image {
+	i.Registry = Registry{
+		Registry: "988080168334.dkr.ecr.us-east-2.amazonaws.com",
+		Username: fmt.Sprintf(
+			"${{ secrets.%s_AWS_ACCESS_KEY_ID }}",
+			secretPrefix,
+		),
+		Password: fmt.Sprintf(
+			"${{ secrets.%s_AWS_SECRET_ACCESS_KEY }}",
+			secretPrefix,
+		),
+	}
+	return i
+}
+
+type Registry struct {
+	Registry string `yaml:"registry,omitempty"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+}
+
+func (r *Registry) Args() Args {
+	if r == nil || (*r == Registry{}) {
+		r = &RegistryDocker
+	}
+	args := Args{
+		"username": r.Username,
+		"password": r.Password,
+	}
+	if r.Registry != "" {
+		args["registry"] = r.Registry
+	}
+	return args
+}
+
+var (
+	RegistryDocker = Registry{
+		Username: "${{ secrets.DOCKER_USERNAME }}",
+		Password: "${{ secrets.DOCKER_PASSWORD }}",
+	}
+)
 
 func GoImage(target string) *Image {
 	return &Image{
@@ -82,6 +126,7 @@ func GoImage(target string) *Image {
 		Context:    ".",
 		Dockerfile: "./docker/golang/Dockerfile",
 		Args:       map[string]string{"TARGET": target},
+		Registry:   RegistryDocker,
 	}
 }
 
@@ -91,6 +136,7 @@ func GoModImage(target string) *Image {
 		Context:    filepath.Join("./mod", target),
 		Dockerfile: "docker/golang/Dockerfile",
 		Args:       map[string]string{"TARGET": target},
+		Registry:   RegistryDocker,
 	}
 }
 
@@ -135,10 +181,7 @@ echo ::set-output name=docker_image::${DOCKER_IMAGE}`, image.Name),
 			Name: "Login to DockerHub",
 			If:   "github.event_name != 'pull_request'",
 			Uses: "docker/login-action@v1",
-			With: Args{
-				"username": "${{ secrets.DOCKER_USERNAME }}",
-				"password": "${{ secrets.DOCKER_PASSWORD }}",
-			},
+			With: image.Registry.Args(),
 		}, {
 			Name: "Build",
 			Uses: "docker/build-push-action@v2",
@@ -184,7 +227,7 @@ func main() {
 				Context:    "./docker/pgbackup",
 			},
 			GoModImage("linkcheck"),
-			GoModImage("gobuilder"),
+			GoModImage("gobuilder").SetECRRegistry("GOBUILDER"),
 		),
 	); err != nil {
 		log.Fatalf("marshaling release workflow: %v", err)
