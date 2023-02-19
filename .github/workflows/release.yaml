@@ -168,7 +168,7 @@ jobs:
       #     username: ${{ secrets.GOBUILDER_AWS_ACCESS_KEY_ID }}
       - name: Build
         id: build
-        run: (cd mod/gobuilder && cp ../../golang/Dockerfile ./ && docker buildx build --build-arg TARGET=gobuilder --push .)
+        run: (cd mod/gobuilder && cp ../../docker/golang/Dockerfile ./ && docker buildx build --build-arg TARGET=gobuilder --push .)
       # - name: Build
       #   uses: docker/build-push-action@v2
       #   with:
