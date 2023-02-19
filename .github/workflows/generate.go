@@ -177,6 +177,7 @@ func main() {
 				Name:       "linkcheck",
 				Dockerfile: "docker/golang/Dockerfile",
 				Context:    "mod/linkcheck",
+				Args:       map[string]string{"TARGET": "linkcheck"},
 			},
 		),
 	); err != nil {
