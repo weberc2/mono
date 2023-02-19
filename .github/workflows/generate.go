@@ -141,7 +141,7 @@ echo ::set-output name=docker_image::${DOCKER_IMAGE}`, image.Name),
 					}
 					return strings.Join(lines, "\n")
 				}(),
-				"context":    ".",
+				"context":    image.Context,
 				"file":       image.Dockerfile,
 				"platforms":  "linux/amd64,linux/arm64",
 				"push":       true,
