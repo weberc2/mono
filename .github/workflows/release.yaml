@@ -168,7 +168,12 @@ jobs:
       #     username: ${{ secrets.GOBUILDER_AWS_ACCESS_KEY_ID }}
       - name: Build
         id: build
-        run: (cd mod/gobuilder && cp ../../docker/golang/Dockerfile ./ && docker buildx build --build-arg TARGET=gobuilder -t 988080168334.dkr.ecr.us-east-2.amazonaws.com/gobuilder --push .)
+        run: |-
+          export AWS_ACCESS_KEY_ID=${{ secrets.GOBUILDER_AWS_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.GOBUILDER_AWS_SECRET_ACCESS_KEY }}
+          aws sts get-caller-identity
+          aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 988080168334.dkr.ecr.us-east-2.amazonaws.com
+          (cd mod/gobuilder && cp ../../docker/golang/Dockerfile ./ && docker buildx build --build-arg TARGET=gobuilder -t 988080168334.dkr.ecr.us-east-2.amazonaws.com/gobuilder --push .)
       # - name: Build
       #   uses: docker/build-push-action@v2
       #   with:
