@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -80,6 +81,15 @@ func GoImage(target string) *Image {
 		Name:       target,
 		Context:    ".",
 		Dockerfile: "./docker/golang/Dockerfile",
+		Args:       map[string]string{"TARGET": target},
+	}
+}
+
+func GoModImage(target string) *Image {
+	return &Image{
+		Name:       target,
+		Context:    filepath.Join("./mod", target),
+		Dockerfile: "docker/golang/Dockerfile",
 		Args:       map[string]string{"TARGET": target},
 	}
 }
@@ -173,12 +183,8 @@ func main() {
 				Dockerfile: "./docker/pgbackup/Dockerfile",
 				Context:    "./docker/pgbackup",
 			},
-			&Image{
-				Name:       "linkcheck",
-				Dockerfile: "docker/golang/Dockerfile",
-				Context:    "mod/linkcheck",
-				Args:       map[string]string{"TARGET": "linkcheck"},
-			},
+			GoModImage("linkcheck"),
+			GoModImage("gobuilder"),
 		),
 	); err != nil {
 		log.Fatalf("marshaling release workflow: %v", err)

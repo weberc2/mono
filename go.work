@@ -2,6 +2,6 @@ go 1.19
 
 use (
 	.
-	./cmd/gobuilder
+	./mod/gobuilder
 	./mod/linkcheck
 )
