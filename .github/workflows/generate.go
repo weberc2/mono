@@ -165,6 +165,8 @@ func GoModImage(target string) *Image {
 var releaseJobPrepareStepScriptTemplate = template.Must(
 	template.
 		New("").
+		// use different delims so GH's ${{ secrets.XYZ }} syntax doesn't
+		// collide
 		Delims("{%", "%}").
 		Parse(
 			`DOCKER_IMAGE={% .DockerImage %}
@@ -220,7 +222,7 @@ func JobRelease(image *Image) Job {
 		}, {
 			Name: "Login to DockerHub",
 			If:   "github.event_name != 'pull_request'",
-			Uses: "docker/login-action@v1",
+			Uses: "docker/login-action@v2",
 			With: image.Registry.Args(),
 		}, {
 			Name: "Build",
