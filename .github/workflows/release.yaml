@@ -166,26 +166,26 @@ jobs:
       #     password: ${{ secrets.GOBUILDER_AWS_SECRET_ACCESS_KEY }}
       #     registry: 988080168334.dkr.ecr.us-east-2.amazonaws.com
       #     username: ${{ secrets.GOBUILDER_AWS_ACCESS_KEY_ID }}
-      - name: Build
-        id: build
-        run: |-
-          export AWS_ACCESS_KEY_ID=${{ secrets.GOBUILDER_AWS_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.GOBUILDER_AWS_SECRET_ACCESS_KEY }}
-          aws sts get-caller-identity
-          aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 988080168334.dkr.ecr.us-east-2.amazonaws.com
-          (cd mod/gobuilder && cp ../../docker/golang/Dockerfile ./ && docker buildx build --build-arg TARGET=gobuilder -t 988080168334.dkr.ecr.us-east-2.amazonaws.com/gobuilder --push .)
       # - name: Build
-      #   uses: docker/build-push-action@v2
-      #   with:
-      #     build-args: TARGET=gobuilder
-      #     builder: ${{ steps.buildx.outputs.name }}
-      #     cache-from: type=gha, scope=${{ github.workflow }}
-      #     cache-to: type=gha, scope=${{ github.workflow }}
-      #     context: mod/gobuilder
-      #     file: docker/golang/Dockerfile
-      #     platforms: linux/amd64,linux/arm64
-      #     push: true
-      #     tags: ${{ steps.prep.outputs.tags }}
+      #   id: build
+      #   run: |-
+      #     export AWS_ACCESS_KEY_ID=${{ secrets.GOBUILDER_AWS_ACCESS_KEY_ID }}
+      #     export AWS_SECRET_ACCESS_KEY=${{ secrets.GOBUILDER_AWS_SECRET_ACCESS_KEY }}
+      #     aws sts get-caller-identity
+      #     aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 988080168334.dkr.ecr.us-east-2.amazonaws.com
+      #     (cd mod/gobuilder && cp ../../docker/golang/Dockerfile ./ && docker buildx build --build-arg TARGET=gobuilder -t 988080168334.dkr.ecr.us-east-2.amazonaws.com/gobuilder --push .)
+      - name: Build
+        uses: docker/build-push-action@v2
+        with:
+          build-args: TARGET=gobuilder
+          builder: ${{ steps.buildx.outputs.name }}
+          cache-from: type=gha, scope=${{ github.workflow }}
+          cache-to: type=gha, scope=${{ github.workflow }}
+          context: mod/gobuilder
+          file: docker/golang/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.prep.outputs.tags }}
   linkcheck:
     runs-on: ubuntu-latest
     steps:
