@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y ca-certificates
 
 WORKDIR /workspace
 
-COPY go.* ./
+COPY go.mod go.sum ./
 
 RUN go mod download
 
