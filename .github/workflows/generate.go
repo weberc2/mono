@@ -173,6 +173,11 @@ func main() {
 				Dockerfile: "./docker/pgbackup/Dockerfile",
 				Context:    "./docker/pgbackup",
 			},
+			&Image{
+				Name:       "linkcheck",
+				Dockerfile: "Dockerfile",
+				Context:    "mod/linkcheck",
+			},
 		),
 	); err != nil {
 		log.Fatalf("marshaling release workflow: %v", err)
