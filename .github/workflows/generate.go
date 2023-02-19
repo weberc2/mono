@@ -175,7 +175,7 @@ func main() {
 			},
 			&Image{
 				Name:       "linkcheck",
-				Dockerfile: "Dockerfile",
+				Dockerfile: "docker/golang/Dockerfile",
 				Context:    "mod/linkcheck",
 			},
 		),
