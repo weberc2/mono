@@ -120,7 +120,7 @@ jobs:
       - name: Prepare
         id: prep
         run: |-
-          DOCKER_IMAGE=${{ secrets.DOCKER_USERNAME }}/gobuilder
+          DOCKER_IMAGE=988080168334.dkr.ecr.us-east-2.amazonaws.com/gobuilder
           VERSION=latest
           SHORTREF=${GITHUB_SHA::8}
 
