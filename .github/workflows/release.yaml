@@ -48,7 +48,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           username: ${{ secrets.DOCKER_USERNAME }}
       - name: Build
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v4
         with:
           build-args: TARGET=auth
           builder: ${{ steps.buildx.outputs.name }}
@@ -101,7 +101,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           username: ${{ secrets.DOCKER_USERNAME }}
       - name: Build
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v4
         with:
           build-args: TARGET=comments
           builder: ${{ steps.buildx.outputs.name }}
@@ -155,7 +155,7 @@ jobs:
           registry: 988080168334.dkr.ecr.us-east-2.amazonaws.com
           username: ${{ secrets.GOBUILDER_AWS_ACCESS_KEY_ID }}
       - name: Build
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v4
         with:
           build-args: TARGET=gobuilder
           builder: ${{ steps.buildx.outputs.name }}
@@ -209,7 +209,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           username: ${{ secrets.DOCKER_USERNAME }}
       - name: Build
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v4
         with:
           build-args: TARGET=linkcheck
           builder: ${{ steps.buildx.outputs.name }}
@@ -262,7 +262,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           username: ${{ secrets.DOCKER_USERNAME }}
       - name: Build
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v4
         with:
           build-args: ""
           builder: ${{ steps.buildx.outputs.name }}

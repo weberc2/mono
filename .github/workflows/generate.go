@@ -258,7 +258,7 @@ func JobRelease(image *Image) Job {
 			With: image.Registry.Args(),
 		}, {
 			Name: "Build",
-			Uses: "docker/build-push-action@v2",
+			Uses: "docker/build-push-action@v4",
 			With: buildArgs,
 		}},
 	}
