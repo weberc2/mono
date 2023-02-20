@@ -155,6 +155,11 @@ func (image *Image) DockerImage() string {
 	return ""
 }
 
+func (image *Image) SetDockerfile(dockerfile string) *Image {
+	image.Dockerfile = dockerfile
+	return image
+}
+
 func GoImage(target string) *Image {
 	return &Image{
 		Name:       target,
@@ -286,6 +291,11 @@ func main() {
 			},
 			GoModImage("linkcheck"),
 			GoModImage("gobuilder").
+				// Use the Dockerfile in the module directory rather than the
+				// default Go Dockerfile (the gobuilder Dockerfile preserves
+				// the Go toolchain in the final image so it can build other
+				// images).
+				SetDockerfile("mod/gobuilder/Dockerfile").
 				SetECRRegistry("GOBUILDER").
 				// disable multiarch for lambda
 				SetSinglePlatform("linux/amd64"),
