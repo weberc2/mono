@@ -18,7 +18,7 @@ func main() {
 	}
 
 	builder := &Builder{
-		Client: s3.New(session.New()),
+		Client: s3.New(session.Must(session.NewSession())),
 		Bucket: os.Getenv("BUCKET"),
 		Prefix: bucketPrefix,
 	}

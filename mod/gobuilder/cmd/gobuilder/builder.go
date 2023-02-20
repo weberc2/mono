@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"hash/adler32"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -99,14 +98,7 @@ func (builder *Builder) Build(
 	log.Infof("validated payload")
 
 	// provision temporary working directory
-	tmpDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		return nil, fmt.Errorf(
-			"building lambda `%s`: creating temporary directory: %w",
-			payload.Name,
-			err,
-		)
-	}
+	tmpDir := os.TempDir()
 	defer func() {
 		if err := os.RemoveAll(tmpDir); err != nil {
 			log.Errorf(
