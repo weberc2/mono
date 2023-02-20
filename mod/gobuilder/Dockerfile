@@ -1,10 +1,12 @@
 FROM golang:1.19
 
-WORKDIR build
+ARG TARGET
+
+WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
-COPY *.go ./
-RUN go build -o /bin/main
+COPY ./cmd/ ./cmd/
+RUN ls && go build -o /bin/main ./cmd/${TARGET}
 
-WORKDIR run
+WORKDIR /run
 ENTRYPOINT /bin/main
