@@ -76,7 +76,18 @@ type Image struct {
 	// The build arguments.
 	Args map[string]string
 
+	// SinglePlatform is an optional field. Setting it to ${os}/${arch} will
+	// disable multiarch support. This is used for building AWS Lambda Function
+	// containers, since AWS Lambda does not support multiarch images at this
+	// time. Example: `linux/amd64`
+	SinglePlatform string
+
 	Registry Registry
+}
+
+func (i *Image) SetSinglePlatform(platform string) *Image {
+	i.SinglePlatform = platform
+	return i
 }
 
 func (i *Image) SetECRRegistry(secretPrefix string) *Image {
@@ -202,6 +213,27 @@ func tmpl(image *Image) string {
 }
 
 func JobRelease(image *Image) Job {
+	buildArgs := Args{
+		"builder": "${{ steps.buildx.outputs.name }}",
+		"build-args": func() string {
+			lines := make([]string, 0, len(image.Args))
+			for key, value := range image.Args {
+				lines = append(lines, fmt.Sprintf("%s=%s", key, value))
+			}
+			return strings.Join(lines, "\n")
+		}(),
+		"context":    image.Context,
+		"file":       image.Dockerfile,
+		"platforms":  "linux/amd64,linux/arm64",
+		"push":       true,
+		"tags":       "${{ steps.prep.outputs.tags }}",
+		"cache-from": "type=gha, scope=${{ github.workflow }}",
+		"cache-to":   "type=gha, scope=${{ github.workflow }}",
+	}
+	if image.SinglePlatform != "" {
+		buildArgs["platforms"] = image.SinglePlatform
+		buildArgs["provenance"] = false
+	}
 	return Job{
 		RunsOn: "ubuntu-latest",
 		Steps: []Step{{
@@ -227,23 +259,7 @@ func JobRelease(image *Image) Job {
 		}, {
 			Name: "Build",
 			Uses: "docker/build-push-action@v2",
-			With: Args{
-				"builder": "${{ steps.buildx.outputs.name }}",
-				"build-args": func() string {
-					lines := make([]string, 0, len(image.Args))
-					for key, value := range image.Args {
-						lines = append(lines, fmt.Sprintf("%s=%s", key, value))
-					}
-					return strings.Join(lines, "\n")
-				}(),
-				"context":    image.Context,
-				"file":       image.Dockerfile,
-				"platforms":  "linux/amd64,linux/arm64",
-				"push":       true,
-				"tags":       "${{ steps.prep.outputs.tags }}",
-				"cache-from": "type=gha, scope=${{ github.workflow }}",
-				"cache-to":   "type=gha, scope=${{ github.workflow }}",
-			},
+			With: buildArgs,
 		}},
 	}
 }
@@ -269,7 +285,10 @@ func main() {
 				Context:    "./docker/pgbackup",
 			},
 			GoModImage("linkcheck"),
-			GoModImage("gobuilder").SetECRRegistry("GOBUILDER"),
+			GoModImage("gobuilder").
+				SetECRRegistry("GOBUILDER").
+				// disable multiarch for lambda
+				SetSinglePlatform("linux/amd64"),
 		),
 	); err != nil {
 		log.Fatalf("marshaling release workflow: %v", err)
