@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -73,6 +75,73 @@ type Image struct {
 
 	// The build arguments.
 	Args map[string]string
+
+	Registry Registry
+}
+
+func (i *Image) SetECRRegistry(secretPrefix string) *Image {
+	i.Registry = Registry{
+		Type: RegistryTypeECR,
+		ECR: ECRDetails{
+			Registry: "988080168334.dkr.ecr.us-east-2.amazonaws.com",
+			Username: fmt.Sprintf(
+				"${{ secrets.%s_AWS_ACCESS_KEY_ID }}",
+				secretPrefix,
+			),
+			Password: fmt.Sprintf(
+				"${{ secrets.%s_AWS_SECRET_ACCESS_KEY }}",
+				secretPrefix,
+			),
+		},
+	}
+	return i
+}
+
+type RegistryType int
+
+const (
+	RegistryTypeDocker RegistryType = iota
+	RegistryTypeECR
+)
+
+type Registry struct {
+	Type RegistryType
+	ECR  ECRDetails
+}
+
+type ECRDetails struct {
+	Registry string
+	Username string
+	Password string
+}
+
+func (r *Registry) Args() Args {
+	if r.Type == RegistryTypeDocker {
+		return Args{
+			"username": "${{ secrets.DOCKER_USERNAME }}",
+			"password": "${{ secrets.DOCKER_PASSWORD }}",
+		}
+	}
+	if r.Type == RegistryTypeECR {
+		return Args{
+			"registry": r.ECR.Registry,
+			"username": r.ECR.Username,
+			"password": r.ECR.Password,
+		}
+	}
+	log.Fatalf("invalid registry type: %d", r.Type)
+	return nil
+}
+
+func (image *Image) DockerImage() string {
+	if image.Registry.Type == RegistryTypeDocker {
+		return fmt.Sprintf("${{ secrets.DOCKER_USERNAME }}/%s", image.Name)
+	}
+	if image.Registry.Type == RegistryTypeECR {
+		return fmt.Sprintf("%s/%s", image.Registry.ECR.Registry, image.Name)
+	}
+	log.Fatalf("invalid registry type: %d", image.Registry.Type)
+	return ""
 }
 
 func GoImage(target string) *Image {
@@ -84,16 +153,23 @@ func GoImage(target string) *Image {
 	}
 }
 
-func JobRelease(image *Image) Job {
-	return Job{
-		RunsOn: "ubuntu-latest",
-		Steps: []Step{{
-			Name: "Checkout",
-			Uses: "actions/checkout@v2",
-		}, {
-			Name: "Prepare",
-			ID:   "prep",
-			Run: fmt.Sprintf(`DOCKER_IMAGE=${{ secrets.DOCKER_USERNAME }}/%s
+func GoModImage(target string) *Image {
+	return &Image{
+		Name:       target,
+		Context:    filepath.Join("./mod", target),
+		Dockerfile: "docker/golang/Dockerfile",
+		Args:       map[string]string{"TARGET": target},
+	}
+}
+
+var releaseJobPrepareStepScriptTemplate = template.Must(
+	template.
+		New("").
+		// use different delims so GH's ${{ secrets.XYZ }} syntax doesn't
+		// collide
+		Delims("{%", "%}").
+		Parse(
+			`DOCKER_IMAGE={% .DockerImage %}
 VERSION=latest
 SHORTREF=${GITHUB_SHA::8}
 
@@ -112,7 +188,29 @@ fi
 
 # Set output parameters.
 echo ::set-output name=tags::${TAGS}
-echo ::set-output name=docker_image::${DOCKER_IMAGE}`, image.Name),
+echo ::set-output name=docker_image::${DOCKER_IMAGE}`))
+
+func tmpl(image *Image) string {
+	var sb strings.Builder
+	if err := releaseJobPrepareStepScriptTemplate.Execute(
+		&sb,
+		image,
+	); err != nil {
+		panic(err)
+	}
+	return sb.String()
+}
+
+func JobRelease(image *Image) Job {
+	return Job{
+		RunsOn: "ubuntu-latest",
+		Steps: []Step{{
+			Name: "Checkout",
+			Uses: "actions/checkout@v2",
+		}, {
+			Name: "Prepare",
+			ID:   "prep",
+			Run:  tmpl(image),
 		}, {
 			Name: "Set up QEMU",
 			Uses: "docker/setup-qemu-action@master",
@@ -124,11 +222,8 @@ echo ::set-output name=docker_image::${DOCKER_IMAGE}`, image.Name),
 		}, {
 			Name: "Login to DockerHub",
 			If:   "github.event_name != 'pull_request'",
-			Uses: "docker/login-action@v1",
-			With: Args{
-				"username": "${{ secrets.DOCKER_USERNAME }}",
-				"password": "${{ secrets.DOCKER_PASSWORD }}",
-			},
+			Uses: "docker/login-action@v2",
+			With: image.Registry.Args(),
 		}, {
 			Name: "Build",
 			Uses: "docker/build-push-action@v2",
@@ -141,7 +236,7 @@ echo ::set-output name=docker_image::${DOCKER_IMAGE}`, image.Name),
 					}
 					return strings.Join(lines, "\n")
 				}(),
-				"context":    ".",
+				"context":    image.Context,
 				"file":       image.Dockerfile,
 				"platforms":  "linux/amd64,linux/arm64",
 				"push":       true,
@@ -173,6 +268,8 @@ func main() {
 				Dockerfile: "./docker/pgbackup/Dockerfile",
 				Context:    "./docker/pgbackup",
 			},
+			GoModImage("linkcheck"),
+			GoModImage("gobuilder").SetECRRegistry("GOBUILDER"),
 		),
 	); err != nil {
 		log.Fatalf("marshaling release workflow: %v", err)
