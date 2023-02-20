@@ -73,7 +73,18 @@ func (crawler *Crawler) Crawl(base *url.URL) error {
 	}
 	crawler.seen[base.String()] = struct{}{}
 
-	rsp, err := crawler.Client.Get(base.String())
+	req, err := http.NewRequest("GET", base.String(), nil)
+	if err != nil {
+		return fmt.Errorf(
+			"checking links for url `%s`: preparing HTTP request: %w",
+			base,
+			err,
+		)
+	}
+
+	req.Header.Set("User-Agent", "linkcheck/1.0")
+
+	rsp, err := crawler.Client.Do(req)
 	if err != nil {
 		return fmt.Errorf("checking links for url `%s`: %w", base, err)
 	}
