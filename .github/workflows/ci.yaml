@@ -81,11 +81,11 @@ jobs:
       - name: Workflows
         id: workflows
         run: |
+          go run ./mod/actionsgenerator/cmd/actionsgenerator > release.yaml
           cd .github/workflows
-          go run generate.go > release.yaml
           if [ -n "$(git diff)" ]; then
             echo "change detected in .github/workflows/release.yaml."
-            echo "please run go run .github/workflows/generate.go > .github/workflows/release.yaml"
+            echo "please run go run ./mod/actionsgenerator/cmd/actionsgenerator > .github/workflows/release.yaml"
             echo ""
             git diff
             exit 1
