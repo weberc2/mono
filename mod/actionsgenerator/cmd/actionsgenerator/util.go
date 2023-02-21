@@ -7,6 +7,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// MarshalToWriter marshals `v` and writes the result directly to `w`.
 func MarshalToWriter(w io.Writer, v interface{}) error {
 	yamlEncoder := yaml.NewEncoder(w)
 	yamlEncoder.SetIndent(2) // this is what you're looking for

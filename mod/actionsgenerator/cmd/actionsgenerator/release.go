@@ -6,6 +6,7 @@ import (
 	"text/template"
 )
 
+// WorkflowRelease builds a job for releasing container images.
 func WorkflowRelease(images ...*Image) Workflow {
 	jobs := make(map[string]Job, len(images))
 	for _, image := range images {
@@ -23,6 +24,7 @@ func WorkflowRelease(images ...*Image) Workflow {
 	}
 }
 
+// JobRelease builds a job for releasing container images.
 func JobRelease(image *Image) Job {
 	buildArgs := Args{
 		"builder": "${{ steps.buildx.outputs.name }}",

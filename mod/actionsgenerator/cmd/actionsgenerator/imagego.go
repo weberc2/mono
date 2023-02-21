@@ -2,6 +2,9 @@ package main
 
 import "path/filepath"
 
+// GoImage creates an `Image` parameterized for a Go target.
+//
+// Deprecated: Use GoModImage instead
 func GoImage(target string) *Image {
 	return &Image{
 		Name:       target,
@@ -11,6 +14,8 @@ func GoImage(target string) *Image {
 	}
 }
 
+// GoModImage creates an `Image` parameterized for a Go module target. The
+// target project should be under the `/mod` directory.
 func GoModImage(target string) *Image {
 	return &Image{
 		Name:       target,
