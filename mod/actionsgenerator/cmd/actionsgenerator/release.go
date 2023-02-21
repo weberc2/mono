@@ -49,7 +49,7 @@ func JobRelease(image *Image) Job {
 		RunsOn: "ubuntu-latest",
 		Steps: []Step{{
 			Name: "Checkout",
-			Uses: "actions/checkout@v2",
+			Uses: "actions/checkout@v3",
 		}, {
 			Name: "Prepare",
 			ID:   "prep",
