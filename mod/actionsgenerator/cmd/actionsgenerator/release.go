@@ -84,7 +84,7 @@ var releaseJobPrepareStepScriptTemplate = template.Must(
 		// collide
 		Delims("{%", "%}").
 		Parse(
-			`DOCKER_IMAGE={% .DockerImage %}
+			`DOCKER_IMAGE={% .FullName %}
 VERSION=latest
 SHORTREF=${GITHUB_SHA::8}
 
