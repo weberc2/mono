@@ -14,24 +14,6 @@ const (
 	RegistryTypeECR
 )
 
-// ECRDetails holds the identifier and credentials for the ECR registry.
-type ECRDetails struct {
-	// Registry is the identifier for the ECR registry.
-	Registry string
-
-	// Username is the username for the ECR registry. This should always be a
-	// string like `"${{ secrets.APP_NAME_AWS_ACCESS_KEY_ID}}`, which tells
-	// GitHub Actions to pull the actual username value out of its secrets
-	// store.
-	Username string
-
-	// Password is the password for the ECR registry. This should always be a
-	// string like `"${{ secrets.APP_NAME_AWS_SECRET_ACCESS_KEY }}`, which
-	// tells GitHub Actions to pull the actual password value out of its
-	// secrets store.
-	Password string
-}
-
 // Registry holds the details for pushing to the target registry.
 type Registry struct {
 	// Type indicates the type of the registry (ECR, Docker, etc).
