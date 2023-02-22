@@ -23,7 +23,12 @@ func main() {
 				// the Go toolchain in the final image so it can build other
 				// images).
 				SetDockerfile("mod/gobuilder/Dockerfile").
-				SetECRRegistry("GOBUILDER").
+				SetRegistry(&Registry{
+					Type:           RegistryTypeECR,
+					ID:             "988080168334.dkr.ecr.us-east-2.amazonaws.com",
+					UsernameSecret: "GOBUILDER_AWS_ACCESS_KEY_ID",
+					PasswordSecret: "GOBUILDER_AWS_SECRET_ACCESS_KEY",
+				}).
 				// disable multiarch for lambda
 				SetSinglePlatform("linux/amd64"),
 		),

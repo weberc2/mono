@@ -1,6 +1,6 @@
 package main
 
-import "log"
+import "fmt"
 
 // RegistryType is the type of ImageRegistry
 type RegistryType int
@@ -37,27 +37,34 @@ type Registry struct {
 	// Type indicates the type of the registry (ECR, Docker, etc).
 	Type RegistryType
 
-	// ECRDetails holds additional parameters for authenticating with an ECR
-	// registry. It's empty unless the type is `RegistryTypeECR`.
-	ECR ECRDetails
+	// ID holds the identifier for the target ECR registry. This is optional
+	// only for the official Docker registry (not for private instances of the
+	// Docker registry).
+	ID string
+
+	// UsernameSecret holds the name of the secret to be provided as the
+	// `username` field to the docker/build-push-image action. For ECR registry
+	// types, this should hold the name of a secret containing the access key
+	// ID for the AWS IAM user with permissions to push the image.
+	UsernameSecret string
+
+	// PasswordSecret holds the name of the secret to be provided as the
+	// `password` field to the docker/build-push-image action. For ECR registry
+	// types, this should hold the name of a secret containing the secret
+	// access key for the AWS IAM user with permissions to push the image.
+	PasswordSecret string
 }
 
 // Args builds an `Args` which will be dropped into the docker/build-push-image
 // action configuration.
 func (r *Registry) Args() Args {
-	if r.Type == RegistryTypeDocker {
-		return Args{
-			"username": "${{ secrets.DOCKER_USERNAME }}",
-			"password": "${{ secrets.DOCKER_PASSWORD }}",
-		}
+	args := Args{
+		"username": fmt.Sprintf("${{ secrets.%s }}", r.UsernameSecret),
+		"password": fmt.Sprintf("${{ secrets.%s }}", r.PasswordSecret),
 	}
-	if r.Type == RegistryTypeECR {
-		return Args{
-			"registry": r.ECR.Registry,
-			"username": r.ECR.Username,
-			"password": r.ECR.Password,
-		}
+	if r.Type == RegistryTypeDocker && r.ID == "" {
+		return args
 	}
-	log.Fatalf("invalid registry type: %d", r.Type)
-	return nil
+	args["registry"] = r.ID
+	return args
 }

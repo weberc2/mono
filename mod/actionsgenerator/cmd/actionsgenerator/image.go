@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 )
 
 // Image represents a container image to be built.
@@ -43,25 +42,9 @@ func (image *Image) SetDockerfile(dockerfile string) *Image {
 	return image
 }
 
-// SetECRRegistry sets the registry to an ECR registry. The `secretPrefix`
-// parameter will be prepended to `_AWS_ACCESS_KEY_ID` and
-// `_AWS_SECRET_ACCESS_KEY` to determine which GitHub Action secrets to use to
-// authenticate with AWS.
-func (image *Image) SetECRRegistry(secretPrefix string) *Image {
-	image.Registry = Registry{
-		Type: RegistryTypeECR,
-		ECR: ECRDetails{
-			Registry: "988080168334.dkr.ecr.us-east-2.amazonaws.com",
-			Username: fmt.Sprintf(
-				"${{ secrets.%s_AWS_ACCESS_KEY_ID }}",
-				secretPrefix,
-			),
-			Password: fmt.Sprintf(
-				"${{ secrets.%s_AWS_SECRET_ACCESS_KEY }}",
-				secretPrefix,
-			),
-		},
-	}
+// SetRegistry sets the Registry field.
+func (image *Image) SetRegistry(registry *Registry) *Image {
+	image.Registry = *registry
 	return image
 }
 
@@ -69,11 +52,14 @@ func (image *Image) SetECRRegistry(secretPrefix string) *Image {
 // prefix).
 func (image *Image) FullName() string {
 	if image.Registry.Type == RegistryTypeDocker {
-		return fmt.Sprintf("${{ secrets.DOCKER_USERNAME }}/%s", image.Name)
+		if image.Registry.ID == "" {
+			return fmt.Sprintf("${{ secrets.DOCKER_USERNAME }}/%s", image.Name)
+		}
+		return fmt.Sprintf(
+			"%s/${{ secrets.DOCKER_USERNAME }}/%s",
+			image.Registry.ID,
+			image.Name,
+		)
 	}
-	if image.Registry.Type == RegistryTypeECR {
-		return fmt.Sprintf("%s/%s", image.Registry.ECR.Registry, image.Name)
-	}
-	log.Fatalf("invalid registry type: %d", image.Registry.Type)
-	return ""
+	return fmt.Sprintf("%s/%s", image.Registry.ID, image.Name)
 }
