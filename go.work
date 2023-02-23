@@ -1,7 +1,6 @@
 go 1.19
 
 use (
-	.
 	./mod/actionsgenerator
 	./mod/comments
 	./mod/es512
