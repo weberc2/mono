@@ -65,10 +65,18 @@ jobs:
       #       golangci-lint run
       - name: Vet
         id: vet
-        run: go vet -v ./...
+        run: |-
+          go vet -v ./...
+          for dir in $(ls ./mod); do
+            (cd $dir && go vet -v ./...)
+          done
       - name: Test
         id: test
-        run: go test -v ./...
+        run: |-
+          go test -v ./...
+          for dir in $(ls ./mod); do
+            (cd $dir && go test -v ./...)
+          done
         env:
           PG_PASS: password
           PG_USER: postgres
@@ -77,7 +85,11 @@ jobs:
           PG_HOST: postgres
       - name: Build
         id: build
-        run: go build ./...
+        run: |-
+          go build -v ./...
+          for dir in $(ls ./mod); do
+            (cd $dir && go build -v ./...)
+          done
       - name: Workflows
         id: workflows
         run: |
