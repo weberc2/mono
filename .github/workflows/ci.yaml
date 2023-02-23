@@ -66,7 +66,6 @@ jobs:
       - name: Vet
         id: vet
         run: |-
-          go vet -v ./...
           for dir in $(ls ./mod); do
             echo ""
             echo "##################"
@@ -77,7 +76,6 @@ jobs:
       - name: Test
         id: test
         run: |-
-          go test -v ./...
           for dir in $(ls ./mod); do
             echo ""
             echo "##################"
@@ -94,7 +92,6 @@ jobs:
       - name: Build
         id: build
         run: |-
-          go build -v ./...
           for dir in $(ls ./mod); do
             echo ""
             echo "###################"
@@ -105,11 +102,11 @@ jobs:
       - name: Workflows
         id: workflows
         run: |
-          go run ./mod/actionsgenerator/cmd/actionsgenerator > release.yaml
+          (cd mod/actionsgenerator/ && go run ./cmd/actionsgenerator > ../../.github/workflows/release.yaml)
           cd .github/workflows
           if [ -n "$(git diff)" ]; then
             echo "change detected in .github/workflows/release.yaml."
-            echo "please run go run ./mod/actionsgenerator/cmd/actionsgenerator > .github/workflows/release.yaml"
+            echo "please run `(cd mod/actionsgenerator/ && go run ./cmd/actionsgenerator > ../../.github/workflows/release.yaml)`"
             echo ""
             git diff
             exit 1
