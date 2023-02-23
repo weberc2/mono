@@ -8,6 +8,4 @@ use (
 	./mod/es512
 	./mod/gobuilder
 	./mod/linkcheck
-	./mod/tokens
-	./mod/users
 )

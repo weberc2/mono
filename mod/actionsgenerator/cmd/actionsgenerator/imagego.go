@@ -4,11 +4,11 @@ import "path/filepath"
 
 // GoImage creates an `Image` parameterized for a Go module target. The target
 // project should be under the `/mod` directory.
-func GoImage(target string) *Image {
+func GoImage(module, pkg string) *Image {
 	return &Image{
-		Name:       target,
-		Context:    filepath.Join("./mod", target),
+		Name:       pkg,
+		Context:    filepath.Join("./mod", module),
 		Dockerfile: "docker/golang/Dockerfile",
-		Args:       map[string]string{"TARGET": target},
+		Args:       map[string]string{"TARGET": pkg},
 	}
 }

@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/weberc2/mono/mod/tokens/pkg/pgtokenstore"
+	"github.com/weberc2/mono/mod/auth/pkg/pgtokenstore"
 	"github.com/weberc2/mono/pkg/pgutil/cli"
 )
 
