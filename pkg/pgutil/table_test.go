@@ -7,7 +7,7 @@ import (
 	"time"
 
 	pz "github.com/weberc2/httpeasy"
-	"github.com/weberc2/mono/mod/auth/pkg/auth/types"
+	"github.com/weberc2/mono/mod/comments/pkg/auth/types"
 )
 
 func TestTable_Page(t *testing.T) {

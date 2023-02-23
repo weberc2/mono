@@ -3,7 +3,6 @@ go 1.19
 use (
 	.
 	./mod/actionsgenerator
-	./mod/auth
 	./mod/comments
 	./mod/es512
 	./mod/gobuilder

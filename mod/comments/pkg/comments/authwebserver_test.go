@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	pz "github.com/weberc2/httpeasy"
-	"github.com/weberc2/mono/mod/auth/pkg/auth/client"
+	"github.com/weberc2/mono/mod/comments/pkg/auth/client"
 	"github.com/weberc2/mono/mod/comments/pkg/comments/testsupport"
 )
 

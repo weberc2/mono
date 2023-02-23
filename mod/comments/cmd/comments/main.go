@@ -14,7 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	pz "github.com/weberc2/httpeasy"
-	"github.com/weberc2/mono/mod/auth/pkg/auth/client"
+	"github.com/weberc2/mono/mod/comments/pkg/auth/client"
 	"github.com/weberc2/mono/mod/comments/pkg/comments"
 	"github.com/weberc2/mono/mod/comments/pkg/comments/types"
 	"github.com/weberc2/mono/mod/comments/pkg/pgcommentsstore"

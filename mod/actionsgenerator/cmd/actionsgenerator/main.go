@@ -14,8 +14,9 @@ func main() {
 				Dockerfile: "./docker/pgbackup/Dockerfile",
 				Context:    "./docker/pgbackup",
 			},
-			GoImage("auth", "auth"),
-			GoImage("auth", "users"),
+			GoImage("comments", "auth"),
+			GoImage("comments", "tokens"),
+			GoImage("comments", "users"),
 			GoImage("comments", "comments"),
 			GoImage("linkcheck", "linkcheck"),
 			GoImage("gobuilder", "gobuilder").
