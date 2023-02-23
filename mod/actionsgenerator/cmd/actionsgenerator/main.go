@@ -11,13 +11,14 @@ func main() {
 		WorkflowRelease(
 			GoImage("auth"),
 			GoImage("comments"),
+			GoImage("users"),
 			&Image{
 				Name:       "pgbackup",
 				Dockerfile: "./docker/pgbackup/Dockerfile",
 				Context:    "./docker/pgbackup",
 			},
-			GoModImage("linkcheck"),
-			GoModImage("gobuilder").
+			GoImage("linkcheck"),
+			GoImage("gobuilder").
 				// Use the Dockerfile in the module directory rather than the
 				// default Go Dockerfile (the gobuilder Dockerfile preserves
 				// the Go toolchain in the final image so it can build other
