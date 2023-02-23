@@ -68,7 +68,10 @@ jobs:
         run: |-
           go vet -v ./...
           for dir in $(ls ./mod); do
-            echo "vetting mod/$dir"
+            echo ""
+            echo "##################"
+            echo "# vetting mod/$dir"
+            echo "##################"
             (cd mod/$dir && go vet -v ./...)
           done
       - name: Test
@@ -76,7 +79,10 @@ jobs:
         run: |-
           go test -v ./...
           for dir in $(ls ./mod); do
-            echo "testing mod/$dir"
+            echo ""
+            echo "##################"
+            echo "# testing mod/$dir"
+            echo "##################"
             (cd mod/$dir && go test -v ./...)
           done
         env:
@@ -90,7 +96,10 @@ jobs:
         run: |-
           go build -v ./...
           for dir in $(ls ./mod); do
-            echo "building mod/$dir"
+            echo ""
+            echo "###################"
+            echo "# building mod/$dir"
+            echo "###################"
             (cd mod/$dir && go build -v ./...)
           done
       - name: Workflows

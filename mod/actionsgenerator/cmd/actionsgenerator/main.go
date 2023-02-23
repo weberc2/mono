@@ -9,15 +9,17 @@ func main() {
 	if err := MarshalToWriter(
 		os.Stdout,
 		WorkflowRelease(
-			GoImage("auth"),
-			GoImage("comments"),
 			&Image{
 				Name:       "pgbackup",
 				Dockerfile: "./docker/pgbackup/Dockerfile",
 				Context:    "./docker/pgbackup",
 			},
-			GoModImage("linkcheck"),
-			GoModImage("gobuilder").
+			GoImage("comments", "auth"),
+			GoImage("comments", "tokens"),
+			GoImage("comments", "users"),
+			GoImage("comments", "comments"),
+			GoImage("linkcheck", "linkcheck"),
+			GoImage("gobuilder", "gobuilder").
 				// Use the Dockerfile in the module directory rather than the
 				// default Go Dockerfile (the gobuilder Dockerfile preserves
 				// the Go toolchain in the final image so it can build other
