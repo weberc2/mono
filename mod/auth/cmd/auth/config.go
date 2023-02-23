@@ -19,8 +19,8 @@ import (
 	pz "github.com/weberc2/httpeasy"
 	"github.com/weberc2/mono/mod/auth/pkg/auth"
 	"github.com/weberc2/mono/mod/auth/pkg/auth/types"
-	"github.com/weberc2/mono/mod/auth/pkg/pgtokenstore"
 	"github.com/weberc2/mono/mod/auth/pkg/pguserstore"
+	"github.com/weberc2/mono/mod/tokens/pkg/pgtokenstore"
 	"gopkg.in/yaml.v2"
 )
 
