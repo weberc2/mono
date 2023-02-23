@@ -3,6 +3,7 @@ go 1.19
 use (
 	.
 	./mod/actionsgenerator
+	./mod/es512
 	./mod/gobuilder
 	./mod/linkcheck
 )
