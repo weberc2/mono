@@ -7,7 +7,7 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/weberc2/mono/mod/comments/pkg/auth/types"
-	"github.com/weberc2/mono/pkg/pgutil"
+	"github.com/weberc2/mono/mod/comments/pkg/pgutil"
 )
 
 type PGTokenStore sql.DB

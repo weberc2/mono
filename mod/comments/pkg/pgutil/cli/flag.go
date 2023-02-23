@@ -7,7 +7,7 @@ import (
 
 	"github.com/gosimple/slug"
 	"github.com/urfave/cli/v2"
-	"github.com/weberc2/mono/pkg/pgutil"
+	"github.com/weberc2/mono/mod/comments/pkg/pgutil"
 )
 
 func insertFlags(t *pgutil.Table) []cli.Flag {

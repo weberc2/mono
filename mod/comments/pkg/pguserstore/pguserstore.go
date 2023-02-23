@@ -6,7 +6,7 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/weberc2/mono/mod/comments/pkg/auth/types"
-	"github.com/weberc2/mono/pkg/pgutil"
+	"github.com/weberc2/mono/mod/comments/pkg/pgutil"
 )
 
 // PGUserStore is a postgres implementation of `types.UserStore`.

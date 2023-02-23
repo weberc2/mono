@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/urfave/cli/v2"
-	"github.com/weberc2/mono/pkg/pgutil"
+	"github.com/weberc2/mono/mod/comments/pkg/pgutil"
 )
 
 // New creates a new CLI app for a given `pgutil.Table` schema.

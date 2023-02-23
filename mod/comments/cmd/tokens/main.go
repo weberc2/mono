@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/weberc2/mono/mod/comments/pkg/pgtokenstore"
-	"github.com/weberc2/mono/pkg/pgutil/cli"
+	"github.com/weberc2/mono/mod/comments/pkg/pgutil/cli"
 )
 
 func main() {
