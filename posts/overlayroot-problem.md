@@ -1,6 +1,7 @@
 ---
 Title: Overlayroot Problem Statement
 Date: 2023-03-03
+Tags: [homelab]
 ---
 
 This week I've been looking at `overlayroot` as a potential solution to reduce
