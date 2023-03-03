@@ -66,22 +66,22 @@ jobs:
       - name: Vet
         id: vet
         run: |-
-          for dir in $(ls ./mod); do
+          for dir in $(ls ./); do
             echo ""
             echo "##################"
-            echo "# vetting mod/$dir"
+            echo "# vetting $dir"
             echo "##################"
-            (cd mod/$dir && go vet -v ./...)
+            (cd $dir && go vet -v ./...)
           done
       - name: Test
         id: test
         run: |-
-          for dir in $(ls ./mod); do
+          for dir in $(ls ./); do
             echo ""
             echo "##################"
-            echo "# testing mod/$dir"
+            echo "# testing $dir"
             echo "##################"
-            (cd mod/$dir && go test -v ./...)
+            (cd $dir && go test -v ./...)
           done
         env:
           PG_PASS: password
@@ -92,21 +92,21 @@ jobs:
       - name: Build
         id: build
         run: |-
-          for dir in $(ls ./mod); do
+          for dir in $(ls ./); do
             echo ""
             echo "###################"
-            echo "# building mod/$dir"
+            echo "# building $dir"
             echo "###################"
-            (cd mod/$dir && go build -v ./...)
+            (cd $dir && go build -v ./...)
           done
       - name: Workflows
         id: workflows
         run: |
-          (cd mod/actionsgenerator/ && go run ./cmd/actionsgenerator > ../../.github/workflows/release.yaml)
+          (cd actionsgenerator/ && go run ./cmd/actionsgenerator > ../../.github/workflows/release.yaml)
           cd .github/workflows
           if [ -n "$(git diff)" ]; then
             echo "change detected in .github/workflows/release.yaml."
-            echo "please run `(cd mod/actionsgenerator/ && go run ./cmd/actionsgenerator > ../../.github/workflows/release.yaml)`"
+            echo "please run `(cd actionsgenerator/ && go run ./cmd/actionsgenerator > ../../.github/workflows/release.yaml)`"
             echo ""
             git diff
             exit 1
