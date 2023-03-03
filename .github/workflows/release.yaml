@@ -54,7 +54,7 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
-          context: mod/comments
+          context: comments
           file: docker/golang/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
@@ -107,7 +107,7 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
-          context: mod/comments
+          context: comments
           file: docker/golang/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
@@ -161,8 +161,8 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
-          context: mod/gobuilder
-          file: mod/gobuilder/Dockerfile
+          context: gobuilder
+          file: gobuilder/Dockerfile
           platforms: linux/amd64
           provenance: false
           push: true
@@ -215,7 +215,7 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
-          context: mod/linkcheck
+          context: linkcheck
           file: docker/golang/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
@@ -321,7 +321,7 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
-          context: mod/comments
+          context: comments
           file: docker/golang/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
@@ -374,7 +374,7 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
-          context: mod/comments
+          context: comments
           file: docker/golang/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
