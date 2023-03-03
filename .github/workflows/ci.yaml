@@ -67,6 +67,9 @@ jobs:
         id: vet
         run: |-
           for dir in $(ls ./); do
+            if [ ! -d $dir ] || [ ! -f $dir/go.mod ]; then
+              break
+            fi
             echo ""
             echo "##################"
             echo "# vetting $dir"
@@ -77,6 +80,9 @@ jobs:
         id: test
         run: |-
           for dir in $(ls ./); do
+            if [ ! -d $dir ] || [ ! -f $dir/go.mod ]; then
+              break
+            fi
             echo ""
             echo "##################"
             echo "# testing $dir"
@@ -93,6 +99,9 @@ jobs:
         id: build
         run: |-
           for dir in $(ls ./); do
+            if [ ! -d $dir ] || [ ! -f $dir/go.mod ]; then
+              break
+            fi
             echo ""
             echo "###################"
             echo "# building $dir"
