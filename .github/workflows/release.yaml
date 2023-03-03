@@ -162,7 +162,7 @@ jobs:
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
           context: gobuilder
-          file: mod/gobuilder/Dockerfile
+          file: gobuilder/Dockerfile
           platforms: linux/amd64
           provenance: false
           push: true

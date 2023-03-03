@@ -24,7 +24,7 @@ func main() {
 				// default Go Dockerfile (the gobuilder Dockerfile preserves
 				// the Go toolchain in the final image so it can build other
 				// images).
-				SetDockerfile("mod/gobuilder/Dockerfile").
+				SetDockerfile("gobuilder/Dockerfile").
 				SetRegistry(&Registry{
 					Type:           RegistryTypeECR,
 					ID:             "988080168334.dkr.ecr.us-east-2.amazonaws.com",
