@@ -1,12 +1,12 @@
 ---
 Title: Overlayroot Problem Statement
-Date: 2023-03-02
+Date: 2023-03-03
 ---
 
 This week I've been looking at `overlayroot` as a potential solution to reduce
 the effort to make changes to the nodes in my Raspberry Pi cluster. In this
-post I want to talk about the problem I'm hoping it solves and the problems
-I'm running into with respect to implementing `overlayroot` as well as
+post I want to brain-dump about the problem I'm hoping it solves and the
+problems I'm running into with respect to implementing `overlayroot` as well as
 potential solutions that I'm exploring.
 
 <!-- more -->
