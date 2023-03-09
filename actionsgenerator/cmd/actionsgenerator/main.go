@@ -5,26 +5,24 @@ import (
 	"os"
 )
 
-func main() {
-	if err := MarshalToWriter(
-		os.Stdout,
-		WorkflowRelease(
-			&Image{
-				Name:       "pgbackup",
-				Dockerfile: "./docker/pgbackup/Dockerfile",
-				Context:    "./docker/pgbackup",
-			},
-			&Image{
-				Name:       "blog",
-				Dockerfile: "./docker/blog/Dockerfile",
-				Context:    "blog",
-			},
-			GoImage("comments", "auth"),
-			GoImage("comments", "tokens"),
-			GoImage("comments", "users"),
-			GoImage("comments", "comments"),
-			GoImage("linkcheck", "linkcheck"),
-			GoImage("gobuilder", "gobuilder").
+var workflows = []Workflow{
+	(*GoModule).Workflow(&GoModule{
+		Name: "comments",
+		Images: []GoModuleImage{
+			GoModImage("auth"),
+			GoModImage("tokens"),
+			GoModImage("users"),
+			GoModImage("comments"),
+		},
+	}),
+	(*GoModule).Workflow(&GoModule{
+		Name:   "linkcheck",
+		Images: []GoModuleImage{GoModImage("linkcheck")},
+	}),
+	(*GoModule).Workflow(&GoModule{
+		Name: "gobuilder",
+		Images: []GoModuleImage{
+			GoModImage("gobuilder").
 				// Use the Dockerfile in the module directory rather than the
 				// default Go Dockerfile (the gobuilder Dockerfile preserves
 				// the Go toolchain in the final image so it can build other
@@ -38,8 +36,29 @@ func main() {
 				}).
 				// disable multiarch for lambda
 				SetSinglePlatform("linux/amd64"),
-		),
-	); err != nil {
-		log.Fatalf("marshaling release workflow: %v", err)
+		},
+	}),
+	ImageWorkflow(&Image{
+		Name:       "pgbackup",
+		Dockerfile: "./docker/pgbackup/Dockerfile",
+		Context:    "./docker/pgbackup",
+	}),
+	ImageWorkflow(&Image{
+		Name:       "blog",
+		Dockerfile: "./docker/blog/Dockerfile",
+		Context:    "blog",
+	}),
+}
+
+func ImageWorkflow(image *Image) Workflow {
+	return *NewWorkflow("pgbackup").
+		WithJob("build/push image", JobRelease(image))
+}
+
+func main() {
+	for _, workflow := range workflows {
+		if err := MarshalWorkflow(os.Args[1], &workflow); err != nil {
+			log.Fatal(err)
+		}
 	}
 }

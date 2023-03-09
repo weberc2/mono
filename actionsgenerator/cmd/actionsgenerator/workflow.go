@@ -62,3 +62,19 @@ type Workflow struct {
 	// Jobs is the list of Jobs to execute which constitute the workflow.
 	Jobs map[string]Job
 }
+
+func NewWorkflow(name string) *Workflow {
+	return &Workflow{
+		Name: name,
+		On: Trigger{Push: PushTrigger{
+			Branches: []string{"*"},
+			Tags:     []string{"*"},
+		}},
+		Jobs: map[string]Job{},
+	}
+}
+
+func (workflow *Workflow) WithJob(name string, job Job) *Workflow {
+	workflow.Jobs[name] = job
+	return workflow
+}
