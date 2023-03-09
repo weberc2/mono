@@ -15,9 +15,9 @@ func main() {
 				Context:    "./docker/pgbackup",
 			},
 			&Image{
-				Name: "blog",
+				Name:       "blog",
 				Dockerfile: "./docker/blog/Dockerfile",
-				Context: "blog",
+				Context:    "blog",
 			},
 			GoImage("comments", "auth"),
 			GoImage("comments", "tokens"),
