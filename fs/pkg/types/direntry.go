@@ -4,5 +4,5 @@ type DirEntry struct {
 	Ino      Ino
 	FileType FileType
 	NameLen  uint8
-	Name     string
+	Name     []byte
 }

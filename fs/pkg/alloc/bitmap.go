@@ -1,6 +1,9 @@
-package types
+package alloc
 
-import "github.com/weberc2/mono/fs/pkg/math"
+import (
+	"github.com/weberc2/mono/fs/pkg/math"
+	. "github.com/weberc2/mono/fs/pkg/types"
+)
 
 const bitsPerByte = 8
 
@@ -8,11 +11,11 @@ type Bitmap struct {
 	bytes []byte
 }
 
-func NewBitmap(size Byte) Bitmap {
+func New(size Byte) Bitmap {
 	return Bitmap{make([]byte, math.DivRoundUp(size, bitsPerByte))}
 }
 
-func (bm *Bitmap) Alloc() (uint64, bool) {
+func (bm Bitmap) Alloc() (uint64, bool) {
 	i, bit, ok := bytesFirstZero(bm.bytes)
 	if !ok {
 		return 0, false
@@ -21,10 +24,17 @@ func (bm *Bitmap) Alloc() (uint64, bool) {
 	return uint64(i*bitsPerByte) + uint64(bit), true
 }
 
-func (bm *Bitmap) Free(value uint64) {
+func (bm Bitmap) Free(value uint64) {
 	b := &bm.bytes[value/bitsPerByte]
 	*b = byteSetLow(*b, uint8(value%bitsPerByte))
 }
+
+func (bm Bitmap) Reserve(value uint64) {
+	b := &bm.bytes[value/bitsPerByte]
+	*b = byteSetHigh(*b, uint8(value%bitsPerByte))
+}
+
+func (bm Bitmap) Bytes() []byte { return bm.bytes }
 
 func bytesFirstZero(bytes []byte) (int, uint8, bool) {
 	for i, byt := range bytes {

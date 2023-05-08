@@ -1,0 +1,2 @@
+- [ ] Write tests for reader and writer
+- [ ] Fix the broken readwriter abstraction (I don't want to have to explicitly invoke `rw.Writer()` and `rw.Reader()` just to pass readers and writers around, and I really don't want to have to save temp variables just to take a reference)

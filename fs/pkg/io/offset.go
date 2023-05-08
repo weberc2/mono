@@ -57,7 +57,7 @@ type OffsetVolume struct {
 	offset Byte
 }
 
-func NewVolume(inner Volume, offset Byte) *OffsetVolume {
+func NewOffsetVolume(inner Volume, offset Byte) *OffsetVolume {
 	return &OffsetVolume{inner: inner, offset: offset}
 }
 

@@ -11,15 +11,15 @@ import (
 )
 
 type Writer struct {
-	physicalReader physical.Reader
-	byteWriter     io.WriteAt
+	physicalReadWriter physical.ReadWriter
+	byteWriter         io.WriteAt
 }
 
-func NewWriter(physicalReader physical.Reader, byteWriter io.WriteAt) Writer {
-	return Writer{physicalReader: physicalReader, byteWriter: byteWriter}
+func NewWriter(physical physical.ReadWriter, byteWriter io.WriteAt) Writer {
+	return Writer{physicalReadWriter: physical, byteWriter: byteWriter}
 }
 
-func (w *Writer) WriteBlock(
+func (w *Writer) Write(
 	inode *Inode,
 	block Block,
 	offset Byte,
@@ -31,7 +31,7 @@ func (w *Writer) WriteBlock(
 
 	n := math.Min(BlockSize-offset, Byte(len(buf)))
 
-	physicalBlock, err := w.physicalReader.ReadPhysical(inode, block)
+	physicalBlock, err := w.physicalReadWriter.ReadAlloc(inode, block)
 	if err != nil {
 		return 0, fmt.Errorf(
 			"reading `%d` bytes from inode `%d` block `%d` at offset `%d`: "+
@@ -41,18 +41,6 @@ func (w *Writer) WriteBlock(
 			block,
 			offset,
 			err,
-		)
-	}
-
-	if physicalBlock == BlockNil {
-		return 0, fmt.Errorf(
-			"reading `%d` bytes from inode `%d` block `%d` at offset `%d`: "+
-				"physical block is invalid: %w",
-			n,
-			inode.Ino,
-			block,
-			offset,
-			stdio.EOF,
 		)
 	}
 

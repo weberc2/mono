@@ -8,6 +8,8 @@ const (
 	DirectBlocksCount Block = 12
 	InodeSize         Byte  = 512
 	InoSize           Byte  = 8
+	InoNil            Ino   = 0
+	InoRoot           Ino   = 1
 )
 
 type Inode struct {
@@ -33,6 +35,29 @@ const (
 	FileTypeSocket
 	FileTypeSymlink
 )
+
+func (ft FileType) String() string {
+	switch ft {
+	case FileTypeInvalid:
+		return "Invalid"
+	case FileTypeRegular:
+		return "Regular"
+	case FileTypeDir:
+		return "Dir"
+	case FileTypeCharDev:
+		return "CharDev"
+	case FileTypeBlockDev:
+		return "BlockDev"
+	case FileTypeFifo:
+		return "Fifo"
+	case FileTypeSocket:
+		return "Socket"
+	case FileTypeSymlink:
+		return "Symlink"
+	default:
+		panic(fmt.Sprintf("invalid file type: `%d`", ft))
+	}
+}
 
 func (ft FileType) Validate() error {
 	if ft <= FileTypeInvalid || ft > FileTypeSymlink {

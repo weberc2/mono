@@ -7,26 +7,41 @@ import (
 )
 
 type ReadWriter struct {
-	physicalReader physical.Reader
-	volume         io.Volume
+	physicalReadWriter physical.ReadWriter
+	volume             io.Volume
 }
 
-func (rw *ReadWriter) ReadBlock(
+func NewReadWriter(
+	readWriter physical.ReadWriter,
+	volume io.Volume,
+) ReadWriter {
+	return ReadWriter{readWriter, volume}
+}
+
+func (rw *ReadWriter) Reader() Reader {
+	return NewReader(rw.physicalReadWriter.Reader(), rw.volume)
+}
+
+func (rw *ReadWriter) Writer() Writer {
+	return NewWriter(rw.physicalReadWriter, rw.volume)
+}
+
+func (rw *ReadWriter) Read(
 	inode *Inode,
 	block Block,
 	offset Byte,
 	buf []byte,
 ) (Byte, error) {
-	r := NewReader(rw.physicalReader, rw.volume)
-	return r.ReadBlock(inode, block, offset, buf)
+	r := NewReader(rw.physicalReadWriter.Reader(), rw.volume)
+	return r.Read(inode, block, offset, buf)
 }
 
-func (rw *ReadWriter) WriteBlock(
+func (rw *ReadWriter) Write(
 	inode *Inode,
 	block Block,
 	offset Byte,
 	buf []byte,
 ) (Byte, error) {
-	w := NewWriter(rw.physicalReader, rw.volume)
-	return w.WriteBlock(inode, block, offset, buf)
+	w := NewWriter(rw.physicalReadWriter, rw.volume)
+	return w.Write(inode, block, offset, buf)
 }

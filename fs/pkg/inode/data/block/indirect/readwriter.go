@@ -31,3 +31,7 @@ func (rw ReadWriter) WriteIndirect(
 func (rw ReadWriter) Reader() Reader {
 	return Reader{rw.volume}
 }
+
+func (rw ReadWriter) Writer() Writer {
+	return Writer{rw.volume}
+}

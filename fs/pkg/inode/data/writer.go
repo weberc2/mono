@@ -13,6 +13,10 @@ type Writer struct {
 	inodeStore  InodeStore
 }
 
+func NewWriter(blockWriter block.Writer, inodeStore InodeStore) Writer {
+	return Writer{blockWriter, inodeStore}
+}
+
 func (w *Writer) Write(inode *Inode, offset Byte, b []byte) (Byte, error) {
 	var chunkBegin Byte
 
@@ -21,7 +25,7 @@ func (w *Writer) Write(inode *Inode, offset Byte, b []byte) (Byte, error) {
 		chunkOffset := (offset + chunkBegin) % BlockSize
 		chunkLength := math.Min(Byte(len(b)), BlockSize-chunkOffset)
 
-		actual, err := w.blockWriter.WriteBlock(
+		actual, err := w.blockWriter.Write(
 			inode,
 			chunkBlock,
 			chunkOffset,

@@ -2,6 +2,7 @@ package physical
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/weberc2/mono/fs/pkg/inode/data/block/indirect"
 	. "github.com/weberc2/mono/fs/pkg/types"
@@ -19,36 +20,9 @@ func NewReader(indirectReader indirect.Reader) Reader {
 	return Reader{indirectReader}
 }
 
-func (r Reader) ReadPhysical(inode *Inode, inodeBlock Block) (Block, error) {
+func (r Reader) Read(inode *Inode, inodeBlock Block) (Block, error) {
 	var ind indirection
-	ind.fromBlock(inodeBlock)
-
-	block, err := func() (Block, error) {
-		switch ind.level {
-		case levelDirect:
-			return inode.DirectBlocks[ind.direct], nil
-		case levelSingly:
-			return r.singlyIndirect(inode.SinglyIndirectBlock, ind.singly)
-		case levelDoubly:
-			return r.doublyIndirect(
-				inode.DoublyIndirectBlock,
-				ind.singly,
-				ind.doubly,
-			)
-		case levelTriply:
-			return r.triplyIndirect(
-				inode.TriplyIndirectBlock,
-				ind.singly,
-				ind.doubly,
-				ind.triply,
-			)
-		case levelOutOfRange:
-			return BlockNil, OutOfRangeErr
-		}
-		panic(fmt.Sprintf("invalid indirection level: %d", ind.level))
-	}()
-
-	if err != nil {
+	if err := ind.fromInodeBlock(inode, inodeBlock); err != nil {
 		return BlockNil, fmt.Errorf(
 			"reading physical block for inode `%d`, block `%d`: %w",
 			inode.Ino,
@@ -56,6 +30,34 @@ func (r Reader) ReadPhysical(inode *Inode, inodeBlock Block) (Block, error) {
 			err,
 		)
 	}
+
+	type errctx struct {
+		b Block
+		i indirect.Index
+	}
+
+	block := *ind.ptr
+	ctx := []errctx{}
+	for _, index := range ind.indices() {
+		ctx = append(ctx, errctx{block, index})
+		var err error
+		block, err = r.indirectReader.ReadIndirect(block, index)
+		if err != nil {
+			var sb strings.Builder
+			fmt.Fprintf(
+				&sb,
+				"reading physical block for inode `%d`, block `%d`",
+				inode.Ino,
+				inodeBlock,
+			)
+			for _, c := range ctx {
+				fmt.Fprintf(&sb, ": reading block `%d`, index `%d`", c.b, c.i)
+			}
+
+			return BlockNil, fmt.Errorf("%s: %w", &sb, err)
+		}
+	}
+
 	return block, nil
 }
 

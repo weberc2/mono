@@ -12,6 +12,10 @@ type Reader struct {
 	blockReader block.Reader
 }
 
+func NewReader(blockReader block.Reader) Reader {
+	return Reader{blockReader}
+}
+
 func (r *Reader) Read(inode *Inode, offset Byte, b []byte) (Byte, error) {
 	maxLength := math.Min(Byte(len(b)), inode.Size-offset)
 	var chunkBegin Byte = 0
@@ -21,7 +25,7 @@ func (r *Reader) Read(inode *Inode, offset Byte, b []byte) (Byte, error) {
 		chunkOffset := (offset + chunkBegin) % BlockSize
 		chunkLength := math.Min(maxLength-chunkBegin, BlockSize-chunkOffset)
 
-		actual, err := r.blockReader.ReadBlock(
+		actual, err := r.blockReader.Read(
 			inode,
 			chunkBlock,
 			chunkOffset,

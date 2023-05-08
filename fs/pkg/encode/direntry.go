@@ -1,6 +1,7 @@
 package encode
 
 import (
+	"fmt"
 	stdmath "math"
 
 	"github.com/weberc2/mono/fs/pkg/math"
@@ -16,11 +17,16 @@ func EncodeDirEntryHeader(entry *DirEntry, b *[DirEntryHeaderSize]byte) {
 	putU8(p, dirEntryNameLenStart, uint8(nameLen))
 }
 
-func DecodeDirEntryHeader(entry *DirEntry, b *[DirEntryHeaderSize]byte) {
+func DecodeDirEntryHeader(entry *DirEntry, b *[DirEntryHeaderSize]byte) error {
 	p := b[:]
+	ft := FileType(getU8(p, dirEntryFileTypeStart))
+	if err := ft.Validate(); err != nil {
+		return fmt.Errorf("decoding direntry header: %w", err)
+	}
+	entry.FileType = ft
 	entry.Ino = getIno(p, dirEntryInoStart)
-	entry.FileType = FileType(getU8(p, dirEntryFileTypeStart))
 	entry.NameLen = getU8(p, dirEntryNameLenStart)
+	return nil
 }
 
 const (

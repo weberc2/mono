@@ -20,7 +20,7 @@ func NewReader(physicalReader physical.Reader, byteReader io.ReadAt) Reader {
 	return Reader{physicalReader, byteReader}
 }
 
-func (r *Reader) ReadBlock(
+func (r *Reader) Read(
 	inode *Inode,
 	block Block,
 	offset Byte,
@@ -42,7 +42,7 @@ func (r *Reader) ReadBlock(
 		))
 	}
 
-	physicalBlock, err := r.physicalReader.ReadPhysical(inode, block)
+	physicalBlock, err := r.physicalReader.Read(inode, block)
 	if err != nil {
 		return 0, fmt.Errorf(
 			"reading `%d` bytes from block `%d` from inode `%d` at offset "+
