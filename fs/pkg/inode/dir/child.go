@@ -2,6 +2,7 @@ package dir
 
 import (
 	"fmt"
+	"log"
 
 	. "github.com/weberc2/mono/fs/pkg/types"
 )
@@ -42,6 +43,7 @@ func CreateChild(
 		)
 	}
 
+	log.Printf("creating child with ino %d", ino)
 	if err := InitInode(
 		fs,
 		&dirInode,
@@ -57,6 +59,7 @@ func CreateChild(
 			err,
 		)
 	}
+	log.Printf("child has ino %d", out.Ino)
 
 	if err := AddEntry(fs, &dirInode, out, name); err != nil {
 		return fmt.Errorf(

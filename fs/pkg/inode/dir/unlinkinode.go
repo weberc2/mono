@@ -9,7 +9,7 @@ import (
 	. "github.com/weberc2/mono/fs/pkg/types"
 )
 
-func UnlinkInode(reader *data.Reader, dir *Inode) (bool, error) {
+func UnlinkInode(reader data.Reader, dir *Inode) (bool, error) {
 	var offset Byte
 	for offset < dir.Size {
 		var entry DirEntry

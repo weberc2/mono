@@ -9,7 +9,7 @@ import (
 )
 
 func WriteEntry(
-	writer *data.Writer,
+	writer data.Writer,
 	inode *Inode,
 	offset Byte,
 	entry *DirEntry,

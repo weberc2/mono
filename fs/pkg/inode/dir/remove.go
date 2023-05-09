@@ -7,7 +7,7 @@ import (
 	. "github.com/weberc2/mono/fs/pkg/types"
 )
 
-func RemoveEntry(writer *data.Writer, dir *Inode, freeSpace *FreeSpace) error {
+func RemoveEntry(writer data.Writer, dir *Inode, freeSpace *FreeSpace) error {
 	if err := WriteEntry(
 		writer,
 		dir,

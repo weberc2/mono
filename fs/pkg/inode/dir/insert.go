@@ -2,15 +2,14 @@ package dir
 
 import (
 	"fmt"
+	"log"
 	"math"
 
-	"github.com/weberc2/mono/fs/pkg/inode/data"
 	. "github.com/weberc2/mono/fs/pkg/types"
 )
 
 func InsertEntry(
-	writer *data.Writer,
-	inodeStore InodeStore,
+	fs *FileSystem,
 	dir *Inode,
 	entry *Inode,
 	name []byte,
@@ -30,7 +29,7 @@ func InsertEntry(
 	}
 
 	if err := WriteEntry(
-		writer,
+		fs.ReadWriter.Writer(),
 		dir,
 		freeSpace.Offset,
 		&DirEntry{
@@ -50,9 +49,10 @@ func InsertEntry(
 			err,
 		)
 	}
+	log.Printf("writing entry `%d` into dir `%d` at offset `%d` with name `%s`", entry.Ino, dir.Ino, lastOffset, name)
 
 	entry.LinksCount++
-	if err := inodeStore.Put(entry); err != nil {
+	if err := fs.InodeStore.Put(entry); err != nil {
 		return fmt.Errorf(
 			"inserting inode `%d` into dir `%d` with name `%s` at last "+
 				"offset `%d`: %w",

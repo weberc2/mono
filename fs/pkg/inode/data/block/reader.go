@@ -20,7 +20,7 @@ func NewReader(physicalReader physical.Reader, byteReader io.ReadAt) Reader {
 	return Reader{physicalReader, byteReader}
 }
 
-func (r *Reader) Read(
+func (r Reader) Read(
 	inode *Inode,
 	block Block,
 	offset Byte,

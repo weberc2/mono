@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	stdio "io"
 	"log"
 
 	"github.com/weberc2/mono/fs/pkg/alloc"
@@ -62,6 +63,23 @@ func main() {
 	}
 
 	log.Printf("data: %s", buf)
+
+	var rootHandle dir.Handle
+	if err := dir.Open(&fs, InoRoot, &rootHandle); err != nil {
+		log.Fatal(err)
+	}
+
+	var err error
+	for err == nil {
+		var info dir.FileInfo
+		if err := dir.ReadNext(&fs, &rootHandle, &info); err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("info: %s", jsonify(&info))
+	}
+	if err != stdio.EOF {
+		log.Fatal(err)
+	}
 }
 
 func newInodeStore(volume io.Volume) InodeStore {

@@ -19,7 +19,7 @@ func NewWriter(physical physical.ReadWriter, byteWriter io.WriteAt) Writer {
 	return Writer{physicalReadWriter: physical, byteWriter: byteWriter}
 }
 
-func (w *Writer) Write(
+func (w Writer) Write(
 	inode *Inode,
 	block Block,
 	offset Byte,
