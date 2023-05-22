@@ -1,8 +1,7 @@
-package dir
+package directory
 
 import (
 	"fmt"
-	"log"
 
 	. "github.com/weberc2/mono/fs/pkg/types"
 )
@@ -10,7 +9,7 @@ import (
 func CreateChild(
 	fs *FileSystem,
 	dir Ino,
-	name []byte,
+	name string,
 	fileType FileType,
 	out *Inode,
 ) error {
@@ -43,7 +42,6 @@ func CreateChild(
 		)
 	}
 
-	log.Printf("creating child with ino %d", ino)
 	if err := InitInode(
 		fs,
 		&dirInode,
@@ -59,7 +57,6 @@ func CreateChild(
 			err,
 		)
 	}
-	log.Printf("child has ino %d", out.Ino)
 
 	if err := AddEntry(fs, &dirInode, out, name); err != nil {
 		return fmt.Errorf(

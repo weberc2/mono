@@ -7,7 +7,8 @@ import (
 	"log"
 
 	"github.com/weberc2/mono/fs/pkg/alloc"
-	"github.com/weberc2/mono/fs/pkg/inode/dir"
+	"github.com/weberc2/mono/fs/pkg/directory"
+	"github.com/weberc2/mono/fs/pkg/filesystem"
 	"github.com/weberc2/mono/fs/pkg/inode/store"
 	"github.com/weberc2/mono/fs/pkg/io"
 	. "github.com/weberc2/mono/fs/pkg/types"
@@ -15,7 +16,7 @@ import (
 
 func main() {
 	volume := io.NewBuffer(make([]byte, 1024*1024))
-	var fs dir.FileSystem
+	var fs directory.FileSystem
 	fs.Init(
 		alloc.BlockAllocator{Allocator: alloc.New(1024)},
 		alloc.InoAllocator{Allocator: alloc.New(1024)},
@@ -26,7 +27,7 @@ func main() {
 	var root Inode
 	log.Printf("before: %s", jsonify(&root))
 
-	if err := dir.InitRoot(&fs, &root); err != nil {
+	if err := directory.InitRootDirectory(&fs, &root); err != nil {
 		log.Fatalf("initializing root inode: %v", err)
 	}
 
@@ -36,18 +37,41 @@ func main() {
 	log.Printf("after: %s", jsonify(&root))
 
 	log.Printf("root.Size: %d", root.Size)
-	var helloInode Inode
-	if err := dir.CreateChild(
+	var helloInode, worldInode Inode
+	if err := directory.CreateChild(
 		&fs,
 		root.Ino,
-		[]byte("hello"),
+		"hello",
 		FileTypeRegular,
 		&helloInode,
 	); err != nil {
 		log.Fatalf("creating child inode: %v", err)
 	}
 
+	if err := directory.CreateChild(
+		&fs,
+		root.Ino,
+		"world",
+		FileTypeDir,
+		&worldInode,
+	); err != nil {
+		log.Fatalf("creating child inode: %v", err)
+	}
+
 	log.Printf("after: %s", jsonify(&root))
+
+	var fooInode Inode
+	if err := directory.CreateChild(
+		&fs,
+		worldInode.Ino,
+		"foo",
+		FileTypeRegular,
+		&fooInode,
+	); err != nil {
+		log.Fatalf("creating child inode: %v", err)
+	}
+
+	log.Printf("world: %s", jsonify(&worldInode))
 
 	if _, err := fs.ReadWriter.Write(
 		&helloInode,
@@ -64,25 +88,60 @@ func main() {
 
 	log.Printf("data: %s", buf)
 
-	var rootHandle dir.Handle
-	if err := dir.Open(&fs, InoRoot, &rootHandle); err != nil {
+	if err := listFiles(&fs, InoRoot); err != nil {
 		log.Fatal(err)
 	}
 
-	var err error
-	for err == nil {
-		var info dir.FileInfo
-		if err := dir.ReadNext(&fs, &rootHandle, &info); err != nil {
-			log.Fatal(err)
+	if err := listFiles(&fs, worldInode.Ino); err != nil {
+		log.Fatal(err)
+	}
+
+	var info directory.FileInfo
+	if err := directory.Lookup(
+		&fs,
+		InoRoot,
+		"world",
+		&info,
+	); err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("result: %s", jsonify(&info))
+
+	if err := directory.Lookup(
+		&fs,
+		info.Ino,
+		"foo",
+		&info,
+	); err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("result: %s", jsonify(&info))
+
+	if err := filesystem.Lookup(&fs, "/world", &info); err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("result: %s", jsonify(&info))
+}
+
+func listFiles(fs *directory.FileSystem, ino Ino) error {
+	var h directory.Handle
+	if err := directory.Open(fs, ino, &h); err != nil {
+		return err
+	}
+
+	for {
+		var info directory.FileInfo
+		if err := directory.ReadNext(fs, &h, &info); err != nil {
+			if err == stdio.EOF {
+				return nil
+			}
+			return err
 		}
 		log.Printf("info: %s", jsonify(&info))
 	}
-	if err != stdio.EOF {
-		log.Fatal(err)
-	}
 }
 
-func newInodeStore(volume io.Volume) InodeStore {
+func newInodeStore(volume io.Volume) *store.CachingInodeStore {
 	const inodeTableOffset = 0
 	inodeStoreOffsetVolume := io.NewOffsetVolume(volume, inodeTableOffset)
 	inodeStoreBackend := store.NewVolumeInodeStore(inodeStoreOffsetVolume)

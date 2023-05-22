@@ -1,12 +1,14 @@
-package dir
+package directory
 
 import (
 	"encoding/json"
 	"fmt"
 	stdio "io"
+	"log"
 	"testing"
 
 	"github.com/weberc2/mono/fs/pkg/alloc"
+	"github.com/weberc2/mono/fs/pkg/encode"
 	"github.com/weberc2/mono/fs/pkg/inode/store"
 	"github.com/weberc2/mono/fs/pkg/io"
 	. "github.com/weberc2/mono/fs/pkg/types"
@@ -23,6 +25,7 @@ func TestAdd(t *testing.T) {
 		wantedEntry   Inode
 		wantedError   func(err error) error
 		wantedEntries []FileInfo
+		hook          func()
 	}
 
 	testCases := []testCase{func() testCase {
@@ -31,31 +34,162 @@ func TestAdd(t *testing.T) {
 		entry := newInode(&fs, &root, FileTypeRegular)
 		name := "entry"
 
+		wantedRoot := root
+		wantedRoot.Size += encode.DirEntrySize(uint8(len(name)))
+
+		wantedEntry := entry
+		wantedEntry.LinksCount++
+
 		return testCase{
-			name:       "simple",
-			state:      fs,
-			inputDir:   root,
-			inputEntry: entry,
-			inputName:  name,
+			name:        "append",
+			state:       fs,
+			inputDir:    root,
+			inputEntry:  entry,
+			inputName:   name,
+			wantedDir:   wantedRoot,
+			wantedEntry: wantedEntry,
 			wantedEntries: []FileInfo{{
 				Ino:      root.Ino,
 				FileType: FileTypeDir,
-				Name:     []byte("."),
+				Name:     ".",
 			}, {
 				Ino:      entry.Ino,
 				FileType: entry.FileType,
-				Name:     []byte(name),
+				Name:     name,
+			}},
+			hook: hook,
+		}
+	}(), func() testCase {
+		fs := defaultFileSystem()
+		root := getRoot(&fs)
+
+		// Given the root has two DirEntries: the first being the '.' entry and
+		// the second being an entry with sufficient free space to fit the new
+		// entry.
+		bigEntry := newInode(&fs, &root, FileTypeRegular)
+		bigEntryName := "bigentry"
+		const bigEntryRecLen = 512 // plenty of space for new entry
+		if err := WriteEntry(
+			fs.ReadWriter.Writer(),
+			&root,
+			encode.DirEntrySize(1), // right after the `.` entry
+			&DirEntry{
+				Ino:      bigEntry.Ino,
+				NameLen:  uint8(len(bigEntryName)),
+				FileType: bigEntry.FileType,
+				RecLen:   bigEntryRecLen,
+				Name:     bigEntryName,
+			},
+		); err != nil {
+			t.Fatalf("writing bigentry: unexpected err: %v", err)
+		}
+		if err := fs.InodeStore.Put(&root); err != nil {
+			t.Fatalf("storing updated root inode: unexpected err: %v", err)
+		}
+		newEntry := newInode(&fs, &root, FileTypeRegular)
+		name := "entry"
+
+		wantedRoot := root
+		wantedRoot.Size += encode.DirEntrySize(uint8(len(name)))
+
+		wantedEntry := newEntry
+		wantedEntry.LinksCount++
+
+		return testCase{
+			name:        "insert",
+			state:       fs,
+			inputDir:    root,
+			inputEntry:  newEntry,
+			inputName:   name,
+			wantedDir:   wantedRoot,
+			wantedEntry: wantedEntry,
+			wantedEntries: []FileInfo{{
+				Ino:      root.Ino,
+				FileType: FileTypeDir,
+				Name:     ".",
+			}, {
+				Ino:      bigEntry.Ino,
+				FileType: bigEntry.FileType,
+				Name:     bigEntryName,
+			}, {
+				Ino:      newEntry.Ino,
+				FileType: newEntry.FileType,
+				Name:     name,
+			}},
+		}
+	}(), func() testCase {
+		fs := defaultFileSystem()
+		root := getRoot(&fs)
+
+		// Given the root has two DirEntries: the first being the '.' entry and
+		// the second being an entry with sufficient free space to fit the new
+		// entry.
+		smallEntry := newInode(&fs, &root, FileTypeRegular)
+		smallEntryName := "smallentry"
+		// only leave a free space of a few bytes
+		smallEntryRecLen := uint16(
+			encode.DirEntrySize(uint8(len(smallEntryName))) + 5,
+		)
+		if err := WriteEntry(
+			fs.ReadWriter.Writer(),
+			&root,
+			encode.DirEntrySize(1), // right after the `.` entry
+			&DirEntry{
+				Ino:      smallEntry.Ino,
+				NameLen:  uint8(len(smallEntryName)),
+				FileType: smallEntry.FileType,
+				RecLen:   smallEntryRecLen,
+				Name:     smallEntryName,
+			},
+		); err != nil {
+			t.Fatalf("writing bigentry: unexpected err: %v", err)
+		}
+		if err := fs.InodeStore.Put(&root); err != nil {
+			t.Fatalf("storing updated root inode: unexpected err: %v", err)
+		}
+		newEntry := newInode(&fs, &root, FileTypeRegular)
+		name := "entry"
+
+		wantedRoot := root
+		wantedRoot.Size += encode.DirEntrySize(uint8(len(name)))
+
+		wantedEntry := newEntry
+		wantedEntry.LinksCount++
+
+		return testCase{
+			name:        "try-insert",
+			state:       fs,
+			inputDir:    root,
+			inputEntry:  newEntry,
+			inputName:   name,
+			wantedDir:   wantedRoot,
+			wantedEntry: wantedEntry,
+			wantedEntries: []FileInfo{{
+				Ino:      root.Ino,
+				FileType: FileTypeDir,
+				Name:     ".",
+			}, {
+				Ino:      smallEntry.Ino,
+				FileType: smallEntry.FileType,
+				Name:     smallEntryName,
+			}, {
+				Ino:      newEntry.Ino,
+				FileType: newEntry.FileType,
+				Name:     name,
 			}},
 		}
 	}()}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			if tc.hook != nil {
+				tc.hook()
+			}
 			if err := AddEntry(
 				&tc.state,
 				&tc.inputDir,
 				&tc.inputEntry,
-				[]byte(tc.name),
+				tc.inputName,
 			); err != nil {
 				if tc.wantedError == nil {
 					t.Fatalf("AddEntry(): unexpected err: %v", err)
@@ -145,7 +279,7 @@ func defaultFileSystem() FileSystem {
 	var fs FileSystem
 	fs.Init(blockAllocator, inoAllocator, blockVolume, inodeStore)
 	var root Inode
-	if err := InitRoot(&fs, &root); err != nil {
+	if err := InitRootDirectory(&fs, &root); err != nil {
 		panic(fmt.Sprintf("initializing root: %v", err))
 	}
 	return fs
@@ -169,4 +303,8 @@ func getRoot(fs *FileSystem) Inode {
 		panic(fmt.Sprintf("getting root inode: %v", err))
 	}
 	return root
+}
+
+func hook() {
+	log.Println("hello")
 }

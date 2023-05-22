@@ -21,7 +21,7 @@ func (w *Writer) Write(inode *Inode, offset Byte, b []byte) (Byte, error) {
 	var chunkBegin Byte
 
 	for chunkBegin < Byte(len(b)) {
-		chunkBlock := Block(offset + chunkBegin/BlockSize)
+		chunkBlock := Block((offset + chunkBegin) / BlockSize)
 		chunkOffset := (offset + chunkBegin) % BlockSize
 		chunkLength := math.Min(Byte(len(b)), BlockSize-chunkOffset)
 

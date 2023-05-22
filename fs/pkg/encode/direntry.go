@@ -8,8 +8,12 @@ import (
 	. "github.com/weberc2/mono/fs/pkg/types"
 )
 
-func DirEntrySize(entry *DirEntry) Byte {
-	return Byte(entry.NameLen) + DirEntryHeaderSize
+func DirEntrySize(nameLen uint8) Byte {
+	return Byte(nameLen) + DirEntryHeaderSize
+}
+
+func DirEntryFreeSpace(entry *DirEntry) Byte {
+	return Byte(entry.RecLen) - Byte(entry.NameLen) - DirEntryHeaderSize
 }
 
 func EncodeDirEntryHeader(entry *DirEntry, b *[DirEntryHeaderSize]byte) {
@@ -18,6 +22,7 @@ func EncodeDirEntryHeader(entry *DirEntry, b *[DirEntryHeaderSize]byte) {
 	putIno(p, dirEntryInoStart, entry.Ino)
 	putU8(p, dirEntryFileTypeStart, uint8(entry.FileType))
 	putU8(p, dirEntryNameLenStart, uint8(nameLen))
+	putU16(p, DirEntryRecLenStart, entry.RecLen)
 }
 
 func DecodeDirEntryHeader(entry *DirEntry, b *[DirEntryHeaderSize]byte) {
@@ -28,6 +33,11 @@ func DecodeDirEntryHeader(entry *DirEntry, b *[DirEntryHeaderSize]byte) {
 	entry.FileType = FileType(getU8(p, dirEntryFileTypeStart))
 	entry.Ino = getIno(p, dirEntryInoStart)
 	entry.NameLen = getU8(p, dirEntryNameLenStart)
+	entry.RecLen = getU16(p, DirEntryRecLenStart)
+}
+
+func EncodeDirEntryRecLen(recLen uint16, b *[2]byte) {
+	putU16(b[:], 0, recLen)
 }
 
 const (
@@ -43,5 +53,9 @@ const (
 	dirEntryNameLenSize  = 1
 	dirEntryNameLenEnd   = dirEntryNameLenStart + dirEntryNameLenSize
 
-	DirEntryHeaderSize = dirEntryNameLenEnd
+	DirEntryRecLenStart = dirEntryNameLenEnd
+	dirEntryRecLenSize  = 2
+	dirEntryRecLenEnd   = DirEntryRecLenStart + dirEntryRecLenSize
+
+	DirEntryHeaderSize = dirEntryRecLenEnd
 )

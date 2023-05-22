@@ -1,11 +1,10 @@
-package dir
+package directory
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"unsafe"
 
 	"github.com/weberc2/mono/fs/pkg/encode"
 	"github.com/weberc2/mono/fs/pkg/inode/data"
@@ -28,7 +27,6 @@ func ReadNext(fs *FileSystem, handle *Handle, info *FileInfo) error {
 
 	// loop until we either run out of entries in the dir (if so, return EOF)
 	for handle.offset < inode.Size {
-		log.Printf("handle.offset: %d; inode.Size: %d", handle.offset, inode.Size)
 		if err := ReadEntry(r, &inode, handle.offset, &entry); err != nil {
 			return fmt.Errorf(
 				"reading entry from `%d` at offset `%d`: %w",
@@ -38,7 +36,7 @@ func ReadNext(fs *FileSystem, handle *Handle, info *FileInfo) error {
 			)
 		}
 
-		handle.offset += encode.DirEntrySize(&entry)
+		handle.offset += encode.DirEntrySize(entry.NameLen)
 
 		// if the entry is nil, skip it
 		if entry.Ino == InoNil {
@@ -82,29 +80,6 @@ type Handle struct {
 	offset Byte
 }
 
-type FileInfo struct {
-	Ino      Ino
-	FileType FileType
-	Name     []byte
-}
-
-func (fi *FileInfo) Equal(other *FileInfo) bool {
-	return fi.Ino == other.Ino && fi.FileType == other.FileType &&
-		bytes.Equal(fi.Name, other.Name)
-}
-
-func (fi *FileInfo) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		Ino      Ino
-		FileType string
-		Name     string
-	}{
-		Ino:      fi.Ino,
-		FileType: fi.FileType.String(),
-		Name:     string(fi.Name),
-	})
-}
-
 func ReadEntry(
 	reader data.Reader,
 	inode *Inode,
@@ -127,11 +102,12 @@ func ReadEntry(
 
 	encode.DecodeDirEntryHeader(out, buf)
 
-	out.Name = make([]byte, out.NameLen)
+	b := make([]byte, out.NameLen)
+	out.Name = *(*string)(unsafe.Pointer(&b))
 	if _, err := reader.Read(
 		inode,
 		offset+encode.DirEntryHeaderSize,
-		out.Name,
+		b,
 	); err != nil {
 		return fmt.Errorf(
 			"reading direntry for inode `%d` at offset `%d`: %w",

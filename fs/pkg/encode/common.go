@@ -31,19 +31,19 @@ func getU64(b []byte, start Byte) uint64 {
 }
 
 func putU32(b []byte, start Byte, u uint32) {
-	binary.LittleEndian.PutUint32(b[start:start+8], u)
+	binary.LittleEndian.PutUint32(b[start:start+4], u)
 }
 
 func getU32(b []byte, start Byte) uint32 {
-	return binary.LittleEndian.Uint32(b[start : start+8])
+	return binary.LittleEndian.Uint32(b[start : start+4])
 }
 
 func putU16(b []byte, start Byte, u uint16) {
-	binary.LittleEndian.PutUint16(b[start:start+8], u)
+	binary.LittleEndian.PutUint16(b[start:start+2], u)
 }
 
 func getU16(b []byte, start Byte) uint16 {
-	return binary.LittleEndian.Uint16(b[start : start+8])
+	return binary.LittleEndian.Uint16(b[start : start+2])
 }
 
 func putU8(b []byte, start Byte, u uint8) {

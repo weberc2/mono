@@ -1,6 +1,8 @@
 package types
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Ino uint64
 
@@ -57,6 +59,15 @@ func (ft FileType) String() string {
 	default:
 		panic(fmt.Sprintf("invalid file type: `%d`", ft))
 	}
+}
+
+func (ft FileType) MarshalJSON() ([]byte, error) {
+	s := ft.String()
+	out := make([]byte, len(s)+2)
+	out[0] = '"'
+	out[len(out)-1] = '"'
+	copy(out[1:], s)
+	return out, nil
 }
 
 func (ft FileType) Validate() error {
