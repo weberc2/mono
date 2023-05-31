@@ -5,6 +5,7 @@ import (
 	"fmt"
 )
 
+// SliceBuffer is a fixed-capacity ring-buffer backed by a slice.
 type SliceBuffer[T any] struct {
 	// entries holds the items. there is always one more entry than items
 	// because there is a 'spacer' slot preceding `start` which allows us to
@@ -22,24 +23,22 @@ type SliceBuffer[T any] struct {
 	tail int
 }
 
+// NewSliceBuffer creates a new fixed-capacity slice-backed ring-buffer.
 func NewSliceBuffer[T any](capacity int) (*SliceBuffer[T], error) {
 	if capacity < 1 {
 		return nil, fmt.Errorf(
 			"capacity `%d`: %w",
 			capacity,
-			NonPositiveCapacityErr,
+			ErrNonPositiveCapacity,
 		)
 	}
 	return &SliceBuffer[T]{entries: make([]T, capacity+1)}, nil
 }
 
+// Cap returns the capacity of the ring buffer.
 func (buf *SliceBuffer[T]) Cap() int { return len(buf.entries) - 1 }
 
-func (buf *SliceBuffer[T]) Full() bool {
-	return (buf.start > 0 && buf.tail == 0) ||
-		(buf.start == 0 && buf.tail == len(buf.entries)-2)
-}
-
+// Len returns the length of the ring buffer.
 func (buf *SliceBuffer[T]) Len() int {
 	// S
 	// [_, #]
@@ -72,14 +71,17 @@ func (buf *SliceBuffer[T]) next(i int) int {
 }
 
 func (buf *SliceBuffer[T]) prev(i int) int {
-	// we are adding `len(buf.entries)` to the numerator so that we get Python's
-	// wraparound behavior (e.g., `-1 % n -> n-1`) instead of Go's
-	// `-1 % n -> -1`. Of course, this only works so long as
-	// `i < len(buf.entries)`, but that should always be the case.
+	// we are adding `len(buf.entries)` to the numerator so that we get
+	// Python's wraparound behavior (e.g., `-1 % n -> n-1`) instead of Go's `-1
+	// % n -> -1`. Of course, this only works so long as `i <
+	// len(buf.entries)`, but that should always be the case.
 	return (len(buf.entries) + i - 1) % len(buf.entries)
 }
 
-// what is the difference between (cap=1, len=0) [ST] and (cap=1, len=1) [ST]
+// Push appends an item onto the back of the ring-buffer. If there is no spare
+// capacity, it will overwrite the head of the ring-buffer. If an element is
+// overwritten, the boolean value in the return tuple will be `true` and the
+// evicted element will be returned.
 func (buf *SliceBuffer[T]) Push(item T) (T, bool) {
 	// S            S
 	// [X, #] => [#, X]
@@ -117,6 +119,8 @@ func (buf *SliceBuffer[T]) Push(item T) (T, bool) {
 	return zero, false
 }
 
+// PopFront pops the first element off of the ring-buffer. If the buffer is
+// empty, the second return value will be `false`.
 func (buf *SliceBuffer[T]) PopFront() (T, bool) {
 	// empty
 	if buf.tail == buf.start {
@@ -129,6 +133,10 @@ func (buf *SliceBuffer[T]) PopFront() (T, bool) {
 	return popped, true
 }
 
+// Items creates a snapshot of the buffer as a slice. It allocates a new slice
+// and copies elements from the ring buffer into it such that the first element
+// in the ring buffer will be at index 0 in the returned slice (i.e., it's not
+// a naive copy of the buffer's backing slice).
 func (buf *SliceBuffer[T]) Items() []T {
 	items := make([]T, buf.Len())
 	cap := buf.Cap()
@@ -138,11 +146,6 @@ func (buf *SliceBuffer[T]) Items() []T {
 	return items
 }
 
-func Must[T any](t T, err error) T {
-	if err != nil {
-		panic(err)
-	}
-	return t
-}
-
-var NonPositiveCapacityErr = errors.New("capacity must be positive")
+// ErrNonPositiveCapacity indicates an attempt to create an empty or
+// negative-capacity `SliceBuffer`.
+var ErrNonPositiveCapacity = errors.New("capacity must be positive")
