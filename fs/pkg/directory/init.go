@@ -1,13 +1,14 @@
-package dir
+package directory
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/weberc2/mono/fs/pkg/encode"
 	. "github.com/weberc2/mono/fs/pkg/types"
 )
 
-func InitRoot(fs *FileSystem, root *Inode) error {
+func InitRootDirectory(fs *FileSystem, root *Inode) error {
 	b := new([encode.DirEntryHeaderSize + Byte(len("."))]byte)
 
 	root.FileType = FileTypeDir
@@ -18,7 +19,8 @@ func InitRoot(fs *FileSystem, root *Inode) error {
 		Ino:      root.Ino,
 		FileType: FileTypeDir,
 		NameLen:  uint8(len(".")),
-		Name:     []byte("."),
+		RecLen:   uint16(encode.DirEntrySize(1)),
+		Name:     ".",
 	}
 
 	encode.EncodeDirEntryHeader(
@@ -52,6 +54,9 @@ func InitInode(
 	ino Ino,
 	fileType FileType,
 ) error {
+	if ino == 3 {
+		log.Printf("initializing inode")
+	}
 	*entry = Inode{
 		Ino:      ino,
 		FileType: fileType,
@@ -84,21 +89,23 @@ func InitInode(
 }
 
 func InitDir(fs *FileSystem, parent *Inode, dir *Inode) error {
-	dotDotOffset := align4(encode.DirEntryHeaderSize + Byte(len("..")))
+	dotDotOffset := encode.DirEntryHeaderSize + Byte(len("."))
 	b := new([BlockSize]byte)
 
 	dotEntry := DirEntry{
 		Ino:      dir.Ino,
 		FileType: FileTypeDir,
 		NameLen:  uint8(len(".")),
-		Name:     []byte("."),
+		RecLen:   uint16(encode.DirEntrySize(1)),
+		Name:     ".",
 	}
 
 	dotDotEntry := DirEntry{
 		Ino:      parent.Ino,
 		FileType: FileTypeDir,
 		NameLen:  uint8(len("..")),
-		Name:     []byte(".."),
+		RecLen:   uint16(encode.DirEntrySize(2)),
+		Name:     "..",
 	}
 
 	encode.EncodeDirEntryHeader(
@@ -113,7 +120,7 @@ func InitDir(fs *FileSystem, parent *Inode, dir *Inode) error {
 	)
 	copy(b[dotDotOffset+encode.DirEntryHeaderSize:], "..")
 
-	if _, err := fs.ReadWriter.Write(dir, 0, b[:]); err != nil {
+	if _, err := fs.ReadWriter.Write(dir, 0, b[:dotDotOffset+encode.DirEntrySize(uint8(len("..")))]); err != nil {
 		return fmt.Errorf(
 			"initializing dir `%d` with parent `%d`: %w",
 			dir.Ino,

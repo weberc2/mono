@@ -31,9 +31,6 @@ var testCases = []testCase{{
 	},
 	inputBlock:  0,
 	wantedBlock: 1,
-	hook: func() {
-		log.Println()
-	},
 }, func() testCase {
 	indirect := ind{outer: 10, index: 5, inner: 6}
 	return testCase{

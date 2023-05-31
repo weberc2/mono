@@ -1,7 +1,6 @@
-package dir
+package directory
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/weberc2/mono/fs/pkg/encode"
@@ -21,9 +20,7 @@ func UnlinkInode(reader data.Reader, dir *Inode) (bool, error) {
 			)
 		}
 
-		if entry.Ino == 0 &&
-			!bytes.Equal(entry.Name, []byte(".")) &&
-			!bytes.Equal(entry.Name, []byte("..")) {
+		if entry.Ino == 0 && entry.Name != "." && entry.Name != ".." {
 			return true, nil
 		}
 

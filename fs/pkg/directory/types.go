@@ -1,4 +1,4 @@
-package dir
+package directory
 
 import (
 	. "github.com/weberc2/mono/fs/pkg/types"
