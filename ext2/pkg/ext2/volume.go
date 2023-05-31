@@ -1,4 +1,4 @@
-package main
+package ext2
 
 import (
 	"fmt"
@@ -8,6 +8,26 @@ import (
 type Volume interface {
 	Read(offset uint64, buffer []byte) error
 	Write(offset uint64, buffer []byte) error
+}
+
+type MemoryVolume struct {
+	buf []byte
+}
+
+func NewMemoryVolume(capacity uint64) MemoryVolume {
+	return MemoryVolume{make([]byte, capacity)}
+}
+
+func (volume MemoryVolume) Read(offset uint64, buffer []byte) error {
+	if offset < uint64(len(volume.buf)) {
+		copy(buffer, volume.buf[offset:])
+	}
+	return nil
+}
+
+func (volume MemoryVolume) Write(offset uint64, buffer []byte) error {
+	volume.buf = append(volume.buf[offset:], buffer...)
+	return nil
 }
 
 type FileVolume struct {

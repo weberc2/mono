@@ -1,13 +1,30 @@
-package main
+package ext2
 
-import "fmt"
+import (
+	"encoding/binary"
+	"fmt"
+)
+
+type SuperblockState uint16
+
+type RevLevel uint32
 
 const (
-	SuperblockMagic           uint16 = 0xef53
+	SuperblockMagic uint16 = 0xef53
+
+	// SuperblockSize is the size allocated for the superblock on disk.
+	// The superblock doesn't actually use this much size; it seems to be more
+	// of an upper-bound in case more fields were added to the superblock.
+	SuperblockSize            uint16 = 1024
+	SuperblockOffset          uint32 = 1024
 	SupportedIncompatFeatures uint32 = 0x0002
 	SupportedROCompatFeatures uint32 = 0
-	StateClean                uint16 = 1
-	RevLevelStatic            uint32 = 0
+
+	StateClean SuperblockState = 1
+	StateDirty SuperblockState = 2
+
+	RevLevelStatic  RevLevel = 0
+	RevLevelDynamic RevLevel = 1
 
 	DefaultFirstIno  uint32 = 11
 	DefaultInodeSize uint16 = 128
@@ -21,8 +38,8 @@ type Superblock struct {
 	LogBlockSize    uint32
 	BlocksPerGroup  uint32
 	InodesPerGroup  uint32
-	State           uint16
-	RevLevel        uint32
+	State           SuperblockState
+	RevLevel        RevLevel
 	FirstIno        uint32
 	InodeSize       uint16
 	FeatureCompat   uint32
@@ -43,7 +60,7 @@ func (err ErrBadMagic) Error() string {
 }
 
 type ErrBadState struct {
-	Found uint16
+	Found SuperblockState
 }
 
 func (err ErrBadState) Error() string {
@@ -77,24 +94,27 @@ func (err ErrIncompatibleFeaturesReadOnly) Error() string {
 	)
 }
 
-func DecodeSuperblock(b *[1024]byte, readOnly bool) (Superblock, error) {
+func DecodeSuperblock(
+	b *[SuperblockSize]byte,
+	readOnly bool,
+) (Superblock, error) {
 	var sb Superblock
 	err := sb.Decode(b, readOnly)
 	return sb, err
 }
 
-func (sb *Superblock) Decode(b *[1024]byte, readOnly bool) error {
+func (sb *Superblock) Decode(b *[SuperblockSize]byte, readOnly bool) error {
 	magic := DecodeUint16(b[56], b[57])
 	if magic != SuperblockMagic {
 		return fmt.Errorf("decoding superblock: %w", ErrBadMagic{magic})
 	}
 
-	state := DecodeUint16(b[58], b[59])
+	state := SuperblockState(DecodeUint16(b[58], b[59]))
 	if state != StateClean {
 		return fmt.Errorf("decoding superblock: %w", ErrBadState{state})
 	}
 
-	rev := DecodeUint32(b[76], b[77], b[78], b[79])
+	rev := RevLevel(DecodeUint32(b[76], b[77], b[78], b[79]))
 
 	var featureCompat, featureIncompat, featureROCompat uint32
 	if rev >= 1 {
@@ -153,4 +173,33 @@ func DecodeUint32(b0, b1, b2, b3 byte) uint32 {
 		(uint32(b1) << 8) +
 		(uint32(b2) << 16) +
 		(uint32(b3) << 24)
+}
+
+func (superblock *Superblock) Encode(b *[SuperblockSize]byte) {
+	EncodeUint32(superblock.BlocksCount, b[4:])
+	EncodeUint32(superblock.FreeBlocksCount, b[12:])
+	EncodeUint32(superblock.FreeInodesCount, b[16:])
+	EncodeUint32(superblock.FirstDataBlock, b[20:])
+	EncodeUint32(superblock.LogBlockSize, b[24:])
+	EncodeUint32(superblock.BlocksPerGroup, b[32:])
+	EncodeUint32(superblock.InodesPerGroup, b[40:])
+	EncodeUint16(SuperblockMagic, b[56:])
+	EncodeUint16(uint16(superblock.State), b[58:])
+	EncodeUint32(uint32(superblock.RevLevel), b[76:])
+
+	if superblock.RevLevel != RevLevelStatic {
+		EncodeUint32(superblock.FirstIno, b[84:])
+		EncodeUint16(superblock.InodeSize, b[88:])
+		EncodeUint32(superblock.FeatureCompat, b[92:])
+		EncodeUint32(superblock.FeatureIncompat, b[96:])
+		EncodeUint32(superblock.FeatureROCompat, b[100:])
+	}
+}
+
+func EncodeUint16(x uint16, b []byte) {
+	binary.LittleEndian.PutUint16(b, x)
+}
+
+func EncodeUint32(x uint32, b []byte) {
+	binary.LittleEndian.PutUint32(b, x)
 }
