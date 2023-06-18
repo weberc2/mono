@@ -1,0 +1,19 @@
+# Committed
+* Create `core` package
+  * move `byteslice/byteslice.h` to `core/byteslice.h`
+  * move `io` to `core/io`
+    * need to refactor `error` out of `io` since it allocates
+* Create `std` package
+  * move `panic/panic.h` to `std/panic.h`
+  * move `bytestring/bytestring.h` to `std/bytestring/bytestring.h`
+  * move `vector/vector.h` to `std/collections/vector.h`
+  * move `error/error.h` to `std/error.h`
+* Make `deferable` internal to `test.c` such that `test_defer` just pushes
+  onto the `deferable` vector.
+* Rename `bytestring` to `string` and `byteslice` to `str`
+* Write tests for `buffered_reader`
+* 🥳 Begin implementing static site generator!
+
+# Speculative
+* Use build2 or some other build system
+* Create GitHub Actions to build/test
