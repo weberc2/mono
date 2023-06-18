@@ -51,7 +51,7 @@ size_t buffered_reader_read(buffered_reader *br, str buf, errors *errs)
             break;
         }
 
-        // otherwise loop around and refil the buffer
+        // otherwise loop around and refill the buffer
     }
     return n;
 }
