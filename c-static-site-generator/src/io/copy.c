@@ -1,5 +1,5 @@
 #include "io/copy.h"
-#include "byteslice/byteslice.h"
+#include "str/str.h"
 
 const char *const ERR_SHORT_WRITE = "short write";
 const char *const ERR_INVALID_WRITE = "invalid write";
@@ -7,8 +7,8 @@ const char *const ERR_INVALID_WRITE = "invalid write";
 size_t copy(writer dst, reader src, errors *errs)
 {
     char buffer[256];
-    byteslice buf;
-    byteslice_init(&buf, buffer, sizeof(buffer));
+    str buf;
+    str_init(&buf, buffer, sizeof(buffer));
     buf.len = sizeof(buffer) - 1;
 
     size_t written;
@@ -18,8 +18,8 @@ size_t copy(writer dst, reader src, errors *errs)
         if (nr > 0)
         {
 
-            byteslice tmp;
-            byteslice_slice(buf, &tmp, 0, nr);
+            str tmp;
+            str_slice(buf, &tmp, 0, nr);
 
             size_t nw = writer_write(dst, tmp, errs);
 

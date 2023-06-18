@@ -1,17 +1,17 @@
 #include "io/buffered_reader.h"
 
-void buffered_reader_init(buffered_reader *br, reader source, byteslice buf)
+void buffered_reader_init(buffered_reader *br, reader source, str buf)
 {
     br->source = source;
     br->buffer = buf;
     br->cursor = 0;
 }
 
-size_t buffered_reader_read(buffered_reader *br, byteslice buf, errors *errs)
+size_t buffered_reader_read(buffered_reader *br, str buf, errors *errs)
 {
-    byteslice remaining;
-    byteslice_slice(br->buffer, &remaining, br->cursor, br->buffer.len);
-    size_t n = byteslice_copy(buf, remaining);
+    str remaining;
+    str_slice(br->buffer, &remaining, br->cursor, br->buffer.len);
+    size_t n = str_copy(buf, remaining);
 
     // if n >= buf.len, it means we had at least a whole `buf` left in the
     // buffer. If n == 0, it means we've reached the end of the file. In either
@@ -41,7 +41,7 @@ size_t buffered_reader_read(buffered_reader *br, byteslice buf, errors *errs)
 
         // otherwise we read something; let's copy it to the unwritten portion
         // of the output buffer.
-        size_t copied = byteslice_copy_at(buf, br->buffer, n);
+        size_t copied = str_copy_at(buf, br->buffer, n);
         size_t unwritten = buf.len - n;
         n += copied;
 

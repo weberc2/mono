@@ -1,13 +1,13 @@
 #include "error/error.h"
 
-void error_write_string(error err, bytestring *message)
+void error_write_string(error err, string *message)
 {
     err.error_func(err.data, message);
 }
 
-void error_const_write_string(char *message, bytestring *out)
+void error_const_write_string(char *message, string *out)
 {
-    bytestring_push_raw(out, message, strlen(message));
+    string_push_raw(out, message, strlen(message));
 }
 
 void error_const(error *err, const char *message)
@@ -31,12 +31,12 @@ void errors_push(errors *errs, error err)
     vector_push(&errs->errors, &err);
 }
 
-void errors_write_string(errors *errs, bytestring *message)
+void errors_write_string(errors *errs, string *message)
 {
     for (int i = errs->errors.len; i >= 0; i--)
     {
         error err = *(error *)vector_get((vector *)errs, i);
-        bytestring_push_raw(message, ": ", 2);
+        string_push_raw(message, ": ", 2);
         error_write_string(err, message);
     }
 }
