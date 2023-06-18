@@ -1,26 +1,26 @@
 #include "test.h"
 #include "io/copy.h"
-#include "io/byteslice_reader.h"
-#include "bytestring/bytestring.h"
+#include "io/str_reader.h"
+#include "string/string.h"
 #include <stdbool.h>
 
-bool test_byteslice_reader()
+bool test_str_reader()
 {
-    test_init("test_byteslice_reader");
+    test_init("test_str_reader");
 
     char data[] = "helloworld";
-    byteslice source;
-    byteslice_init(&source, data, sizeof(data) - 1);
+    str source;
+    str_init(&source, data, sizeof(data) - 1);
 
     char buf[6] = ".....";
-    byteslice buffer;
-    byteslice_init(&buffer, buf, sizeof(buf) - 1);
+    str buffer;
+    str_init(&buffer, buf, sizeof(buf) - 1);
 
-    byteslice_reader br;
-    byteslice_reader_init(&br, source);
+    str_reader br;
+    str_reader_init(&br, source);
 
     reader r;
-    byteslice_reader_to_reader(&br, &r);
+    str_reader_to_reader(&br, &r);
 
     errors errs;
     errors_init(&errs);
@@ -33,9 +33,9 @@ bool test_byteslice_reader()
         return test_fail("nr: wanted `%zu`; found `%zu`", buffer.len, nr);
     }
 
-    byteslice wanted;
-    byteslice_init(&wanted, "hello", 5);
-    if (!byteslice_eq(wanted, buffer))
+    str wanted;
+    str_init(&wanted, "hello", 5);
+    if (!str_eq(wanted, buffer))
     {
         return test_fail(
             "data: wanted `%s`; found `%s`",
@@ -55,8 +55,8 @@ bool test_byteslice_reader()
         return test_fail("nr: wanted `%zu`; found `%zu`", buffer.len, nr);
     }
 
-    byteslice_init(&wanted, "world", 5);
-    if (!byteslice_eq(wanted, buffer))
+    str_init(&wanted, "world", 5);
+    if (!str_eq(wanted, buffer))
     {
         return test_fail(
             "data: wanted `%s`; found `%s`",
@@ -92,31 +92,31 @@ bool test_copy()
     TEST_DEFER(defer_many, &deferables);
 
     char srcdata[] = "helloworld";
-    byteslice src;
-    byteslice_init(&src, srcdata, sizeof(srcdata) - 1);
+    str src;
+    str_init(&src, srcdata, sizeof(srcdata) - 1);
 
-    bytestring dst;
-    bytestring_init(&dst);
-    deferables_push(&deferables, (void *)&dst, (defer_func)bytestring_drop);
+    string dst;
+    string_init(&dst);
+    deferables_push(&deferables, (void *)&dst, (defer_func)string_drop);
 
     errors errs;
     errors_init(&errs);
     deferables_push(&deferables, &errs, (defer_func)errors_drop);
 
-    byteslice_reader byteslice_reader;
-    byteslice_reader_init(&byteslice_reader, src);
+    str_reader str_reader;
+    str_reader_init(&str_reader, src);
 
     reader r;
-    byteslice_reader_to_reader(&byteslice_reader, &r);
+    str_reader_to_reader(&str_reader, &r);
 
     writer w;
-    writer_from_bytestring(&w, &dst);
+    writer_from_string(&w, &dst);
 
     copy(w, r, &errs);
 
-    byteslice dstslice;
-    bytestring_borrow(&dst, &dstslice);
-    if (!byteslice_eq(src, dstslice))
+    str dstslice;
+    string_borrow(&dst, &dstslice);
+    if (!str_eq(src, dstslice))
     {
         return test_fail("wanted `%s`; found `%s`", src.data, dst.data);
     }
@@ -126,5 +126,5 @@ bool test_copy()
 
 bool io_tests()
 {
-    return test_byteslice_reader() && test_copy();
+    return test_str_reader() && test_copy();
 }

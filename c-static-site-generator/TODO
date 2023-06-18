@@ -10,7 +10,6 @@
   * move `error/error.h` to `std/error.h`
 * Make `deferable` internal to `test.c` such that `test_defer` just pushes
   onto the `deferable` vector.
-* Rename `bytestring` to `string` and `byteslice` to `str`
 * Write tests for `buffered_reader`
 * 🥳 Begin implementing static site generator!
 

@@ -6,19 +6,19 @@ void writer_init(writer *w, void *data, write_func write)
     w->write = write;
 }
 
-size_t writer_write(writer w, byteslice bs, errors *errs)
+size_t writer_write(writer w, str s, errors *errs)
 {
-    return w.write(w.data, bs, errs);
+    return w.write(w.data, s, errs);
 }
 
-size_t bytestring_write(bytestring *bs, byteslice buf, errors *errs)
+size_t string_write(string *s, str buf, errors *errs)
 {
-    bytestring_push_slice(bs, buf);
+    string_push_slice(s, buf);
     return buf.len;
 }
 
-void writer_from_bytestring(writer *w, bytestring *bs)
+void writer_from_string(writer *w, string *s)
 {
-    w->data = bs;
-    w->write = (write_func)bytestring_write;
+    w->data = s;
+    w->write = (write_func)string_write;
 }
