@@ -50,3 +50,11 @@ bool str_eq(str lhs, str rhs)
 {
     return lhs.len == rhs.len && memcmp(lhs.data, rhs.data, lhs.len) == 0;
 }
+
+size_t str_copy_to_c(char *dst, str src, size_t len)
+{
+    size_t copied = min(len, src.len);
+    memmove(dst, src.data, copied);
+    dst[copied] = '\0';
+    return copied;
+}
