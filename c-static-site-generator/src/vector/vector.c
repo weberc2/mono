@@ -1,5 +1,7 @@
 #include "vector/vector.h"
 
+#include <stdbool.h>
+
 void vector_init(vector *v, size_t elt_size)
 {
     v->data = NULL;
@@ -45,6 +47,19 @@ void vector_push(vector *v, void *value)
 {
     void *dst = vector_alloc(v);
     memcpy(dst, value, v->elt_size);
+}
+
+bool vector_pop(vector *v, void *out)
+{
+    if (v->len < 1)
+    {
+        return false;
+    }
+
+    void *src = v->data + (v->elt_size * (v->len - 1));
+    memcpy(out, src, v->elt_size);
+    v->len--;
+    return true;
 }
 
 void *vector_get(vector *v, size_t i)

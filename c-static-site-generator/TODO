@@ -8,8 +8,6 @@
   * move `bytestring/bytestring.h` to `std/bytestring/bytestring.h`
   * move `vector/vector.h` to `std/collections/vector.h`
   * move `error/error.h` to `std/error.h`
-* Make `deferable` internal to `test.c` such that `test_defer` just pushes
-  onto the `deferable` vector.
 * 🥳 Begin implementing static site generator!
 
 # Speculative
