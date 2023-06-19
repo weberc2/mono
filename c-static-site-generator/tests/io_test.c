@@ -1,6 +1,7 @@
 #include "test.h"
 #include "io/copy.h"
 #include "io/str_reader.h"
+#include "io/buffered_reader.h"
 #include "string/string.h"
 #include <stdbool.h>
 
@@ -124,7 +125,111 @@ bool test_copy()
     return test_success();
 }
 
+bool assert_str_eq(char *wanted_c, str found)
+{
+    str wanted;
+    str_init(&wanted, wanted_c, strlen(wanted_c));
+    if (!str_eq(wanted, found))
+    {
+        char *found_c = malloc(found.len + 1);
+        str_copy_to_c(found_c, found, found.len);
+        bool result = test_fail(
+            "wanted `%s` (len: `%zu`); "
+            "found `%s` (len: `%zu`)",
+            wanted_c,
+            wanted.len,
+            found_c,
+            found.len);
+        free(found_c);
+        return result;
+    }
+    return true;
+}
+
+bool assert_no_errs(errors *errs)
+{
+    size_t errors_count = errors_len(errs);
+    if (errors_count > 0)
+    {
+        return test_fail("found `%zu` unexpected errors", errors_count);
+    }
+    return true;
+}
+
+bool assert_count(const char *ctx, size_t wanted, size_t found)
+{
+    if (wanted != found)
+    {
+        return test_fail("%s: wanted `%zu`; found `%zu`", ctx, wanted, found);
+    }
+    return true;
+}
+
+bool assert_read(char *wanted_c, size_t nr, str found, errors *errs)
+{
+    size_t len = strlen(wanted_c);
+    str_slice(found, &found, 0, len);
+    return assert_count("bytes read", len, nr) &&
+           assert_no_errs(errs) &&
+           assert_str_eq(wanted_c, found);
+}
+
+bool assert_buffered_read(
+    buffered_reader *br,
+    str buf,
+    char *wanted_c,
+    errors *errs)
+{
+    size_t nr = buffered_reader_read(br, buf, errs);
+    return assert_read("ll", nr, buf, errs);
+}
+
+bool test_buffered_reader()
+{
+    test_init("test_buffered_reader");
+
+    char srcalloc[] = "helloworld!";
+    str src_str;
+    str_init(&src_str, srcalloc, sizeof(srcalloc) - 1);
+
+    str_reader src_str_reader;
+    str_reader_init(&src_str_reader, src_str);
+
+    reader src_reader;
+    str_reader_to_reader(&src_str_reader, &src_reader);
+
+    char internal_bufalloc[5] = {0};
+    str internal_buffer;
+    str_init(&internal_buffer, internal_bufalloc, sizeof(internal_bufalloc));
+
+    buffered_reader br;
+    buffered_reader_init(&br, src_reader, internal_buffer);
+
+    char bufalloc[2] = {0};
+    str buf;
+    str_init(&buf, bufalloc, sizeof(bufalloc));
+
+    errors errs;
+    errors_init(&errs);
+    TEST_DEFER(errors_drop, &errs);
+
+#define ASSERT_BUFFERED_READ(wanted)                      \
+    if (!assert_buffered_read(&br, buf, (wanted), &errs)) \
+    {                                                     \
+        return false;                                     \
+    }
+    ASSERT_BUFFERED_READ("he");
+    ASSERT_BUFFERED_READ("ll");
+    ASSERT_BUFFERED_READ("ow");
+    ASSERT_BUFFERED_READ("or");
+    ASSERT_BUFFERED_READ("ld");
+    ASSERT_BUFFERED_READ("!");
+#undef ASSERT_BUFFERED_READ
+
+    return test_success();
+}
+
 bool io_tests()
 {
-    return test_str_reader() && test_copy();
+    return test_str_reader() && test_copy() && test_buffered_reader();
 }

@@ -1,4 +1,5 @@
 #include "io/buffered_reader.h"
+#include "math/math.h"
 
 void buffered_reader_init(buffered_reader *br, reader source, str buf)
 {
@@ -9,20 +10,29 @@ void buffered_reader_init(buffered_reader *br, reader source, str buf)
 
 size_t buffered_reader_read(buffered_reader *br, str buf, errors *errs)
 {
-    str remaining;
-    str_slice(br->buffer, &remaining, br->cursor, br->buffer.len);
-    size_t n = str_copy(buf, remaining);
-
-    // if n >= buf.len, it means we had at least a whole `buf` left in the
-    // buffer. If n == 0, it means we've reached the end of the file. In either
-    // case, return.
-    if (n >= buf.len || n < 1)
+    size_t n;
+    if (br->cursor > 0 && br->cursor < br->buffer.len)
     {
-        return n;
+        str remaining;
+        str_slice(br->buffer, &remaining, br->cursor, br->buffer.len);
+        n = str_copy(buf, remaining);
+        br->cursor += n;
+
+        // if n >= buf.len, it means we had at least a whole `buf` left in the
+        // buffer. If n == 0, it means we've reached the end of the file. In either
+        // case, return.
+        if (n >= buf.len || n < 1)
+        {
+            return n;
+        }
+    }
+    else
+    {
+        n = 0;
     }
 
-    // otherwise, we only partially filled the buffer and we need to reload the
-    // buffer.
+    // otherwise, we only partially filled the output buffer and we need to
+    // reload the internal buffer.
     while (n < buf.len)
     {
         br->cursor = 0;
@@ -41,9 +51,12 @@ size_t buffered_reader_read(buffered_reader *br, str buf, errors *errs)
 
         // otherwise we read something; let's copy it to the unwritten portion
         // of the output buffer.
-        size_t copied = str_copy_at(buf, br->buffer, n);
+        str target;
+        str_slice(buf, &target, n, min(buf.len, nr));
+        size_t copied = str_copy(target, br->buffer);
         size_t unwritten = buf.len - n;
         n += copied;
+        br->cursor += copied;
 
         // if we filled the output buffer OR encountered errors, return.
         if (copied >= unwritten || errors_len(errs) > 0)
