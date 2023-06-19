@@ -1,11 +1,11 @@
 # Committed
 * Create `core` package
-  * move `byteslice/byteslice.h` to `core/byteslice.h`
+  * move `str/str.h` to `core/str.h`
   * move `io` to `core/io`
     * need to refactor `error` out of `io` since it allocates
 * Create `std` package
   * move `panic/panic.h` to `std/panic.h`
-  * move `bytestring/bytestring.h` to `std/bytestring/bytestring.h`
+  * move `string/string.h` to `std/string/string.h`
   * move `vector/vector.h` to `std/collections/vector.h`
   * move `error/error.h` to `std/error.h`
 * 🥳 Begin implementing static site generator!
