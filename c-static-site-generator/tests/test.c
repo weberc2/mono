@@ -3,30 +3,42 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include "vector/vector.h"
 
 char *current_test;
+
+struct deferable
+{
+    void *data;
+    defer_func defer;
+};
+
+static vector deferables;
+static bool initialized;
 
 void test_init(char *name)
 {
     current_test = name;
+    if (!initialized)
+    {
+        vector_init(&deferables, sizeof(struct deferable));
+        initialized = true;
+    }
 }
-
-static void noop(void *_) {}
-
-static defer_func deferred = noop;
-void *deferred_data;
 
 void test_defer(defer_func func, void *data)
 {
-    deferred = func;
-    deferred_data = data;
+    struct deferable deferable = {data, func};
+    vector_push(&deferables, &deferable);
 }
 
 void test_run_defer()
 {
-    deferred(deferred_data);
-    deferred = noop;
-    deferred_data = NULL;
+    struct deferable deferable;
+    while (vector_pop(&deferables, &deferable))
+    {
+        deferable.defer(deferable.data);
+    }
 }
 
 bool test_fail(const char *format, ...)
@@ -48,19 +60,4 @@ bool test_success()
 
     printf("SUCCESS: %s()\n", current_test);
     return true;
-}
-
-void defer_many(vector *deferables)
-{
-    for (int i = deferables->len - 1; i >= 0; i--)
-    {
-        struct deferable *deferable = vector_get(deferables, i);
-        deferable->defer(deferable->data);
-    }
-}
-
-void deferables_push(vector *deferables, void *data, defer_func defer)
-{
-    struct deferable deferable = {data, defer};
-    vector_push(deferables, &deferable);
 }

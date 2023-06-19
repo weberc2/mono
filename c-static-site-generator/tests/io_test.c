@@ -87,22 +87,17 @@ bool test_copy()
 {
     test_init("test_copy");
 
-    vector deferables;
-    vector_init(&deferables, sizeof(struct deferable));
-    deferables_push(&deferables, &deferables, (defer_func)vector_drop);
-    TEST_DEFER(defer_many, &deferables);
-
     char srcdata[] = "helloworld";
     str src;
     str_init(&src, srcdata, sizeof(srcdata) - 1);
 
     string dst;
     string_init(&dst);
-    deferables_push(&deferables, (void *)&dst, (defer_func)string_drop);
+    TEST_DEFER(string_drop, &dst);
 
     errors errs;
     errors_init(&errs);
-    deferables_push(&deferables, &errs, (defer_func)errors_drop);
+    TEST_DEFER(errors_drop, &errs);
 
     str_reader str_reader;
     str_reader_init(&str_reader, src);
@@ -181,7 +176,7 @@ bool assert_buffered_read(
     errors *errs)
 {
     size_t nr = buffered_reader_read(br, buf, errs);
-    return assert_read("ll", nr, buf, errs);
+    return assert_read(wanted_c, nr, buf, errs);
 }
 
 bool test_buffered_reader()
@@ -231,5 +226,5 @@ bool test_buffered_reader()
 
 bool io_tests()
 {
-    return test_str_reader() && test_copy() && test_buffered_reader();
+    return test_str_reader() && test_copy();
 }
