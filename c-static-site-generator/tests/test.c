@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "vector/vector.h"
+#include "string/string.h"
+#include "string/string_formatter.h"
 
 char *current_test;
 
@@ -60,4 +62,31 @@ bool test_success()
 
     printf("SUCCESS: %s()\n", current_test);
     return true;
+}
+
+char *error_to_raw(error err)
+{
+    string s;
+    string_init(&s);
+    TEST_DEFER(string_drop, &s);
+
+    formatter f;
+    string_formatter(&f, &s);
+
+    error_display(err, f);
+    char *tmp = calloc(s.len, 1);
+    TEST_DEFER(free, tmp);
+
+    string_copy_to_c(tmp, &s, s.len);
+    return tmp;
+}
+
+bool assert_ok(io_result res)
+{
+    if (res.ok)
+    {
+        return true;
+    }
+
+    return test_fail("unexpected err: %s", error_to_raw(res.err));
 }

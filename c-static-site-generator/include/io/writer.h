@@ -2,9 +2,9 @@
 #define WRITER_H
 
 #include "str/str.h"
-#include "error/error.h"
+#include "io_result.h"
 
-typedef size_t (*write_func)(void *, str, errors *);
+typedef size_t (*write_func)(void *, str, io_result *);
 
 typedef struct
 {
@@ -13,7 +13,6 @@ typedef struct
 } writer;
 
 void writer_init(writer *w, void *data, write_func write);
-void writer_from_string(writer *w, string *s);
-size_t writer_write(writer w, str s, errors *errs);
+size_t writer_write(writer w, str s, io_result *res);
 
 #endif // WRITER_H

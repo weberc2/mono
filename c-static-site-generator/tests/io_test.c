@@ -1,9 +1,15 @@
+#include <stdbool.h>
+#include <string.h>
+#include <stdlib.h>
+
 #include "test.h"
 #include "io/copy.h"
+#include "io/io_result.h"
 #include "io/str_reader.h"
 #include "io/buffered_reader.h"
 #include "string/string.h"
-#include <stdbool.h>
+#include "string/string_formatter.h"
+#include "string/string_writer.h"
 
 bool test_str_reader()
 {
@@ -23,16 +29,16 @@ bool test_str_reader()
     reader r;
     str_reader_to_reader(&br, &r);
 
-    errors errs;
-    errors_init(&errs);
-    TEST_DEFER(errors_drop, &errs);
+    io_result res;
+    io_result_ok(&res);
 
-    size_t nr = reader_read(r, buffer, &errs);
+    size_t nr = reader_read(r, buffer, &res);
 
     if (nr != buffer.len)
     {
         return test_fail("nr: wanted `%zu`; found `%zu`", buffer.len, nr);
     }
+    ASSERT_OK(res);
 
     str wanted;
     str_init(&wanted, "hello", 5);
@@ -43,13 +49,10 @@ bool test_str_reader()
             wanted.data,
             buffer.data);
     }
-    if (errors_len(&errs) > 0)
-    {
-        return test_fail("found `%d` unexpected errors", errors_len(&errs));
-    }
+    ASSERT_OK(res);
 
     // Read a second time to get the rest of the data
-    nr = reader_read(r, buffer, &errs);
+    nr = reader_read(r, buffer, &res);
 
     if (nr != buffer.len)
     {
@@ -64,21 +67,15 @@ bool test_str_reader()
             wanted.data,
             buffer.data);
     }
-    if (errors_len(&errs) > 0)
-    {
-        return test_fail("found `%d` unexpected errors", errors_len(&errs));
-    }
+    ASSERT_OK(res);
 
     // read a third time to get the eof
-    nr = reader_read(r, buffer, &errs);
+    nr = reader_read(r, buffer, &res);
     if (nr != 0)
     {
         return test_fail("nr: wanted `0`; found `%zu`", nr);
     }
-    if (errors_len(&errs) > 0)
-    {
-        return test_fail("found `%d` unexpected errors", errors_len(&errs));
-    }
+    ASSERT_OK(res);
 
     return test_success();
 }
@@ -95,9 +92,8 @@ bool test_copy()
     string_init(&dst);
     TEST_DEFER(string_drop, &dst);
 
-    errors errs;
-    errors_init(&errs);
-    TEST_DEFER(errors_drop, &errs);
+    io_result res;
+    io_result_ok(&res);
 
     str_reader str_reader;
     str_reader_init(&str_reader, src);
@@ -106,9 +102,9 @@ bool test_copy()
     str_reader_to_reader(&str_reader, &r);
 
     writer w;
-    writer_from_string(&w, &dst);
+    string_writer(&w, &dst);
 
-    copy(w, r, &errs);
+    copy(w, r, &res);
 
     str dstslice;
     string_borrow(&dst, &dstslice);
@@ -141,16 +137,6 @@ bool assert_str_eq(char *wanted_c, str found)
     return true;
 }
 
-bool assert_no_errs(errors *errs)
-{
-    size_t errors_count = errors_len(errs);
-    if (errors_count > 0)
-    {
-        return test_fail("found `%zu` unexpected errors", errors_count);
-    }
-    return true;
-}
-
 bool assert_count(const char *ctx, size_t wanted, size_t found)
 {
     if (wanted != found)
@@ -160,23 +146,23 @@ bool assert_count(const char *ctx, size_t wanted, size_t found)
     return true;
 }
 
-bool assert_read(char *wanted_c, size_t nr, str found, errors *errs)
+bool assert_read(char *wanted_c, size_t nr, str found, io_result res)
 {
     size_t len = strlen(wanted_c);
     str_slice(found, &found, 0, len);
     return assert_count("bytes read", len, nr) &&
-           assert_no_errs(errs) &&
+           assert_ok(res) &&
            assert_str_eq(wanted_c, found);
 }
 
 bool assert_buffered_read(
     buffered_reader *br,
     str buf,
-    char *wanted_c,
-    errors *errs)
+    char *wanted_c)
 {
-    size_t nr = buffered_reader_read(br, buf, errs);
-    return assert_read(wanted_c, nr, buf, errs);
+    io_result res;
+    size_t nr = buffered_reader_read(br, buf, &res);
+    return assert_read(wanted_c, nr, buf, res);
 }
 
 bool test_buffered_reader()
@@ -204,14 +190,13 @@ bool test_buffered_reader()
     str buf;
     str_init(&buf, bufalloc, sizeof(bufalloc));
 
-    errors errs;
-    errors_init(&errs);
-    TEST_DEFER(errors_drop, &errs);
+    io_result res;
+    io_result_ok(&res);
 
-#define ASSERT_BUFFERED_READ(wanted)                      \
-    if (!assert_buffered_read(&br, buf, (wanted), &errs)) \
-    {                                                     \
-        return false;                                     \
+#define ASSERT_BUFFERED_READ(wanted)               \
+    if (!assert_buffered_read(&br, buf, (wanted))) \
+    {                                              \
+        return false;                              \
     }
     ASSERT_BUFFERED_READ("he");
     ASSERT_BUFFERED_READ("ll");
