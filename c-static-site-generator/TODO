@@ -1,12 +1,4 @@
 # Committed
-* Create `core` package
-  * move `str/str.h` to `core/str.h`
-  * move `io` to `core/io`
-* Create `std` package
-  * move `panic/panic.h` to `std/panic.h`
-  * move `string/string.h` to `std/string/string.h`
-  * move `vector/vector.h` to `std/collections/vector.h`
-  * move `error/error.h` to `std/error.h`
 * 🥳 Begin implementing static site generator!
 
 # Speculative
