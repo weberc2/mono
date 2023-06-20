@@ -3,9 +3,9 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include "vector/vector.h"
-#include "string/string.h"
-#include "string/string_formatter.h"
+#include "std/vector/vector.h"
+#include "std/string/string.h"
+#include "std/string/string_formatter.h"
 
 char *current_test;
 

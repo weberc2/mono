@@ -7,9 +7,9 @@
 #include "core/io/io_result.h"
 #include "core/io/str_reader.h"
 #include "core/io/buffered_reader.h"
-#include "string/string.h"
-#include "string/string_formatter.h"
-#include "string/string_writer.h"
+#include "std/string/string.h"
+#include "std/string/string_formatter.h"
+#include "std/string/string_writer.h"
 
 bool test_str_reader()
 {
