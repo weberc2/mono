@@ -1,6 +1,6 @@
-#include "io/buffered_reader.h"
-#include "io/io_result.h"
-#include "math/math.h"
+#include "core/io/buffered_reader.h"
+#include "core/io/io_result.h"
+#include "core/math/math.h"
 
 void buffered_reader_init(buffered_reader *br, reader source, str buf)
 {

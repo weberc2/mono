@@ -1,4 +1,4 @@
-#include "error/error.h"
+#include "core/error/error.h"
 #include <string.h>
 
 void error_init(error *err, void *data, display_func display)

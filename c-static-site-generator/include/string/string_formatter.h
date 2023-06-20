@@ -1,7 +1,7 @@
 #ifndef STRING_FORMATTER_H
 #define STRING_FORMATTER_H
 
-#include "fmt/formatter.h"
+#include "core/fmt/formatter.h"
 #include "string/string.h"
 
 void string_formatter(formatter *f, string *s);

@@ -1,5 +1,5 @@
-#include "io/writer.h"
-#include "io/io_result.h"
+#include "core/io/writer.h"
+#include "core/io/io_result.h"
 
 void writer_init(writer *w, void *data, write_func write)
 {

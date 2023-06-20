@@ -1,5 +1,5 @@
-#include "io/str_reader.h"
-#include "io/io_result.h"
+#include "core/io/str_reader.h"
+#include "core/io/io_result.h"
 
 void str_reader_init(str_reader *sr, str buffer)
 {

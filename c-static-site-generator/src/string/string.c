@@ -1,5 +1,5 @@
 #include "string/string.h"
-#include "math/math.h"
+#include "core/math/math.h"
 
 #include <stdlib.h> // free()
 #include <string.h> // memcpy()

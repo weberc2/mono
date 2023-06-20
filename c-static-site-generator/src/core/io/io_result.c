@@ -1,5 +1,5 @@
 #include <stdbool.h>
-#include "io/io_result.h"
+#include "core/io/io_result.h"
 
 void io_result_ok(io_result *res)
 {

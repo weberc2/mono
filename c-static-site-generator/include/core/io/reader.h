@@ -1,7 +1,7 @@
 #ifndef READER_H
 #define READER_H
 
-#include "str/str.h"
+#include "core/str/str.h"
 #include "io_result.h"
 
 #include <stddef.h>

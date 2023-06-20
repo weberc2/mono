@@ -1,5 +1,5 @@
-#include "io/reader.h"
-#include "str/str.h"
+#include "core/io/reader.h"
+#include "core/str/str.h"
 
 void reader_init(reader *r, void *data, read_func read)
 {
