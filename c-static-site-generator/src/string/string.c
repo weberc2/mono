@@ -54,3 +54,9 @@ void string_slice(string *s, str *out, size_t start, size_t end)
     string_borrow(s, out);
     str_slice(*out, out, start, end);
 }
+
+void string_copy_to_c(char *dst, string *s, size_t len)
+{
+    str tmp;
+    str_copy_to_c(dst, tmp, len);
+}

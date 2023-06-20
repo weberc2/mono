@@ -1,4 +1,5 @@
 #include "io/buffered_reader.h"
+#include "io/io_result.h"
 #include "math/math.h"
 
 void buffered_reader_init(buffered_reader *br, reader source, str buf)
@@ -8,7 +9,7 @@ void buffered_reader_init(buffered_reader *br, reader source, str buf)
     br->cursor = 0;
 }
 
-size_t buffered_reader_read(buffered_reader *br, str buf, errors *errs)
+size_t buffered_reader_read(buffered_reader *br, str buf, io_result *res)
 {
     size_t n;
     if (br->cursor > 0 && br->cursor < br->buffer.len)
@@ -19,10 +20,11 @@ size_t buffered_reader_read(buffered_reader *br, str buf, errors *errs)
         br->cursor += n;
 
         // if n >= buf.len, it means we had at least a whole `buf` left in the
-        // buffer. If n == 0, it means we've reached the end of the file. In either
-        // case, return.
+        // buffer. If n == 0, it means we've reached the end of the file. In
+        // either case, return.
         if (n >= buf.len || n < 1)
         {
+            io_result_ok(res);
             return n;
         }
     }
@@ -36,7 +38,7 @@ size_t buffered_reader_read(buffered_reader *br, str buf, errors *errs)
     while (n < buf.len)
     {
         br->cursor = 0;
-        size_t nr = reader_read(br->source, br->buffer, errs);
+        size_t nr = reader_read(br->source, br->buffer, res);
 
         // NB: we are deliberately *NOT* handling errors at this point--we
         // first want to copy anything we successfully read into the output
@@ -59,7 +61,7 @@ size_t buffered_reader_read(buffered_reader *br, str buf, errors *errs)
         br->cursor += copied;
 
         // if we filled the output buffer OR encountered errors, return.
-        if (copied >= unwritten || errors_len(errs) > 0)
+        if (copied >= unwritten || !res->ok)
         {
             break;
         }

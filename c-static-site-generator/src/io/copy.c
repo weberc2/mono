@@ -1,10 +1,11 @@
 #include "io/copy.h"
+#include "io/io_result.h"
 #include "str/str.h"
 
 const char *const ERR_SHORT_WRITE = "short write";
 const char *const ERR_INVALID_WRITE = "invalid write";
 
-size_t copy(writer dst, reader src, errors *errs)
+size_t copy(writer dst, reader src, io_result *res)
 {
     char buffer[256];
     str buf;
@@ -14,28 +15,28 @@ size_t copy(writer dst, reader src, errors *errs)
     size_t written;
     while (true)
     {
-        size_t nr = reader_read(src, buf, errs);
+        size_t nr = reader_read(src, buf, res);
         if (nr > 0)
         {
 
             str tmp;
             str_slice(buf, &tmp, 0, nr);
 
-            size_t nw = writer_write(dst, tmp, errs);
+            size_t nw = writer_write(dst, tmp, res);
 
             error err;
             if (nw < nr || nw < 0)
             {
                 nw = 0;
-                if (errors_len(errs) < 0)
+                if (!res->ok)
                 {
                     error_const(&err, ERR_INVALID_WRITE);
-                    errors_push(errs, err);
+                    io_result_err(res, err);
                 }
             }
             written += nw;
 
-            if (errors_len(errs) > 0)
+            if (!res->ok)
             {
                 break;
             }
@@ -43,10 +44,10 @@ size_t copy(writer dst, reader src, errors *errs)
             if (nr != nw)
             {
                 error_const(&err, ERR_SHORT_WRITE);
-                errors_push(errs, err);
+                io_result_err(res, err);
                 break;
             }
-            if (errors_len(errs) > 0)
+            if (!res->ok)
             {
                 break;
             }

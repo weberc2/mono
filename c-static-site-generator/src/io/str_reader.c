@@ -1,4 +1,5 @@
 #include "io/str_reader.h"
+#include "io/io_result.h"
 
 void str_reader_init(str_reader *sr, str buffer)
 {
@@ -16,8 +17,9 @@ size_t str_reader_read(str_reader *sr, str buffer)
 size_t str_reader_io_read(
     str_reader *sr,
     str buffer,
-    errors *errs)
+    io_result *res)
 {
+    io_result_ok(res);
     return str_reader_read(sr, buffer);
 }
 

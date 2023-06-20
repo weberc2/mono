@@ -1,47 +1,32 @@
 #include "error/error.h"
+#include <string.h>
 
-void error_write_string(error err, string *message)
+void error_init(error *err, void *data, display_func display)
 {
-    err.error_func(err.data, message);
+    err->data = data;
+    err->display = display;
 }
 
-void error_const_write_string(char *message, string *out)
+void error_null(error *err)
 {
-    string_push_raw(out, message, strlen(message));
+    err->data = NULL;
+    err->display = NULL;
+}
+
+void error_display(error err, formatter f)
+{
+    err.display(err.data, f);
+}
+
+bool error_const_display(const char *message, formatter f)
+{
+    str s;
+    str_init(&s, (char *)message, strlen(message));
+    return fmt_write_str(f, s);
 }
 
 void error_const(error *err, const char *message)
 {
     err->data = (void *)message;
-    err->error_func = (error_func)error_const_write_string;
-}
-
-void errors_init(errors *errs)
-{
-    vector_init(&errs->errors, sizeof(error));
-}
-
-void errors_drop(errors *errs)
-{
-    vector_drop(&errs->errors);
-}
-
-void errors_push(errors *errs, error err)
-{
-    vector_push(&errs->errors, &err);
-}
-
-void errors_write_string(errors *errs, string *message)
-{
-    for (int i = errs->errors.len; i >= 0; i--)
-    {
-        error err = *(error *)vector_get((vector *)errs, i);
-        string_push_raw(message, ": ", 2);
-        error_write_string(err, message);
-    }
-}
-
-size_t errors_len(errors *errs)
-{
-    return errs->errors.len;
+    err->display = (display_func)error_const_display;
 }

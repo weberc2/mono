@@ -7,7 +7,7 @@ void reader_init(reader *r, void *data, read_func read)
     r->read = read;
 }
 
-size_t reader_read(reader r, str bs, errors *errs)
+size_t reader_read(reader r, str bs, io_result *res)
 {
-    return r.read(r.data, bs, errs);
+    return r.read(r.data, bs, res);
 }
