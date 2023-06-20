@@ -4,7 +4,7 @@
 
 #include "test.h"
 #include "core/io/copy.h"
-#include "core/io/io_result.h"
+#include "core/result/result.h"
 #include "core/io/str_reader.h"
 #include "core/io/buffered_reader.h"
 #include "std/string/string.h"
@@ -29,8 +29,8 @@ bool test_str_reader()
     reader r;
     str_reader_to_reader(&br, &r);
 
-    io_result res;
-    io_result_ok(&res);
+    result res;
+    result_ok(&res);
 
     size_t nr = reader_read(r, buffer, &res);
 
@@ -92,8 +92,8 @@ bool test_copy()
     string_init(&dst);
     TEST_DEFER(string_drop, &dst);
 
-    io_result res;
-    io_result_ok(&res);
+    result res;
+    result_ok(&res);
 
     str_reader str_reader;
     str_reader_init(&str_reader, src);
@@ -146,7 +146,7 @@ bool assert_count(const char *ctx, size_t wanted, size_t found)
     return true;
 }
 
-bool assert_read(char *wanted_c, size_t nr, str found, io_result res)
+bool assert_read(char *wanted_c, size_t nr, str found, result res)
 {
     size_t len = strlen(wanted_c);
     str_slice(found, &found, 0, len);
@@ -160,7 +160,7 @@ bool assert_buffered_read(
     str buf,
     char *wanted_c)
 {
-    io_result res;
+    result res;
     size_t nr = buffered_reader_read(br, buf, &res);
     return assert_read(wanted_c, nr, buf, res);
 }
@@ -190,8 +190,8 @@ bool test_buffered_reader()
     str buf;
     str_init(&buf, bufalloc, sizeof(bufalloc));
 
-    io_result res;
-    io_result_ok(&res);
+    result res;
+    result_ok(&res);
 
 #define ASSERT_BUFFERED_READ(wanted)               \
     if (!assert_buffered_read(&br, buf, (wanted))) \

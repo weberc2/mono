@@ -81,7 +81,7 @@ char *error_to_raw(error err)
     return tmp;
 }
 
-bool assert_ok(io_result res)
+bool assert_ok(result res)
 {
     if (res.ok)
     {
