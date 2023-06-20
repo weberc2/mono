@@ -7,10 +7,7 @@ CC="clang -g -O0"
 
 libraries=""
 function buildLibrary() {
-    for dir in $SCRIPTDIR/src/*; do
-        if [[ "$(basename $dir)" == "core" ]]; then
-            continue
-        fi
+    for dir in $SCRIPTDIR/src/std/*; do
         if [[ -d $dir ]]; then
             lib=$(basename $dir)
             objdir=$LIBDIR/src/$lib

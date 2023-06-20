@@ -1,5 +1,5 @@
 #include "test.h"
-#include "vector/vector.h"
+#include "std/vector/vector.h"
 #include <stdbool.h>
 
 bool test_vector_init()
