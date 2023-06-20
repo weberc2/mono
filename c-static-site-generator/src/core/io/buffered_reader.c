@@ -1,5 +1,5 @@
 #include "core/io/buffered_reader.h"
-#include "core/io/io_result.h"
+#include "core/result/result.h"
 #include "core/math/math.h"
 
 void buffered_reader_init(buffered_reader *br, reader source, str buf)
@@ -9,7 +9,7 @@ void buffered_reader_init(buffered_reader *br, reader source, str buf)
     br->cursor = 0;
 }
 
-size_t buffered_reader_read(buffered_reader *br, str buf, io_result *res)
+size_t buffered_reader_read(buffered_reader *br, str buf, result *res)
 {
     size_t n;
     if (br->cursor > 0 && br->cursor < br->buffer.len)
@@ -24,7 +24,7 @@ size_t buffered_reader_read(buffered_reader *br, str buf, io_result *res)
         // either case, return.
         if (n >= buf.len || n < 1)
         {
-            io_result_ok(res);
+            result_ok(res);
             return n;
         }
     }

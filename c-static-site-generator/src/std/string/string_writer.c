@@ -1,11 +1,11 @@
 #include "std/string/string_writer.h"
 #include "std/string/string.h"
 #include "core/io/writer.h"
-#include "core/io/io_result.h"
+#include "core/result/result.h"
 
-size_t string_write(string *s, str buf, io_result *res)
+size_t string_write(string *s, str buf, result *res)
 {
-    io_result_ok(res);
+    result_ok(res);
     string_push_slice(s, buf);
     return buf.len;
 }

@@ -1,5 +1,5 @@
 #include "core/io/writer.h"
-#include "core/io/io_result.h"
+#include "core/result/result.h"
 
 void writer_init(writer *w, void *data, write_func write)
 {
@@ -7,7 +7,7 @@ void writer_init(writer *w, void *data, write_func write)
     w->write = write;
 }
 
-size_t writer_write(writer w, str s, io_result *res)
+size_t writer_write(writer w, str s, result *res)
 {
     return w.write(w.data, s, res);
 }
