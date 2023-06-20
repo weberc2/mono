@@ -1,7 +1,7 @@
 #ifndef STR_READER_H
 #define STR_READER_H
 
-#include "str/str.h"
+#include "core/str/str.h"
 #include "reader.h"
 
 typedef struct

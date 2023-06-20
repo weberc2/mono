@@ -2,7 +2,7 @@
 #define FORMATTER_H
 
 #include <stdbool.h>
-#include "str/str.h"
+#include "core/str/str.h"
 
 typedef bool (*formatter_write_str)(void *, str);
 

@@ -1,6 +1,6 @@
-#include "io/copy.h"
-#include "io/io_result.h"
-#include "str/str.h"
+#include "core/io/copy.h"
+#include "core/io/io_result.h"
+#include "core/str/str.h"
 
 const char *const ERR_SHORT_WRITE = "short write";
 const char *const ERR_INVALID_WRITE = "invalid write";

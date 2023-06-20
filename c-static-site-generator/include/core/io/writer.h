@@ -1,7 +1,7 @@
 #ifndef WRITER_H
 #define WRITER_H
 
-#include "str/str.h"
+#include "core/str/str.h"
 #include "io_result.h"
 
 typedef size_t (*write_func)(void *, str, io_result *);

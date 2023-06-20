@@ -1,6 +1,6 @@
-#include "str/str.h"
-#include "math/math.h"
-#include "panic/panic.h"
+#include "core/str/str.h"
+#include "core/math/math.h"
+#include "core/panic/panic.h"
 #include <string.h>
 
 void str_init(str *s, char *data, size_t len)

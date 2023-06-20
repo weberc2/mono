@@ -1,7 +1,7 @@
 #include "string/string_writer.h"
 #include "string/string.h"
-#include "io/writer.h"
-#include "io/io_result.h"
+#include "core/io/writer.h"
+#include "core/io/io_result.h"
 
 size_t string_write(string *s, str buf, io_result *res)
 {

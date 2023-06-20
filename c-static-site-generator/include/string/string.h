@@ -1,7 +1,7 @@
 #ifndef STRING_H
 #define STRING_H
 
-#include "str/str.h"
+#include "core/str/str.h"
 #include <stddef.h>
 
 typedef struct

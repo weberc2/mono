@@ -3,10 +3,10 @@
 #include <stdlib.h>
 
 #include "test.h"
-#include "io/copy.h"
-#include "io/io_result.h"
-#include "io/str_reader.h"
-#include "io/buffered_reader.h"
+#include "core/io/copy.h"
+#include "core/io/io_result.h"
+#include "core/io/str_reader.h"
+#include "core/io/buffered_reader.h"
 #include "string/string.h"
 #include "string/string_formatter.h"
 #include "string/string_writer.h"

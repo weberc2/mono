@@ -2,21 +2,34 @@
 
 SCRIPTDIR="$(dirname $(realpath "$0"))"
 BUILDDIR=$SCRIPTDIR/build
-LIBDIR=$BUILDDIR/lib/
+LIBDIR=$BUILDDIR/lib
 CC="clang -g -O0"
 
 libraries=""
 function buildLibrary() {
     for dir in $SCRIPTDIR/src/*; do
+        if [[ "$(basename $dir)" == "core" ]]; then
+            continue
+        fi
         if [[ -d $dir ]]; then
             lib=$(basename $dir)
             objdir=$LIBDIR/src/$lib
             mkdir -p $objdir
 
-            (
-                cd $objdir &&
-                $CC -I $SCRIPTDIR/include -c $dir/*.c
-            )
+            (cd $objdir && $CC -I $SCRIPTDIR/include -c $dir/*.c)
+            ar -crs $LIBDIR/lib${lib}.a $objdir/*.o
+            libraries="$libraries -l$lib"
+        fi
+    done
+
+    subdir="core/"
+    for dir in $SCRIPTDIR/src/core/*; do
+        if [[ -d $dir ]]; then
+            lib=$(basename $dir)
+            objdir=$LIBDIR/src/${subdir}$lib
+            mkdir -p $objdir
+
+            (cd $objdir && $CC -I $SCRIPTDIR/include -c $dir/*.c)
             ar -crs $LIBDIR/lib${lib}.a $objdir/*.o
             libraries="$libraries -l$lib"
         fi
@@ -34,7 +47,8 @@ function buildTests() {
     mkdir -p $testsdir
     $CC \
         -I $SCRIPTDIR/include \
-        -L $LIBDIR $libraries \
+        -L $LIBDIR \
+        $libraries \
         -o $testsdir/tests \
         $SCRIPTDIR/tests/*.c
 }

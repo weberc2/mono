@@ -1,7 +1,7 @@
 #include <stdbool.h>
 #include "string/string_formatter.h"
 #include "string/string.h"
-#include "fmt/formatter.h"
+#include "core/fmt/formatter.h"
 
 bool string_write_str(string *s, str str)
 {

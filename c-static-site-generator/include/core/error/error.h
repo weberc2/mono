@@ -1,7 +1,7 @@
 #ifndef ERROR_H
 #define ERROR_H
 
-#include "fmt/display.h"
+#include "core/fmt/display.h"
 
 typedef struct
 {

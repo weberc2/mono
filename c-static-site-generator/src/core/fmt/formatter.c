@@ -1,5 +1,5 @@
 #include <stdbool.h>
-#include "fmt/formatter.h"
+#include "core/fmt/formatter.h"
 
 bool fmt_write_str(formatter f, str s)
 {
