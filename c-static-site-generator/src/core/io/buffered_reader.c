@@ -7,15 +7,16 @@ void buffered_reader_init(buffered_reader *br, reader source, str buf)
     br->source = source;
     br->buffer = buf;
     br->cursor = 0;
+    br->read_end = 0;
 }
 
 size_t buffered_reader_read(buffered_reader *br, str buf, result *res)
 {
     size_t n;
-    if (br->cursor > 0 && br->cursor < br->buffer.len)
+    if (br->cursor > 0 && br->cursor < br->read_end)
     {
         str remaining;
-        str_slice(br->buffer, &remaining, br->cursor, br->buffer.len);
+        str_slice(br->buffer, &remaining, br->cursor, br->read_end);
         n = str_copy(buf, remaining);
         br->cursor += n;
 
@@ -51,7 +52,11 @@ size_t buffered_reader_read(buffered_reader *br, str buf, result *res)
         }
 
         // if we didn't read anything because we reached eof, we don't want to
-        // reset the cursor back to the beginning of the buffer.
+        // reset the `read_end` back to the beginning of the buffer.
+        br->read_end = nr;
+
+        // if we didn't read anything because we reached eof, we don't want to
+        // reset the `cursor` back to the beginning of the buffer.
         br->cursor = 0;
 
         // otherwise we read something; let's copy it to the unwritten portion

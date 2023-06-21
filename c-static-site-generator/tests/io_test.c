@@ -217,9 +217,9 @@ bool test_buffered_reader_read()
     return test_success();
 }
 
-bool test_buffered_reader_read__big_outbuf()
+bool test_buffered_reader_read__partial_rewind()
 {
-    test_init("test_buffered_reader_read__big_outbuf");
+    test_init("test_buffered_reader_read__partial_rewind");
     char src_[] = "foo";
     char innerbuf_[128] = {0};
     char outerbuf_[256] = {0};
@@ -237,7 +237,7 @@ bool test_buffered_reader_read__big_outbuf()
     buffered_reader_init(&br, r, innerbuf);
 
     result res;
-    result_ok(&res);
+    result_init(&res);
     size_t nr = buffered_reader_read(&br, outerbuf, &res);
     ASSERT_OK(res);
 
@@ -256,6 +256,30 @@ bool test_buffered_reader_read__big_outbuf()
         char found_[256] = {0};
         str_copy_to_c(found_, found, sizeof(found_));
         return test_fail("wanted `%s`; found `%s`", src_, found_);
+    }
+
+    // try rewinding, but not all the way
+    size_t new_cursor = 1;
+    br.cursor = new_cursor;
+    nr = buffered_reader_read(&br, outerbuf, &res);
+    ASSERT_OK(res);
+
+    if (nr != sizeof(src_) - 1 - new_cursor)
+    {
+        return test_fail(
+            "bytes read: wanted `%zu`; found `%zu`",
+            sizeof(src_) - 1 - new_cursor,
+            nr);
+    }
+
+    str wanted;
+    str_slice(outerbuf, &found, 0, nr);
+    str_slice(src, &wanted, new_cursor, src.len);
+    if (!str_eq(wanted, found))
+    {
+        char found_[256] = {0};
+        str_copy_to_c(found_, found, sizeof(found_));
+        return test_fail("wanted `%s`; found `%s`", src_ + new_cursor, found_);
     }
 
     return test_success();
@@ -436,6 +460,6 @@ bool io_tests()
     return test_str_reader() &&
            test_copy() &&
            test_buffered_reader_read() &&
-           test_buffered_reader_find() &&
-           test_buffered_reader_read__big_outbuf();
+           test_buffered_reader_read__partial_rewind() &&
+           test_buffered_reader_find();
 }
