@@ -11,6 +11,18 @@ void string_init(string *s)
     s->cap = 0;
 }
 
+void string_from_slice(string *s, str src)
+{
+    string_init(s);
+    string_push_slice(s, src);
+}
+
+void string_from_raw(string *s, char *data, size_t len)
+{
+    string_init(s);
+    string_push_raw(s, data, len);
+}
+
 void string_drop(string *s)
 {
     free(s->data);
