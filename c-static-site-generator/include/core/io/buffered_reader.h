@@ -10,6 +10,7 @@ typedef struct
     reader source;
     str buffer;
     size_t cursor;
+    size_t read_end;
 } buffered_reader;
 
 void buffered_reader_init(buffered_reader *br, reader source, str buf);
