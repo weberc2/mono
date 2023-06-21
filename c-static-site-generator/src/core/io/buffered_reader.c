@@ -11,7 +11,7 @@ void buffered_reader_init(buffered_reader *br, reader source, str buf)
 
 size_t buffered_reader_read(buffered_reader *br, str buf, result *res)
 {
-    size_t n;
+    size_t n = 0;
     if (br->cursor > 0 && br->cursor < br->buffer.len)
     {
         str remaining;

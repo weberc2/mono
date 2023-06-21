@@ -9,7 +9,7 @@ size_t copy(writer dst, reader src, result *res)
     str_init(&buf, buffer, sizeof(buffer));
     buf.len = sizeof(buffer);
 
-    size_t written;
+    size_t written = 0;
     while (true)
     {
         size_t nr = reader_read(src, buf, res);

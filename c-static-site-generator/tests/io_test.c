@@ -104,7 +104,14 @@ bool test_copy()
     writer w;
     string_writer(&w, &dst);
 
-    copy(w, r, &res);
+    size_t nc = copy(w, r, &res);
+    if (nc != sizeof(srcdata) - 1)
+    {
+        return test_fail(
+            "bytes copied: wanted `%zu`; found `%zu`",
+            sizeof(srcdata) - 1,
+            nc);
+    }
 
     str dstslice;
     string_borrow(&dst, &dstslice);
