@@ -217,6 +217,50 @@ bool test_buffered_reader_read()
     return test_success();
 }
 
+bool test_buffered_reader_read__big_outbuf()
+{
+    test_init("test_buffered_reader_read__big_outbuf");
+    char src_[] = "foo";
+    char innerbuf_[128] = {0};
+    char outerbuf_[256] = {0};
+
+    str src, innerbuf, outerbuf;
+    str_init(&src, src_, sizeof(src_) - 1);
+    str_init(&innerbuf, innerbuf_, sizeof(innerbuf_) - 1);
+    str_init(&outerbuf, outerbuf_, sizeof(outerbuf_) - 1);
+
+    str_reader src_str_reader;
+    reader r;
+    buffered_reader br;
+    str_reader_init(&src_str_reader, src);
+    str_reader_to_reader(&src_str_reader, &r);
+    buffered_reader_init(&br, r, innerbuf);
+
+    result res;
+    result_ok(&res);
+    size_t nr = buffered_reader_read(&br, outerbuf, &res);
+    ASSERT_OK(res);
+
+    if (nr != sizeof(src_) - 1)
+    {
+        return test_fail(
+            "bytes read: wanted `%zu`; found `%zu`",
+            sizeof(src_) - 1,
+            nr);
+    }
+
+    str found;
+    str_slice(outerbuf, &found, 0, nr);
+    if (!str_eq(src, found))
+    {
+        char found_[256] = {0};
+        str_copy_to_c(found_, found, sizeof(found_));
+        return test_fail("wanted `%s`; found `%s`", src_, found_);
+    }
+
+    return test_success();
+}
+
 typedef struct
 {
     string pre_match_data;
@@ -392,5 +436,6 @@ bool io_tests()
     return test_str_reader() &&
            test_copy() &&
            test_buffered_reader_read() &&
-           test_buffered_reader_find();
+           test_buffered_reader_find() &&
+           test_buffered_reader_read__big_outbuf();
 }
