@@ -15,4 +15,7 @@ typedef struct
 void writer_init(writer *w, void *data, write_func write);
 size_t writer_write(writer w, str s, result *res);
 
+error ERR_SHORT_WRITE;
+error ERR_INVALID_WRITE;
+
 #endif // WRITER_H
