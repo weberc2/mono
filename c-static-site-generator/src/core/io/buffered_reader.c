@@ -37,7 +37,6 @@ size_t buffered_reader_read(buffered_reader *br, str buf, result *res)
     // reload the internal buffer.
     while (n < buf.len)
     {
-        br->cursor = 0;
         size_t nr = reader_read(br->source, br->buffer, res);
 
         // NB: we are deliberately *NOT* handling errors at this point--we
@@ -50,6 +49,10 @@ size_t buffered_reader_read(buffered_reader *br, str buf, result *res)
         {
             break;
         }
+
+        // if we didn't read anything because we reached eof, we don't want to
+        // reset the cursor back to the beginning of the buffer.
+        br->cursor = 0;
 
         // otherwise we read something; let's copy it to the unwritten portion
         // of the output buffer.

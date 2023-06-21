@@ -165,9 +165,9 @@ bool assert_buffered_read(
     return assert_read(wanted_c, nr, buf, res);
 }
 
-bool test_buffered_reader()
+bool test_buffered_reader_read()
 {
-    test_init("test_buffered_reader");
+    test_init("test_buffered_reader_read");
 
     char srcalloc[] = "helloworld!";
     str src_str;
@@ -206,10 +206,18 @@ bool test_buffered_reader()
     ASSERT_BUFFERED_READ("!");
 #undef ASSERT_BUFFERED_READ
 
+    if (br.cursor != src_str.len % buf.len)
+    {
+        return test_fail(
+            "cursor: wanted `%zu`; found `%zu`",
+            src_str.len,
+            br.cursor);
+    }
+
     return test_success();
 }
 
 bool io_tests()
 {
-    return test_str_reader() && test_copy();
+    return test_str_reader() && test_copy() && test_buffered_reader_read();
 }
