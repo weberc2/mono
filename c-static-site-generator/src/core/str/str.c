@@ -27,6 +27,15 @@ void str_slice(str s, str *out, size_t start, size_t end)
             s.len,
             end);
     }
+    else if (start > end)
+    {
+        panic(
+            "slicing str with len `%zu`: start index `%zu` exceeds end index "
+            "`%zu`",
+            s.len,
+            start,
+            end);
+    }
 
     out->data = s.data + start;
     out->len = end - start;
