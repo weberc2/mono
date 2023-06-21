@@ -12,6 +12,8 @@ typedef struct
 } string;
 
 void string_init(string *s);
+void string_from_slice(string *s, str src);
+void string_from_raw(string *s, char *data, size_t len);
 void string_drop(string *s);
 void string_push_raw(string *s, char *data, size_t len);
 void string_push_slice(string *s, str src);

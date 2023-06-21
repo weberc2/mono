@@ -13,9 +13,9 @@ void error_null(error *err)
     err->display = NULL;
 }
 
-void error_display(error err, formatter f)
+bool error_display(error err, formatter f)
 {
-    err.display(err.data, f);
+    return err.display(err.data, f);
 }
 
 bool error_const_display(const char *message, formatter f)
