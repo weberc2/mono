@@ -84,8 +84,7 @@ bool test_copy()
     char srcdata[] = "helloworld";
     str src = str_new(srcdata, sizeof(srcdata) - 1);
 
-    string dst;
-    string_init(&dst);
+    string dst = string_new();
     TEST_DEFER(string_drop, &dst);
 
     result res;
@@ -109,9 +108,7 @@ bool test_copy()
             nc);
     }
 
-    str dstslice;
-    string_borrow(&dst, &dstslice);
-    if (!str_eq(src, dstslice))
+    if (!str_eq(src, string_borrow(&dst)))
     {
         return test_fail("wanted `%s`; found `%s`", src.data, dst.data);
     }

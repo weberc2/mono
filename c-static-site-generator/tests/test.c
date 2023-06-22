@@ -67,8 +67,7 @@ bool test_success()
 
 char *error_to_raw(error err, char *buf, size_t size)
 {
-    string s;
-    string_init(&s);
+    string s = string_new();
     formatter f;
     string_formatter(&f, &s);
 

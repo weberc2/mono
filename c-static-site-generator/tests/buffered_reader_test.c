@@ -97,10 +97,9 @@ bool find_test_case_run(find_test_case *tc)
     buffered_reader_init(&br, r, inner_buf);
 
     // init writer
-    string s;
     writer w;
     result res;
-    string_init(&s);
+    string s = string_new();
     string_writer(&w, &s);
     result_init(&res);
 
@@ -135,8 +134,7 @@ bool find_test_case_run(find_test_case *tc)
             error_to_raw(res.err, m, sizeof(m)));
     }
 
-    str actual_prelude;
-    string_borrow(&s, &actual_prelude);
+    str actual_prelude = string_borrow(&s);
     if (!str_eq(wanted_prelude, actual_prelude))
     {
         char wanted[256] = {0}, actual[256] = {0};
@@ -146,13 +144,12 @@ bool find_test_case_run(find_test_case *tc)
         return test_fail("prelude: wanted `%s`; found `%s`", wanted, actual);
     }
 
-    string postlude;
     str actual_postlude;
-    string_init(&postlude);
+    string postlude = string_new();
     string_writer(&w, &postlude);
     buffered_reader_to_reader(&br, &r);
     copy(w, r, &res);
-    string_borrow(&postlude, &actual_postlude);
+    str actual_postlude = string_borrow(&postlude);
     ASSERT_OK(res);
     if (!str_eq(wanted_postlude, actual_postlude))
     {
