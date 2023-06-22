@@ -52,7 +52,7 @@ void string_borrow(string *s, str *out)
 void string_slice(string *s, str *out, size_t start, size_t end)
 {
     string_borrow(s, out);
-    str_slice(*out, out, start, end);
+    *out = str_slice(*out, start, end);
 }
 
 void string_copy_to_c(char *dst, string *s, size_t len)

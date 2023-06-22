@@ -156,10 +156,9 @@ bool assert_count(const char *ctx, size_t wanted, size_t found)
 bool assert_read(char *wanted_c, size_t nr, str found, result res)
 {
     size_t len = strlen(wanted_c);
-    str_slice(found, &found, 0, len);
     return assert_count("bytes read", len, nr) &&
            assert_ok(res) &&
-           assert_str_eq(wanted_c, found);
+           assert_str_eq(wanted_c, str_slice(found, 0, len));
 }
 
 bool assert_buffered_read(
@@ -256,8 +255,7 @@ bool test_buffered_reader_read__partial_rewind()
             nr);
     }
 
-    str found;
-    str_slice(outerbuf, &found, 0, nr);
+    str found = str_slice(outerbuf, 0, nr);
     if (!str_eq(src, found))
     {
         char found_[256] = {0};
@@ -279,9 +277,8 @@ bool test_buffered_reader_read__partial_rewind()
             nr);
     }
 
-    str wanted;
-    str_slice(outerbuf, &found, 0, nr);
-    str_slice(src, &wanted, new_cursor, src.len);
+    found = str_slice(outerbuf, 0, nr);
+    str wanted = str_slice(src, new_cursor, src.len);
     if (!str_eq(wanted, found))
     {
         char found_[256] = {0};
