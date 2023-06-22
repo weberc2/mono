@@ -144,7 +144,6 @@ bool find_test_case_run(find_test_case *tc)
         return test_fail("prelude: wanted `%s`; found `%s`", wanted, actual);
     }
 
-    str actual_postlude;
     string postlude = string_new();
     string_writer(&w, &postlude);
     buffered_reader_to_reader(&br, &r);
