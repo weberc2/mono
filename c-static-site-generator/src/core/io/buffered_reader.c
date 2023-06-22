@@ -31,7 +31,7 @@ size_t buffered_reader_read(buffered_reader *br, str buf, result *res)
         // either case, return.
         if (n >= buf.len || n < 1)
         {
-            result_ok(res);
+            *res = result_ok();
             return n;
         }
     }
@@ -140,8 +140,7 @@ bool buffered_reader_find(
             // rewind the cursor to the end of the match (`read.len - i +
             // (match.len - match_cursor`), and return.
             str prelude = str_slice(read, 0, i);
-            result write_res;
-            result_init(&write_res);
+            result write_res = result_new();
             size_t nw = writer_write(w, prelude, &write_res);
 
             br->cursor -= read.len - (i + (match.len - match_cursor));
@@ -158,7 +157,7 @@ bool buffered_reader_find(
 
         result write_res;
     REFILL_BUFFER:
-        result_init(&write_res);
+        write_res = result_new();
         size_t nw = writer_write(w, read, &write_res);
 
         if (!write_res.ok)
@@ -168,7 +167,7 @@ bool buffered_reader_find(
         }
         if (nw != nr)
         {
-            result_err(res, ERR_SHORT_WRITE);
+            *res = result_err(ERR_SHORT_WRITE);
             return false;
         }
         if (!res->ok)

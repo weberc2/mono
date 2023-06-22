@@ -10,7 +10,8 @@ typedef struct
 } result;
 
 void result_init(result *res);
-void result_ok(result *res);
-void result_err(result *res, error err);
+result result_new();
+result result_ok();
+result result_err(error err);
 
 #endif // RESULT_H

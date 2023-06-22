@@ -19,7 +19,7 @@ size_t str_reader_io_read(
     str buffer,
     result *res)
 {
-    result_ok(res);
+    *res = result_ok();
     return str_reader_read(sr, buffer);
 }
 
