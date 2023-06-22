@@ -27,8 +27,7 @@ bool test_str_reader()
     reader r;
     str_reader_to_reader(&br, &r);
 
-    result res = result_ok();
-
+    result res = result_new();
     size_t nr = reader_read(r, buffer, &res);
 
     if (nr != buffer.len)
@@ -86,8 +85,6 @@ bool test_copy()
     string dst = string_new();
     TEST_DEFER(string_drop, &dst);
 
-    result res = result_ok();
-
     str_reader str_reader;
     str_reader_init(&str_reader, src);
 
@@ -96,6 +93,7 @@ bool test_copy()
 
     writer w = string_writer(&dst);
 
+    result res = result_new();
     size_t nc = copy(w, r, &res);
     if (nc != sizeof(srcdata) - 1)
     {

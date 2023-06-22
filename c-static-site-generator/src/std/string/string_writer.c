@@ -5,7 +5,7 @@
 
 size_t string_write(string *s, str buf, result *res)
 {
-    result_ok(res);
+    *res = result_ok();
     string_push_slice(s, buf);
     return buf.len;
 }
