@@ -179,8 +179,7 @@ bool test_buffered_reader_read()
     char internal_buf_[5] = {0};
     str internal_buffer = str_new(internal_buf_, sizeof(internal_buf_));
 
-    buffered_reader br;
-    buffered_reader_init(&br, src_reader, internal_buffer);
+    buffered_reader br = buffered_reader_new(src_reader, internal_buffer);
 
     char buf_[2] = {0};
     str buf = str_new(buf_, sizeof(buf_));
@@ -225,10 +224,9 @@ bool test_buffered_reader_read__partial_rewind()
 
     str_reader src_str_reader;
     reader r;
-    buffered_reader br;
     str_reader_init(&src_str_reader, src);
     str_reader_to_reader(&src_str_reader, &r);
-    buffered_reader_init(&br, r, innerbuf);
+    buffered_reader br = buffered_reader_new(r, innerbuf);
 
     result res;
     result_init(&res);

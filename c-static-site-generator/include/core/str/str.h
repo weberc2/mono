@@ -18,4 +18,6 @@ size_t str_copy_at(str dst, str src, size_t start);
 bool str_eq(str lhs, str rhs);
 size_t str_copy_to_c(char *dst, str src, size_t len);
 
+#define STR_NEW_ARR(s) str_new(s, sizeof(s))
+
 #endif // STR_H
