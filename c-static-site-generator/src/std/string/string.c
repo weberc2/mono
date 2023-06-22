@@ -1,3 +1,4 @@
+#include "core/str/str.h"
 #include "std/string/string.h"
 #include "core/math/math.h"
 
@@ -9,6 +10,13 @@ void string_init(string *s)
     s->data = NULL;
     s->len = 0;
     s->cap = 0;
+}
+
+string string_new()
+{
+    string s;
+    string_init(&s);
+    return s;
 }
 
 void string_drop(string *s)
@@ -43,16 +51,14 @@ void string_push_slice(string *s, str src)
     string_push_raw(s, src.data, src.len);
 }
 
-void string_borrow(string *s, str *out)
+str string_borrow(string *s)
 {
-    out->data = s->data;
-    out->len = s->len;
+    return str_new(s->data, s->len);
 }
 
-void string_slice(string *s, str *out, size_t start, size_t end)
+str string_slice(string *s, size_t start, size_t end)
 {
-    string_borrow(s, out);
-    *out = str_slice(*out, start, end);
+    return str_slice(string_borrow(s), start, end);
 }
 
 void string_copy_to_c(char *dst, string *s, size_t len)
