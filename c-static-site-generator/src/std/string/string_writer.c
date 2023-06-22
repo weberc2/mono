@@ -10,7 +10,7 @@ size_t string_write(string *s, str buf, result *res)
     return buf.len;
 }
 
-void string_writer(writer *w, string *s)
+writer string_writer(string *s)
 {
-    writer_init(w, s, (write_func)string_write);
+    return writer_new(s, (write_func)string_write);
 }

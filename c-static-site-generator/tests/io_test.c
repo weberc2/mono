@@ -96,8 +96,7 @@ bool test_copy()
     reader r;
     str_reader_to_reader(&str_reader, &r);
 
-    writer w;
-    string_writer(&w, &dst);
+    writer w = string_writer(&dst);
 
     size_t nc = copy(w, r, &res);
     if (nc != sizeof(srcdata) - 1)

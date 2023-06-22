@@ -4,6 +4,6 @@
 #include "std/string/string.h"
 #include "core/io/writer.h"
 
-void string_writer(writer *w, string *s);
+writer string_writer(string *s);
 
 #endif // STRING_WRITER_H
