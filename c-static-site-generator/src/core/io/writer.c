@@ -13,6 +13,13 @@ void writer_init(writer *w, void *data, write_func write)
     w->write = write;
 }
 
+writer writer_new(void *data, write_func write)
+{
+    writer w;
+    writer_init(&w, data, write);
+    return w;
+}
+
 size_t writer_write(writer w, str s, result *res)
 {
     return w.write(w.data, s, res);

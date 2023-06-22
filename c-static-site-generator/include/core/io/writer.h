@@ -13,6 +13,7 @@ typedef struct
 } writer;
 
 void writer_init(writer *w, void *data, write_func write);
+writer writer_new(void *data, write_func write);
 size_t writer_write(writer w, str s, result *res);
 
 error ERR_SHORT_WRITE;

@@ -96,10 +96,9 @@ bool find_test_case_run(find_test_case *tc)
     buffered_reader br = buffered_reader_new(r, inner_buf);
 
     // init writer
-    writer w;
     result res;
     string s = string_new();
-    string_writer(&w, &s);
+    writer w = string_writer(&s);
     result_init(&res);
 
     bool found = buffered_reader_find(&br, w, &res, match);
@@ -144,7 +143,7 @@ bool find_test_case_run(find_test_case *tc)
     }
 
     string postlude = string_new();
-    string_writer(&w, &postlude);
+    w = string_writer(&postlude);
     buffered_reader_to_reader(&br, &r);
     copy(w, r, &res);
     str actual_postlude = string_borrow(&postlude);
