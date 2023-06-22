@@ -5,8 +5,7 @@
 size_t copy(writer dst, reader src, result *res)
 {
     char buffer[256];
-    str buf;
-    str_init(&buf, buffer, sizeof(buffer));
+    str buf = str_new(buffer, sizeof(buffer));
     buf.len = sizeof(buffer);
 
     size_t written = 0;

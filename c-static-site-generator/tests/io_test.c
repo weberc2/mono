@@ -16,12 +16,10 @@ bool test_str_reader()
     test_init("test_str_reader");
 
     char data[] = "helloworld";
-    str source;
-    str_init(&source, data, sizeof(data) - 1);
+    str source = str_new(data, sizeof(data) - 1);
 
     char buf[6] = ".....";
-    str buffer;
-    str_init(&buffer, buf, sizeof(buf) - 1);
+    str buffer = str_new(buf, sizeof(buf) - 1);
 
     str_reader br;
     str_reader_init(&br, source);
@@ -40,8 +38,7 @@ bool test_str_reader()
     }
     ASSERT_OK(res);
 
-    str wanted;
-    str_init(&wanted, "hello", 5);
+    str wanted = str_new("hello", 5);
     if (!str_eq(wanted, buffer))
     {
         return test_fail(
@@ -59,7 +56,7 @@ bool test_str_reader()
         return test_fail("nr: wanted `%zu`; found `%zu`", buffer.len, nr);
     }
 
-    str_init(&wanted, "world", 5);
+    wanted = str_new("world", 5);
     if (!str_eq(wanted, buffer))
     {
         return test_fail(
@@ -85,8 +82,7 @@ bool test_copy()
     test_init("test_copy");
 
     char srcdata[] = "helloworld";
-    str src;
-    str_init(&src, srcdata, sizeof(srcdata) - 1);
+    str src = str_new(srcdata, sizeof(srcdata) - 1);
 
     string dst;
     string_init(&dst);
@@ -125,8 +121,7 @@ bool test_copy()
 
 bool assert_str_eq(char *wanted_c, str found)
 {
-    str wanted;
-    str_init(&wanted, wanted_c, strlen(wanted_c));
+    str wanted = str_new(wanted_c, strlen(wanted_c));
     if (!str_eq(wanted, found))
     {
         char *found_c = malloc(found.len + 1);
@@ -176,8 +171,7 @@ bool test_buffered_reader_read()
     test_init("test_buffered_reader_read");
 
     char srcalloc[] = "helloworld!";
-    str src_str;
-    str_init(&src_str, srcalloc, sizeof(srcalloc) - 1);
+    str src_str = str_new(srcalloc, sizeof(srcalloc) - 1);
 
     str_reader src_str_reader;
     str_reader_init(&src_str_reader, src_str);
@@ -185,16 +179,14 @@ bool test_buffered_reader_read()
     reader src_reader;
     str_reader_to_reader(&src_str_reader, &src_reader);
 
-    char internal_bufalloc[5] = {0};
-    str internal_buffer;
-    str_init(&internal_buffer, internal_bufalloc, sizeof(internal_bufalloc));
+    char internal_buf_[5] = {0};
+    str internal_buffer = str_new(internal_buf_, sizeof(internal_buf_));
 
     buffered_reader br;
     buffered_reader_init(&br, src_reader, internal_buffer);
 
-    char bufalloc[2] = {0};
-    str buf;
-    str_init(&buf, bufalloc, sizeof(bufalloc));
+    char buf_[2] = {0};
+    str buf = str_new(buf_, sizeof(buf_));
 
     result res;
     result_ok(&res);
@@ -230,10 +222,9 @@ bool test_buffered_reader_read__partial_rewind()
     char innerbuf_[128] = {0};
     char outerbuf_[256] = {0};
 
-    str src, innerbuf, outerbuf;
-    str_init(&src, src_, sizeof(src_) - 1);
-    str_init(&innerbuf, innerbuf_, sizeof(innerbuf_) - 1);
-    str_init(&outerbuf, outerbuf_, sizeof(outerbuf_) - 1);
+    str src = str_new(src_, sizeof(src_) - 1);
+    str innerbuf = str_new(innerbuf_, sizeof(innerbuf_) - 1);
+    str outerbuf = str_new(outerbuf_, sizeof(outerbuf_) - 1);
 
     str_reader src_str_reader;
     reader r;

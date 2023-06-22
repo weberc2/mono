@@ -79,13 +79,14 @@ bool find_test_case_run(find_test_case *tc)
     char outer_buf_[256] = {0};
 
     // init strs and bufs
-    str src, match, inner_buf, outer_buf, wanted_prelude, wanted_postlude;
-    str_init(&src, tc->src, tc->src_size);
-    str_init(&match, tc->match, tc->match_size);
-    str_init(&inner_buf, inner_buf_, sizeof(inner_buf_));
-    str_init(&outer_buf, outer_buf_, sizeof(outer_buf_));
-    str_init(&wanted_prelude, tc->wanted_prelude, tc->wanted_prelude_size);
-    str_init(&wanted_postlude, tc->wanted_postlude, tc->wanted_postlude_size);
+    str src = str_new(tc->src, tc->src_size);
+    str match = str_new(tc->match, tc->match_size);
+    str inner_buf = str_new(inner_buf_, sizeof(inner_buf_));
+    str outer_buf = str_new(outer_buf_, sizeof(outer_buf_));
+    str wanted_prelude = str_new(tc->wanted_prelude, tc->wanted_prelude_size);
+    str wanted_postlude = str_new(
+        tc->wanted_postlude,
+        tc->wanted_postlude_size);
 
     // init reader
     buffered_reader br;
