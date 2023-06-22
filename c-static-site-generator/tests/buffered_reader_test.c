@@ -89,12 +89,11 @@ bool find_test_case_run(find_test_case *tc)
         tc->wanted_postlude_size);
 
     // init reader
-    buffered_reader br;
     reader r;
     str_reader src_str_reader;
     str_reader_init(&src_str_reader, src);
     str_reader_to_reader(&src_str_reader, &r);
-    buffered_reader_init(&br, r, inner_buf);
+    buffered_reader br = buffered_reader_new(r, inner_buf);
 
     // init writer
     writer w;

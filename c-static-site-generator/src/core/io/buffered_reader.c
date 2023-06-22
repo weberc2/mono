@@ -10,6 +10,13 @@ void buffered_reader_init(buffered_reader *br, reader source, str buf)
     br->read_end = 0;
 }
 
+buffered_reader buffered_reader_new(reader source, str buf)
+{
+    buffered_reader br;
+    buffered_reader_init(&br, source, buf);
+    return br;
+}
+
 size_t buffered_reader_read(buffered_reader *br, str buf, result *res)
 {
     size_t n = 0;
