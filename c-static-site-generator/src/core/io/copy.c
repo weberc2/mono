@@ -21,7 +21,6 @@ size_t copy(writer dst, reader src, result *res)
             size_t nw = writer_write(dst, tmp, res);
             written += nw;
 
-            error err;
             if (nr != nw)
             {
                 result_err(res, ERR_SHORT_WRITE);
