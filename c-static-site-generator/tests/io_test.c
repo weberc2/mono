@@ -27,8 +27,7 @@ bool test_str_reader()
     reader r;
     str_reader_to_reader(&br, &r);
 
-    result res;
-    result_ok(&res);
+    result res = result_ok();
 
     size_t nr = reader_read(r, buffer, &res);
 
@@ -87,8 +86,7 @@ bool test_copy()
     string dst = string_new();
     TEST_DEFER(string_drop, &dst);
 
-    result res;
-    result_ok(&res);
+    result res = result_ok();
 
     str_reader str_reader;
     str_reader_init(&str_reader, src);
@@ -183,9 +181,6 @@ bool test_buffered_reader_read()
     char buf_[2] = {0};
     str buf = str_new(buf_, sizeof(buf_));
 
-    result res;
-    result_ok(&res);
-
 #define ASSERT_BUFFERED_READ(wanted)               \
     if (!assert_buffered_read(&br, buf, (wanted))) \
     {                                              \
@@ -227,8 +222,7 @@ bool test_buffered_reader_read__partial_rewind()
     str_reader_to_reader(&src_str_reader, &r);
     buffered_reader br = buffered_reader_new(r, innerbuf);
 
-    result res;
-    result_init(&res);
+    result res = result_new();
     size_t nr = buffered_reader_read(&br, outerbuf, &res);
     ASSERT_OK(res);
 
