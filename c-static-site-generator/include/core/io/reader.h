@@ -15,6 +15,7 @@ typedef struct
 } reader;
 
 void reader_init(reader *r, void *data, read_func read);
+reader reader_new(void *data, read_func read);
 size_t reader_read(reader r, str s, result *res);
 
 #endif // READER_H
