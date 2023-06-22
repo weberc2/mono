@@ -20,8 +20,8 @@ size_t buffered_reader_read(buffered_reader *br, str buf, result *res);
 bool buffered_reader_find(
     buffered_reader *br,
     writer w,
-    result *res,
-    str match);
+    str match,
+    result *res);
 void buffered_reader_to_reader(buffered_reader *br, reader *r);
 
 #endif // BUFFERED_READER_H
