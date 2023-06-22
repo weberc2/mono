@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include "core/panic/panic.h"
 #include "std/vector/vector.h"
 #include "std/string/string.h"
 #include "std/string/string_formatter.h"
@@ -64,21 +65,21 @@ bool test_success()
     return true;
 }
 
-char *error_to_raw(error err)
+char *error_to_raw(error err, char *buf, size_t size)
 {
     string s;
     string_init(&s);
-    TEST_DEFER(string_drop, &s);
-
     formatter f;
     string_formatter(&f, &s);
 
-    error_display(err, f);
-    char *tmp = calloc(s.len, 1);
-    TEST_DEFER(free, tmp);
+    if (!error_display(err, f))
+    {
+        panic("failed to display error!");
+    }
 
-    string_copy_to_c(tmp, &s, s.len);
-    return tmp;
+    string_copy_to_c(buf, &s, size);
+    string_drop(&s);
+    return buf;
 }
 
 bool assert_ok(result res)
@@ -88,5 +89,8 @@ bool assert_ok(result res)
         return true;
     }
 
-    return test_fail("unexpected err: %s", error_to_raw(res.err));
+    char msg[256] = {0};
+    return test_fail(
+        "unexpected err: %s",
+        error_to_raw(res.err, msg, sizeof(msg)));
 }
