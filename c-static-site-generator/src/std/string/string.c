@@ -51,6 +51,11 @@ void string_push_slice(string *s, str src)
     string_push_raw(s, src.data, src.len);
 }
 
+void string_reset(string *s)
+{
+    s->len = 0;
+}
+
 str string_borrow(string *s)
 {
     return str_new(s->data, s->len);
