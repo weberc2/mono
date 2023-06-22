@@ -100,7 +100,7 @@ bool find_test_case_run(find_test_case *tc)
     writer w = string_writer(&s);
     result res = result_new();
 
-    bool found = buffered_reader_find(&br, w, &res, match);
+    bool found = buffered_reader_find(&br, w, match, &res);
 
     if (tc->wanted_match && !found)
     {
