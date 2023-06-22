@@ -12,6 +12,7 @@ void test_init(char *name);
 void test_defer(defer_func fn, void *data);
 bool test_fail(const char *format, ...);
 bool test_success();
+char *error_to_raw(error err, char *data, size_t size);
 bool assert_ok(result res);
 
 #define ASSERT_OK(res)     \
