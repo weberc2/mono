@@ -7,14 +7,22 @@ void result_init(result *res)
     error_const(&res->err, "program error: result not initialized");
 }
 
-void result_ok(result *res)
+result result_new()
 {
-    res->ok = true;
-    error_null(&res->err);
+    result res;
+    result_init(&res);
+    return res;
 }
 
-void result_err(result *res, error err)
+result result_ok()
 {
-    res->ok = false;
-    res->err = err;
+    result res;
+    res.ok = true;
+    error_null(&res.err);
+    return res;
+}
+
+result result_err(error err)
+{
+    return (result){.ok = false, .err = err};
 }
