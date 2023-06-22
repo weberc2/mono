@@ -15,8 +15,7 @@ size_t buffered_reader_read(buffered_reader *br, str buf, result *res)
     size_t n = 0;
     if (br->cursor > 0 && br->cursor < br->read_end)
     {
-        str remaining;
-        str_slice(br->buffer, &remaining, br->cursor, br->read_end);
+        str remaining = str_slice(br->buffer, br->cursor, br->read_end);
         n = str_copy(buf, remaining);
         br->cursor += n;
 
@@ -61,8 +60,7 @@ size_t buffered_reader_read(buffered_reader *br, str buf, result *res)
 
         // otherwise we read something; let's copy it to the unwritten portion
         // of the output buffer.
-        str target;
-        str_slice(buf, &target, n, min(buf.len, nr));
+        str target = str_slice(buf, n, min(buf.len, nr));
         size_t copied = str_copy(target, br->buffer);
         size_t unwritten = buf.len - n;
         n += copied;
@@ -98,8 +96,7 @@ bool buffered_reader_find(
             return false;
         }
 
-        str read;
-        str_slice(buf, &read, 0, nr);
+        str read = str_slice(buf, 0, nr);
 
         // loop over each character in the valid portion of the buffer (the
         // slice that was populated by the last read).
@@ -135,8 +132,7 @@ bool buffered_reader_find(
             // (from `i` to `i+match.len`); write the data up to the match,
             // rewind the cursor to the end of the match (`read.len - i +
             // (match.len - match_cursor`), and return.
-            str prelude;
-            str_slice(read, &prelude, 0, i);
+            str prelude = str_slice(read, 0, i);
             result write_res;
             result_init(&write_res);
             size_t nw = writer_write(w, prelude, &write_res);

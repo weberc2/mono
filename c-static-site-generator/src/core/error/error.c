@@ -20,9 +20,7 @@ bool error_display(error err, formatter f)
 
 bool error_const_display(const char *message, formatter f)
 {
-    str s;
-    str_init(&s, (char *)message, strlen(message));
-    return fmt_write_str(f, s);
+    return fmt_write_str(f, str_new((char *)message, strlen(message)));
 }
 
 void error_const(error *err, const char *message)

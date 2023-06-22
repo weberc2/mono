@@ -3,13 +3,20 @@
 #include "core/panic/panic.h"
 #include <string.h>
 
+str str_new(char *data, size_t len)
+{
+    str s;
+    str_init(&s, data, len);
+    return s;
+}
+
 void str_init(str *s, char *data, size_t len)
 {
     s->data = data;
     s->len = len;
 }
 
-void str_slice(str s, str *out, size_t start, size_t end)
+str str_slice(str s, size_t start, size_t end)
 {
     if (start > s.len)
     {
@@ -37,8 +44,7 @@ void str_slice(str s, str *out, size_t start, size_t end)
             end);
     }
 
-    out->data = s.data + start;
-    out->len = end - start;
+    return str_new(s.data + start, end - start);
 }
 
 size_t str_copy(str dst, str src)
@@ -50,9 +56,7 @@ size_t str_copy(str dst, str src)
 
 size_t str_copy_at(str dst, str src, size_t start)
 {
-    str tail;
-    str_slice(src, &tail, start, src.len);
-    return str_copy(dst, tail);
+    return str_copy(dst, str_slice(src, start, src.len));
 }
 
 bool str_eq(str lhs, str rhs)
