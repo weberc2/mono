@@ -19,7 +19,7 @@ size_t copy(writer dst, reader src, result *res)
 
             if (nr != nw)
             {
-                result_err(res, ERR_SHORT_WRITE);
+                *res = result_err(ERR_SHORT_WRITE);
                 break;
             }
             if (!res->ok)

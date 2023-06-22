@@ -96,10 +96,9 @@ bool find_test_case_run(find_test_case *tc)
     buffered_reader br = buffered_reader_new(r, inner_buf);
 
     // init writer
-    result res;
     string s = string_new();
     writer w = string_writer(&s);
-    result_init(&res);
+    result res = result_new();
 
     bool found = buffered_reader_find(&br, w, &res, match);
 
