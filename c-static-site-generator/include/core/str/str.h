@@ -16,8 +16,25 @@ str str_slice(str s, size_t start, size_t end);
 size_t str_copy(str dst, str src);
 size_t str_copy_at(str dst, str src, size_t start);
 bool str_eq(str lhs, str rhs);
+bool str_has_prefix(str s, str prefix);
 size_t str_copy_to_c(char *dst, str src, size_t len);
+str str_trim_left(str s, str cutset);
+str str_trim_right(str s, str cutset);
+str str_trim(str s, str cutset);
+str str_trim_space_left(str s);
+str str_trim_space_right(str s);
+str str_trim_space(str s);
 
-#define STR_NEW_ARR(s) str_new(s, sizeof(s))
+typedef struct
+{
+    bool found;
+    size_t index;
+} str_find_result;
+
+str_find_result str_find(str src, str match);
+str_find_result str_find_char(str src, char match);
+
+#define STR_FROM_ARR(s) str_new(s, sizeof(s))
+#define STR_FROM_CSTR(s) str_new(s, sizeof(s) - 1)
 
 #endif // STR_H

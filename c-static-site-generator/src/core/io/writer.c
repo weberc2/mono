@@ -1,7 +1,7 @@
 #include "core/io/writer.h"
 #include "core/result/result.h"
 
-void __attribute__((constructor)) init()
+static void __attribute__((constructor)) init()
 {
     error_const(&ERR_SHORT_WRITE, "short write");
     error_const(&ERR_INVALID_WRITE, "invalid write");
