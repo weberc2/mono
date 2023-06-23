@@ -208,7 +208,174 @@ bool test_trim()
     return true;
 }
 
+typedef struct
+{
+    char *name;
+    str input;
+    str match;
+    str_find_result wanted;
+} find_test;
+
+static find_test find_tests[] = {
+    {
+        .name = "test_str_find:prefix-match",
+        .input = STR_FROM_CSTR("foo bar baz"),
+        .match = STR_FROM_CSTR("foo"),
+        .wanted = {.found = true, .index = 0},
+    },
+    {
+        .name = "test_str_find:mid-match",
+        .input = STR_FROM_CSTR("foo bar baz"),
+        .match = STR_FROM_CSTR("bar"),
+        .wanted = {.found = true, .index = 4},
+    },
+    {
+        .name = "test_str_find:suffix-match",
+        .input = STR_FROM_CSTR("foo bar baz"),
+        .match = STR_FROM_CSTR("baz"),
+        .wanted = {.found = true, .index = 8},
+    },
+    {
+        .name = "test_str_find:no-match",
+        .input = STR_FROM_CSTR("foo bar baz"),
+        .match = STR_FROM_CSTR("qux"),
+        .wanted = {.found = false, .index = 0},
+    },
+};
+
+static bool find_test_run(find_test *tc)
+{
+    test_init(tc->name);
+    str_find_result found = str_find(tc->input, tc->match);
+    if (found.found && !tc->wanted.found)
+    {
+        char m[256] = {0}, i[256] = {0};
+        str_copy_to_c(m, tc->match, sizeof(m));
+        str_copy_to_c(i, tc->input, sizeof(i));
+        return test_fail("unexpectedly found `%s` in `%s`", m, i);
+    }
+    if (!found.found && tc->wanted.found)
+    {
+        char m[256] = {0}, i[256] = {0};
+        str_copy_to_c(m, tc->match, sizeof(m));
+        str_copy_to_c(i, tc->input, sizeof(i));
+        return test_fail("expected to find `%s` in `%s` but failed", m, i);
+    }
+    if (found.index != tc->wanted.index)
+    {
+        char m[256] = {0}, i[256] = {0};
+        str_copy_to_c(m, tc->match, sizeof(m));
+        str_copy_to_c(i, tc->input, sizeof(i));
+        return test_fail(
+            "str_find(`%s`, `%s`).index: wanted `%zu`; found `%zu`",
+            i,
+            m,
+            tc->wanted.index,
+            found.index);
+    }
+
+    return test_success();
+}
+
+static bool test_str_find()
+{
+    for (size_t i = 0; i < sizeof(find_tests) / sizeof(find_test); i++)
+    {
+        if (!find_test_run(&find_tests[i]))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+typedef struct
+{
+    char *name;
+    str input;
+    char match;
+    str_find_result wanted;
+} find_char_test;
+
+static find_char_test find_char_tests[] = {
+    {
+        .name = "test_str_find_char:prefix-match",
+        .input = STR_FROM_CSTR("abc"),
+        .match = 'a',
+        .wanted = {.found = true, .index = 0},
+    },
+    {
+        .name = "test_str_find_char:mid-match",
+        .input = STR_FROM_CSTR("abc"),
+        .match = 'b',
+        .wanted = {.found = true, .index = 1},
+    },
+    {
+        .name = "test_str_find_char:suffix-match",
+        .input = STR_FROM_CSTR("abc"),
+        .match = 'c',
+        .wanted = {.found = true, .index = 2},
+    },
+    {
+        .name = "test_str_find_char:no-match",
+        .input = STR_FROM_CSTR("abc"),
+        .match = 'z',
+        .wanted = {.found = false, .index = 0},
+    },
+};
+
+static bool find_char_test_run(find_char_test *tc)
+{
+    test_init(tc->name);
+    str_find_result found = str_find_char(tc->input, tc->match);
+    if (found.found && !tc->wanted.found)
+    {
+        char i[256] = {0};
+        str_copy_to_c(i, tc->input, sizeof(i));
+        return test_fail("unexpectedly found `%c` in `%s`", tc->match, i);
+    }
+    if (!found.found && tc->wanted.found)
+    {
+        char i[256] = {0};
+        str_copy_to_c(i, tc->input, sizeof(i));
+        return test_fail(
+            "expected to find_char `%c` in `%s` but failed",
+            tc->match,
+            i);
+    }
+    if (found.index != tc->wanted.index)
+    {
+        char i[256] = {0};
+        str_copy_to_c(i, tc->input, sizeof(i));
+        return test_fail(
+            "str_find_char(`%s`, `%c`).index: wanted `%zu`; found `%zu`",
+            i,
+            tc->match,
+            tc->wanted.index,
+            found.index);
+    }
+
+    return test_success();
+}
+
+static bool test_str_find_char()
+{
+    for (size_t i = 0; i < sizeof(find_char_tests) / sizeof(find_char_test); i++)
+    {
+        if (!find_char_test_run(&find_char_tests[i]))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 bool str_tests()
 {
-    return test_str_has_prefix() && test_trim();
+    return test_str_has_prefix() &&
+           test_trim() &&
+           test_str_find() &&
+           test_str_find_char();
 }

@@ -164,7 +164,7 @@ str_find_result str_find(str src, str match)
     // the outer loop iterates through characters in the src string. If we get
     // to (src.len - match.len) and we still haven't matched the starting
     // character of the match string, then we've definitely failed.
-    for (size_t start = 0; start < src.len - match.len; start++)
+    for (size_t start = 0; start <= src.len - match.len; start++)
     {
         // for each character in the src string, check to see if it is the
         // start of a match.
