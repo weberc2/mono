@@ -130,7 +130,7 @@ str str_trim_right(str s, str cutset)
             }
         }
 
-        return str_slice(s, 0, cursor);
+        return str_slice(s, 0, cursor + 1);
 
     OUTER:
         continue;

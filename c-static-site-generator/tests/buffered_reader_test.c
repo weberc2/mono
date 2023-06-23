@@ -24,7 +24,7 @@ typedef struct
     bool wanted_error;
 } find_test_case;
 
-find_test_case test_cases[] = {
+static find_test_case test_cases[] = {
     {
         .name = "buffered_reader_find:simple",
         .inner_buf_size = 5,
