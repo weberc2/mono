@@ -10,7 +10,7 @@ typedef struct
 } error;
 
 void error_init(error *err, void *data, display_func display);
-void error_null(error *err);
+error error_null();
 bool error_display(error err, formatter f);
 void error_const(error *err, const char *message);
 
