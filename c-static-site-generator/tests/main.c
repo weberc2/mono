@@ -6,9 +6,6 @@ bool io_tests();
 bool buffered_reader_find_tests();
 bool fmt_tests();
 
-#include "std/os/file.h"
-#include "core/fmt/fmt_fprintf.h"
-
 int main()
 {
     if (
