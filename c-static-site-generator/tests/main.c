@@ -11,10 +11,6 @@ bool fmt_tests();
 
 int main()
 {
-    // FMT_FPRINTF(
-    //     file_writer(file_stdout),
-    //     "hello, {}\n",
-    //     FMT_STR(STR_LIT("world")));
     if (
         str_tests() &&
         vector_tests() &&
