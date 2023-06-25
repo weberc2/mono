@@ -16,10 +16,7 @@ result result_new()
 
 result result_ok()
 {
-    result res;
-    res.ok = true;
-    error_null(&res.err);
-    return res;
+    return (result){.ok = true, .err = error_null()};
 }
 
 result result_err(error err)
