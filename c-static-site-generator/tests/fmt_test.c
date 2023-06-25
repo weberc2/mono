@@ -13,9 +13,9 @@ typedef struct
     fmt_args args;
     str buf;
     str wanted;
-} read_test;
+} fprintf_test;
 
-static read_test read_tests[] = {
+static fprintf_test fprintf_tests[] = {
     {
         .name = "test_fmt_fprintf:empty",
         .format = STR_LIT(""),
@@ -61,7 +61,7 @@ static read_test read_tests[] = {
     },
 };
 
-bool read_test_run(read_test *tc)
+bool fprintf_test_run(fprintf_test *tc)
 {
     test_init(tc->name);
 
@@ -85,9 +85,9 @@ bool read_test_run(read_test *tc)
 
 bool test_fmt_fprintf()
 {
-    for (size_t i = 0; i < sizeof(read_tests) / sizeof(read_test); i++)
+    for (size_t i = 0; i < sizeof(fprintf_tests) / sizeof(fprintf_test); i++)
     {
-        if (!read_test_run(&read_tests[i]))
+        if (!fprintf_test_run(&fprintf_tests[i]))
         {
             return false;
         }
