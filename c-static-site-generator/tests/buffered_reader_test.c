@@ -26,7 +26,7 @@ typedef struct
 
 static find_test_case test_cases[] = {
     {
-        .name = "buffered_reader_find:simple",
+        .name = "test_buffered_reader_find:simple",
         .inner_buf_size = 5,
         .outer_buf_size = 2,
         .src = "hello world!",
@@ -41,7 +41,7 @@ static find_test_case test_cases[] = {
         .wanted_error = false,
     },
     {
-        .name = "buffered_reader_find:big_out_buf",
+        .name = "test_buffered_reader_find:big_out_buf",
         .inner_buf_size = 5,
         .outer_buf_size = 128,
         .src = "hello world!",
@@ -56,7 +56,7 @@ static find_test_case test_cases[] = {
         .wanted_error = false,
     },
     {
-        .name = "buffered_reader_find:big_inner_buf",
+        .name = "test_buffered_reader_find:big_inner_buf",
         .inner_buf_size = 128,
         .outer_buf_size = 5,
         .src = "hello world!",
