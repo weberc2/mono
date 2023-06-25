@@ -7,7 +7,7 @@ str SPACE_CHARS;
 
 static void __attribute__((constructor)) init()
 {
-    SPACE_CHARS = STR_FROM_CSTR(" \t");
+    SPACE_CHARS = STR_LIT(" \t");
 }
 
 str str_new(char *data, size_t len)
