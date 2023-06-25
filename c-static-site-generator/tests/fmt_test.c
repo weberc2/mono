@@ -16,34 +16,34 @@ typedef struct
 } read_test;
 
 static read_test read_tests[] = {
-    // {
-    //     .name = "test_fmt_fprintf:empty",
-    //     .format = STR_LIT(""),
-    //     .args = FMT_ARGS(),
-    //     .buf = STR_ARR((char[256]){0}),
-    //     .wanted = STR_LIT(""),
-    // },
-    // {
-    //     .name = "test_fmt_fprintf:no-directives",
-    //     .format = STR_LIT("foo bar"),
-    //     .args = FMT_ARGS(),
-    //     .buf = STR_ARR((char[256]){0}),
-    //     .wanted = STR_LIT("foo bar"),
-    // },
-    // {
-    //     .name = "test_fmt_fprintf:one-directive",
-    //     .format = STR_LIT("foo {} baz"),
-    //     .args = FMT_ARGS(FMT_STR_LIT("bar")),
-    //     .buf = STR_ARR((char[256]){0}),
-    //     .wanted = STR_LIT("foo bar baz"),
-    // },
-    // {
-    //     .name = "test_fmt_fprintf:one-directive-but-no-args",
-    //     .format = STR_LIT("foo {} baz"),
-    //     .args = FMT_ARGS(),
-    //     .buf = STR_ARR((char[256]){0}),
-    //     .wanted = STR_LIT("foo {}(MISSING) baz"),
-    // },
+    {
+        .name = "test_fmt_fprintf:empty",
+        .format = STR_LIT(""),
+        .args = FMT_ARGS(),
+        .buf = STR_ARR((char[256]){0}),
+        .wanted = STR_LIT(""),
+    },
+    {
+        .name = "test_fmt_fprintf:no-directives",
+        .format = STR_LIT("foo bar"),
+        .args = FMT_ARGS(),
+        .buf = STR_ARR((char[256]){0}),
+        .wanted = STR_LIT("foo bar"),
+    },
+    {
+        .name = "test_fmt_fprintf:one-directive",
+        .format = STR_LIT("foo {} baz"),
+        .args = FMT_ARGS(FMT_STR_LIT("bar")),
+        .buf = STR_ARR((char[256]){0}),
+        .wanted = STR_LIT("foo bar baz"),
+    },
+    {
+        .name = "test_fmt_fprintf:one-directive-but-no-args",
+        .format = STR_LIT("foo {} baz"),
+        .args = FMT_ARGS(),
+        .buf = STR_ARR((char[256]){0}),
+        .wanted = STR_LIT("foo {}(MISSING) baz"),
+    },
     {
         .name = "test_fmt_fprintf:multiple-arg-iterations",
         .format = STR_LIT("foo {} baz"),
@@ -52,13 +52,13 @@ static read_test read_tests[] = {
         .buf = STR_ARR((char[3]){0}),
         .wanted = STR_LIT("foo <this-string-is-longer-than-the-buffer> baz"),
     },
-    // {
-    //     .name = "test_fmt_fprintf:multiple-directives",
-    //     .format = STR_LIT("foo {} baz {}"),
-    //     .args = FMT_ARGS(FMT_STR_LIT("bar"), FMT_STR_LIT("qux")),
-    //     .buf = STR_ARR((char[3]){0}),
-    //     .wanted = STR_LIT("foo bar baz qux"),
-    // },
+    {
+        .name = "test_fmt_fprintf:multiple-directives",
+        .format = STR_LIT("foo {} baz {}"),
+        .args = FMT_ARGS(FMT_STR_LIT("bar"), FMT_STR_LIT("qux")),
+        .buf = STR_ARR((char[3]){0}),
+        .wanted = STR_LIT("foo bar baz qux"),
+    },
 };
 
 bool read_test_run(read_test *tc)

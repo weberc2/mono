@@ -34,7 +34,6 @@ static size_t fmt_reader_read_arg(fmt_reader *fr, str buf, size_t buf_cursor)
 
 FINISH_ARG:
     fmt_args_pop(&fr->args);
-    fr->cursor += 2; // skip past the fmt directive
     fr->reading_arg = false;
     return buf_cursor;
 }
@@ -54,8 +53,9 @@ static size_t fmt_reader_read(fmt_reader *fr, str buf, result *res)
             fr->format.data[fr->cursor] == '{' &&
             fr->format.data[fr->cursor + 1] == '}')
         {
-            buf_cursor = fmt_reader_read_arg(fr, buf, buf_cursor);
             fr->reading_arg = true;
+            buf_cursor = fmt_reader_read_arg(fr, buf, buf_cursor);
+            fr->cursor += 2;
             continue;
         }
 
