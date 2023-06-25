@@ -7,7 +7,7 @@ str SPACE_CHARS;
 
 static void __attribute__((constructor)) init()
 {
-    SPACE_CHARS = STR_FROM_CSTR(" \t");
+    SPACE_CHARS = STR_LIT(" \t");
 }
 
 str str_new(char *data, size_t len)
@@ -157,6 +157,18 @@ str str_trim_space_right(str s)
 str str_trim_space(str s)
 {
     return str_trim(s, SPACE_CHARS);
+}
+
+str str_put_int(str s, int i)
+{
+    str out = str_slice(s, 0, max(i / 10, s.len));
+    for (size_t pos = 0; pos < out.len; pos++)
+    {
+        out.data[out.len - pos] = i / 10 + '0';
+        i /= 10;
+    }
+
+    return out;
 }
 
 str_find_result str_find(str src, str match)

@@ -7,10 +7,9 @@ void error_init(error *err, void *data, display_func display)
     err->display = display;
 }
 
-void error_null(error *err)
+error error_null()
 {
-    err->data = NULL;
-    err->display = NULL;
+    return (error){NULL, NULL};
 }
 
 bool error_display(error err, formatter f)

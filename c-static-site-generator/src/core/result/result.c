@@ -18,7 +18,7 @@ result result_ok()
 {
     result res;
     res.ok = true;
-    error_null(&res.err);
+    res.err = error_null();
     return res;
 }
 
