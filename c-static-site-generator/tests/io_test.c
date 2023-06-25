@@ -21,11 +21,7 @@ bool test_str_reader()
     char buf[6] = ".....";
     str buffer = str_new(buf, sizeof(buf) - 1);
 
-    str_reader br;
-    str_reader_init(&br, source);
-
-    reader r;
-    str_reader_to_reader(&br, &r);
+    reader r = str_reader_to_reader(&STR_READER(source));
 
     result res = result_new();
     size_t nr = reader_read(r, buffer, &res);
@@ -85,16 +81,11 @@ bool test_copy()
     string dst = string_new();
     TEST_DEFER(string_drop, &dst);
 
-    str_reader str_reader;
-    str_reader_init(&str_reader, src);
-
-    reader r;
-    str_reader_to_reader(&str_reader, &r);
-
-    writer w = string_writer(&dst);
-
     result res = result_new();
-    size_t nc = copy(w, r, &res);
+    size_t nc = copy(
+        string_writer(&dst),
+        str_reader_to_reader(&STR_READER(src)),
+        &res);
     if (nc != sizeof(srcdata) - 1)
     {
         return test_fail(
@@ -162,22 +153,11 @@ bool test_buffered_reader_read()
 {
     test_init("test_buffered_reader_read");
 
-    char srcalloc[] = "helloworld!";
-    str src_str = str_new(srcalloc, sizeof(srcalloc) - 1);
-
-    str_reader src_str_reader;
-    str_reader_init(&src_str_reader, src_str);
-
-    reader src_reader;
-    str_reader_to_reader(&src_str_reader, &src_reader);
-
-    char internal_buf_[5] = {0};
-    str internal_buffer = str_new(internal_buf_, sizeof(internal_buf_));
-
-    buffered_reader br = buffered_reader_new(src_reader, internal_buffer);
-
-    char buf_[2] = {0};
-    str buf = str_new(buf_, sizeof(buf_));
+    str src_str = STR_LIT("helloworld!");
+    buffered_reader br = buffered_reader_new(
+        str_reader_to_reader(&STR_READER(src_str)),
+        STR_ARR((char[5]){0}));
+    str buf = STR_ARR((char[2]){0});
 
 #define ASSERT_BUFFERED_READ(wanted)               \
     if (!assert_buffered_read(&br, buf, (wanted))) \
@@ -214,11 +194,9 @@ bool test_buffered_reader_read__partial_rewind()
     str innerbuf = str_new(innerbuf_, sizeof(innerbuf_) - 1);
     str outerbuf = str_new(outerbuf_, sizeof(outerbuf_) - 1);
 
-    str_reader src_str_reader;
-    reader r;
-    str_reader_init(&src_str_reader, src);
-    str_reader_to_reader(&src_str_reader, &r);
-    buffered_reader br = buffered_reader_new(r, innerbuf);
+    buffered_reader br = buffered_reader_new(
+        str_reader_to_reader(&STR_READER(src)),
+        innerbuf);
 
     result res = result_new();
     size_t nr = buffered_reader_read(&br, outerbuf, &res);

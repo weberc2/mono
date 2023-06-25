@@ -1,6 +1,7 @@
 #ifndef BUFFERED_READER_H
 #define BUFFERED_READER_H
 
+#include <stdbool.h>
 #include "core/str/str.h"
 #include "core/result/result.h"
 #include "reader.h"
@@ -17,6 +18,7 @@ typedef struct
 void buffered_reader_init(buffered_reader *br, reader source, str buf);
 buffered_reader buffered_reader_new(reader source, str buf);
 size_t buffered_reader_read(buffered_reader *br, str buf, result *res);
+size_t buffered_reader_refresh(buffered_reader *br, result *res);
 bool buffered_reader_find(
     buffered_reader *br,
     writer w,

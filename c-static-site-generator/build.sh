@@ -7,7 +7,8 @@ CC="clang -g -O0 -std=c11 -Wall"
 
 libraries=""
 function buildLibrary() {
-    for dir in $SCRIPTDIR/src/std/*; do
+    subdir="std"
+    for dir in $SCRIPTDIR/src/$subdir/*; do
         if [[ -d $dir ]]; then
             lib=$(basename $dir)
             objdir=$LIBDIR/src/$lib
@@ -19,11 +20,24 @@ function buildLibrary() {
         fi
     done
 
-    subdir="core/"
-    for dir in $SCRIPTDIR/src/core/*; do
+    subdir="core"
+    for dir in $SCRIPTDIR/src/$subdir/*; do
         if [[ -d $dir ]]; then
             lib=$(basename $dir)
-            objdir=$LIBDIR/src/${subdir}$lib
+            objdir=$LIBDIR/src/$subdir/$lib
+            mkdir -p $objdir
+
+            (cd $objdir && $CC -I $SCRIPTDIR/include -c $dir/*.c)
+            ar -crs $LIBDIR/lib${lib}.a $objdir/*.o
+            libraries="$libraries -l$lib"
+        fi
+    done
+
+    subdir="app"
+    for dir in $SCRIPTDIR/src/$subdir/*; do
+        if [[ -d $dir ]]; then
+            lib=$(basename $dir)
+            objdir=$LIBDIR/src/$subdir/$lib
             mkdir -p $objdir
 
             (cd $objdir && $CC -I $SCRIPTDIR/include -c $dir/*.c)
