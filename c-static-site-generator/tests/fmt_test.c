@@ -2,6 +2,7 @@
 #include "core/fmt/fmt_fprintf.h"
 #include "std/string/string.h"
 #include "std/string/string_writer.h"
+#include "std/string/string_formatter.h"
 #include "test.h"
 
 #define ARR(...) __VA_ARGS__, sizeof(__VA_ARGS__)
@@ -72,6 +73,21 @@ bool fprintf_test_run(fprintf_test *tc)
         tc->format,
         tc->args,
         tc->buf);
+
+    if (!res.ok)
+    {
+        formatter f;
+        string s = string_new();
+        TEST_DEFER(string_drop, &s);
+        string_formatter(&f, &s);
+        if (!error_display(res.err, f))
+        {
+            return test_fail("failed to display error");
+        }
+        char msg[256] = {0};
+        string_copy_to_c(msg, &s, sizeof(msg));
+        return test_fail("unexpected err: %s", msg);
+    }
 
     if (!str_eq(string_borrow(&found), tc->wanted))
     {

@@ -3,7 +3,7 @@
 SCRIPTDIR="$(dirname $(realpath "$0"))"
 BUILDDIR=$SCRIPTDIR/build
 LIBDIR=$BUILDDIR/lib
-CC="clang -g -O0 -std=c11"
+CC="clang -g -O0 -std=c11 -Wall"
 
 libraries=""
 function buildLibrary() {

@@ -9,6 +9,7 @@
 
 typedef struct
 {
+    bool ok;
     size_t size;
     error err;
 } fmt_result;

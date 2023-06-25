@@ -75,14 +75,11 @@ static find_test_case test_cases[] = {
 bool find_test_case_run(find_test_case *tc)
 {
     test_init(tc->name);
-    char inner_buf_[256] = {0};
-    char outer_buf_[256] = {0};
 
     // init strs and bufs
     str src = str_new(tc->src, tc->src_size);
     str match = str_new(tc->match, tc->match_size);
-    str inner_buf = str_new(inner_buf_, sizeof(inner_buf_));
-    str outer_buf = str_new(outer_buf_, sizeof(outer_buf_));
+    str inner_buf = STR_ARR((char[256]){0});
     str wanted_prelude = str_new(tc->wanted_prelude, tc->wanted_prelude_size);
     str wanted_postlude = str_new(
         tc->wanted_postlude,

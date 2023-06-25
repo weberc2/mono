@@ -11,7 +11,7 @@ fmt_reader fmt_reader_new(str format, fmt_args args)
     };
 }
 
-static size_t fmt_reader_read_arg(fmt_reader *fr, str buf, size_t buf_cursor)
+size_t fmt_reader_read_arg(fmt_reader *fr, str buf, size_t buf_cursor)
 {
     fmt_arg arg = fmt_args_first(&fr->args);
     if (fmt_arg_is_null(arg))
@@ -38,7 +38,7 @@ FINISH_ARG:
     return buf_cursor;
 }
 
-static size_t fmt_reader_read(fmt_reader *fr, str buf, result *res)
+size_t fmt_reader_read(fmt_reader *fr, str buf, result *res)
 {
     *res = result_ok(); // always ok
     size_t buf_cursor = 0;

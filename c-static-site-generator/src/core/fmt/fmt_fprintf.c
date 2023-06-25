@@ -8,7 +8,7 @@ fmt_result fmt_fprintf_buf(writer w, str format, fmt_args args, str buf)
     reader r = fmt_reader_to_reader(&fr);
     result res;
     size_t nc = copy_buf(w, r, buf, &res);
-    return (fmt_result){.size = nc, .err = res.err};
+    return (fmt_result){.ok = res.ok, .size = nc, .err = res.err};
 }
 
 fmt_result fmt_fprintf(writer w, str format, fmt_args args)
