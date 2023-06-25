@@ -24,7 +24,6 @@ str str_trim(str s, str cutset);
 str str_trim_space_left(str s);
 str str_trim_space_right(str s);
 str str_trim_space(str s);
-str str_put_int(str s, int i);
 
 typedef struct
 {

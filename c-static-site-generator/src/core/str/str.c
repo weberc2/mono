@@ -159,18 +159,6 @@ str str_trim_space(str s)
     return str_trim(s, SPACE_CHARS);
 }
 
-str str_put_int(str s, int i)
-{
-    str out = str_slice(s, 0, max(i / 10, s.len));
-    for (size_t pos = 0; pos < out.len; pos++)
-    {
-        out.data[out.len - pos] = i / 10 + '0';
-        i /= 10;
-    }
-
-    return out;
-}
-
 str_find_result str_find(str src, str match)
 {
     // the outer loop iterates through characters in the src string. If we get
