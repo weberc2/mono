@@ -1,6 +1,14 @@
 #include "core/io/str_reader.h"
 #include "core/result/result.h"
 
+str_reader str_reader_new(str buffer)
+{
+    return (str_reader){
+        .buffer = buffer,
+        .cursor = 0,
+    };
+}
+
 void str_reader_init(str_reader *sr, str buffer)
 {
     sr->buffer = buffer;
@@ -14,17 +22,13 @@ size_t str_reader_read(str_reader *sr, str buffer)
     return n;
 }
 
-size_t str_reader_io_read(
-    str_reader *sr,
-    str buffer,
-    result *res)
+size_t str_reader_io_read(str_reader *sr, str buffer, result *res)
 {
     *res = result_ok();
     return str_reader_read(sr, buffer);
 }
 
-void str_reader_to_reader(str_reader *sr, reader *out)
+reader str_reader_to_reader(str_reader *sr)
 {
-    out->data = sr;
-    out->read = (read_func)str_reader_io_read;
+    return reader_new((void *)sr, (read_func)str_reader_io_read);
 }

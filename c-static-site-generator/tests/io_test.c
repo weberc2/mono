@@ -15,18 +15,9 @@ bool test_str_reader()
 {
     test_init("test_str_reader");
 
-    char data[] = "helloworld";
-    str source = str_new(data, sizeof(data) - 1);
-
-    char buf[6] = ".....";
-    str buffer = str_new(buf, sizeof(buf) - 1);
-
-    str_reader br;
-    str_reader_init(&br, source);
-
-    reader r;
-    str_reader_to_reader(&br, &r);
-
+    str source = STR_LIT("helloworld");
+    str buffer = STR_ARR((char[5]){0});
+    reader r = str_reader_to_reader(&STR_READER(source));
     result res = result_new();
     size_t nr = reader_read(r, buffer, &res);
 
@@ -36,7 +27,7 @@ bool test_str_reader()
     }
     ASSERT_OK(res);
 
-    str wanted = str_new("hello", 5);
+    str wanted = STR_LIT("hello");
     if (!str_eq(wanted, buffer))
     {
         return test_fail(
@@ -54,7 +45,7 @@ bool test_str_reader()
         return test_fail("nr: wanted `%zu`; found `%zu`", buffer.len, nr);
     }
 
-    wanted = str_new("world", 5);
+    wanted = STR_LIT("world");
     if (!str_eq(wanted, buffer))
     {
         return test_fail(
@@ -79,27 +70,18 @@ bool test_copy()
 {
     test_init("test_copy");
 
-    char srcdata[] = "helloworld";
-    str src = str_new(srcdata, sizeof(srcdata) - 1);
-
+    str src = STR_LIT("helloworld");
     string dst = string_new();
     TEST_DEFER(string_drop, &dst);
-
-    str_reader str_reader;
-    str_reader_init(&str_reader, src);
-
-    reader r;
-    str_reader_to_reader(&str_reader, &r);
-
+    reader r = str_reader_to_reader(&STR_READER(src));
     writer w = string_writer(&dst);
-
     result res = result_new();
     size_t nc = copy(w, r, &res);
-    if (nc != sizeof(srcdata) - 1)
+    if (nc != src.len)
     {
         return test_fail(
             "bytes copied: wanted `%zu`; found `%zu`",
-            sizeof(srcdata) - 1,
+            src.len,
             nc);
     }
 
@@ -162,22 +144,14 @@ bool test_buffered_reader_read()
 {
     test_init("test_buffered_reader_read");
 
-    char srcalloc[] = "helloworld!";
-    str src_str = str_new(srcalloc, sizeof(srcalloc) - 1);
-
-    str_reader src_str_reader;
-    str_reader_init(&src_str_reader, src_str);
-
-    reader src_reader;
-    str_reader_to_reader(&src_str_reader, &src_reader);
-
     char internal_buf_[5] = {0};
     str internal_buffer = str_new(internal_buf_, sizeof(internal_buf_));
+    str src = STR_LIT("helloworld!");
+    buffered_reader br = buffered_reader_new(
+        str_reader_to_reader(&STR_READER(src)),
+        internal_buffer);
 
-    buffered_reader br = buffered_reader_new(src_reader, internal_buffer);
-
-    char buf_[2] = {0};
-    str buf = str_new(buf_, sizeof(buf_));
+    str buf = STR_ARR((char[2]){0});
 
 #define ASSERT_BUFFERED_READ(wanted)               \
     if (!assert_buffered_read(&br, buf, (wanted))) \
@@ -192,11 +166,11 @@ bool test_buffered_reader_read()
     ASSERT_BUFFERED_READ("!");
 #undef ASSERT_BUFFERED_READ
 
-    if (br.cursor != src_str.len % buf.len)
+    if (br.cursor != src.len % buf.len)
     {
         return test_fail(
             "cursor: wanted `%zu`; found `%zu`",
-            src_str.len,
+            src.len,
             br.cursor);
     }
 
@@ -213,13 +187,9 @@ bool test_buffered_reader_read__partial_rewind()
     str src = str_new(src_, sizeof(src_) - 1);
     str innerbuf = str_new(innerbuf_, sizeof(innerbuf_) - 1);
     str outerbuf = str_new(outerbuf_, sizeof(outerbuf_) - 1);
-
-    str_reader src_str_reader;
-    reader r;
-    str_reader_init(&src_str_reader, src);
-    str_reader_to_reader(&src_str_reader, &r);
-    buffered_reader br = buffered_reader_new(r, innerbuf);
-
+    buffered_reader br = buffered_reader_new(
+        str_reader_to_reader(&STR_READER(src)),
+        innerbuf);
     result res = result_new();
     size_t nr = buffered_reader_read(&br, outerbuf, &res);
     ASSERT_OK(res);
