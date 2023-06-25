@@ -45,7 +45,7 @@ size_t buffered_reader_read(buffered_reader *br, str buf, result *res)
     // reload the internal buffer.
     while (n < buf.len)
     {
-        size_t nr = buffered_reader_refresh(br, res);
+        size_t nr = reader_read(br->source, br->buffer, res);
 
         // NB: we are deliberately *NOT* handling errors at this point--we
         // first want to copy anything we successfully read into the output
@@ -87,7 +87,6 @@ size_t buffered_reader_read(buffered_reader *br, str buf, result *res)
 
 size_t buffered_reader_refresh(buffered_reader *br, result *res)
 {
-    return reader_read(br->source, br->buffer, res);
 }
 
 bool buffered_reader_find(
@@ -120,10 +119,4 @@ bool buffered_reader_find(
             return false;
         }
     }
-}
-
-void buffered_reader_to_reader(buffered_reader *br, reader *r)
-{
-    r->data = (void *)br;
-    r->read = (read_func)buffered_reader_read;
 }
