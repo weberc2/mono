@@ -68,6 +68,5 @@ str string_slice(string *s, size_t start, size_t end)
 
 void string_copy_to_c(char *dst, string *s, size_t len)
 {
-    str tmp;
-    str_copy_to_c(dst, tmp, len);
+    str_copy_to_c(dst, string_borrow(s), len);
 }
