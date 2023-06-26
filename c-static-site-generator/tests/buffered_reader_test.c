@@ -1,4 +1,4 @@
-#include "test.h"
+#include "core/testing/test.h"
 #include "core/io/buffered_reader.h"
 #include "core/io/str_reader.h"
 #include "core/io/copy.h"

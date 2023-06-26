@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "test.h"
+#include "core/testing/test.h"
 #include "core/io/copy.h"
 #include "core/result/result.h"
 #include "core/io/str_reader.h"
