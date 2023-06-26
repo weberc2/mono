@@ -3,7 +3,7 @@
 #include "std/string/string.h"
 #include "std/string/string_writer.h"
 #include "core/config_parser/field_parser.h"
-#include "test.h"
+#include "core/testing/test.h"
 
 typedef struct match_name_test
 {
