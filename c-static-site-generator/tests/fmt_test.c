@@ -3,7 +3,7 @@
 #include "std/string/string.h"
 #include "std/string/string_writer.h"
 #include "std/string/string_formatter.h"
-#include "test.h"
+#include "core/testing/test.h"
 
 #define ARR(...) __VA_ARGS__, sizeof(__VA_ARGS__)
 
