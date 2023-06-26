@@ -11,6 +11,9 @@ typedef struct
     size_t cap;
 } string;
 
+#define STRING_NEW \
+    (string) { .data = NULL, .len = 0, .cap = 0 }
+
 void string_init(string *s);
 string string_new();
 void string_drop(string *s);
