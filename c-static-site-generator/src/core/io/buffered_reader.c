@@ -119,5 +119,6 @@ bool buffered_reader_find(
 
 void buffered_reader_to_reader(buffered_reader *br, reader *r)
 {
-    reader_init(r, (void *)br, (read_func)buffered_reader_read);
+    r->data = (void *)br;
+    r->read = (read_func)buffered_reader_read;
 }
