@@ -529,9 +529,13 @@ bool test_parse_field_value()
     return true;
 }
 
-bool field_parser_tests()
+int main()
 {
-    return test_fields_match_name() &&
-           test_parse_field_name() &&
-           test_parse_field_value();
+    if (test_fields_match_name() &&
+        test_parse_field_name() &&
+        test_parse_field_value())
+    {
+        return 0;
+    }
+    return 1;
 }
