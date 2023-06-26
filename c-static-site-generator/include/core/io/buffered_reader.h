@@ -1,7 +1,6 @@
 #ifndef BUFFERED_READER_H
 #define BUFFERED_READER_H
 
-#include <stdbool.h>
 #include "core/str/str.h"
 #include "core/result/result.h"
 #include "reader.h"
