@@ -1,6 +1,6 @@
 #include <stdbool.h>
 #include "core/str/str.h"
-#include "test.h"
+#include "core/testing/test.h"
 
 typedef struct
 {

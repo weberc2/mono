@@ -1,8 +1,8 @@
-#include "test.h"
 
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include "core/testing/test.h"
 #include "core/panic/panic.h"
 #include "std/vector/vector.h"
 #include "std/string/string.h"
