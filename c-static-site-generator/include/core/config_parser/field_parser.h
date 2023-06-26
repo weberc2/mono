@@ -4,30 +4,22 @@
 #include <stdbool.h>
 #include "core/str/str.h"
 #include "core/io/reader.h"
-#include "std/string/string.h"
+#include "core/io/writer.h"
 
 typedef struct field
 {
     str name;
-    string data;
+    writer dst;
     bool match_failed;
 } field;
 
-field field_new(str name);
-
-#define STRING(lit)             \
-    (string)                    \
-    {                           \
-        .data = lit,            \
-        .cap = sizeof(lit) - 1, \
-        .len = sizeof(lit) - 1, \
-    }
+field field_new(str name, writer dst);
 
 #define FIELD(n, d, mf)     \
     (field)                 \
     {                       \
         .name = (n),        \
-        .data = d,          \
+        .dst = d,           \
         .match_failed = mf, \
     }
 

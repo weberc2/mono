@@ -85,10 +85,6 @@ size_t buffered_reader_read(buffered_reader *br, str buf, result *res)
     return n;
 }
 
-size_t buffered_reader_refresh(buffered_reader *br, result *res)
-{
-}
-
 bool buffered_reader_find(
     buffered_reader *br,
     writer w,
@@ -119,4 +115,9 @@ bool buffered_reader_find(
             return false;
         }
     }
+}
+
+void buffered_reader_to_reader(buffered_reader *br, reader *r)
+{
+    reader_init(r, (void *)br, (read_func)buffered_reader_read);
 }

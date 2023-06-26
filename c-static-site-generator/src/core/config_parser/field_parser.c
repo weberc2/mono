@@ -1,12 +1,12 @@
 #include "core/panic/panic.h"
 #include "core/io/writer.h"
-#include "app/field_parser/field_parser.h"
+#include "core/config_parser/field_parser.h"
 
-field field_new(str name)
+field field_new(str name, writer dst)
 {
     return (field){
         .name = name,
-        .data = string_new(),
+        .dst = dst,
         .match_failed = false,
     };
 }
