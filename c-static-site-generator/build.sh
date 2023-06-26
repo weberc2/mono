@@ -47,7 +47,6 @@ function buildPrivateTests() {
 }
 
 function buildTests() {
-    TESTDIR=$BUILDDIR/tests
     mkdir -p $TESTDIR
     $CC \
         -I $SCRIPTDIR/include \
@@ -58,7 +57,7 @@ function buildTests() {
 }
 
 function runTests() {
-    $TESTDIR/tests $tests
+    bash -c "$TESTDIR/tests $tests"
 }
 
 set -eo pipefail
