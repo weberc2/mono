@@ -1,9 +1,10 @@
 #ifndef TEST_HELPERS_H
 #define TEST_HELPERS_H
 
-#include "core/config_parser/field_parser.h"
 #include "core/testing/test.h"
 #include "std/string/string_writer.h"
+
+#include "field_parser.h"
 
 #define EMPTY_STRING_WRITER STRING_WRITER(&STRING_NEW)
 

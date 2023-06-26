@@ -1,7 +1,8 @@
 #include "core/io/str_reader.h"
-#include "core/config_parser/field_parser.h"
 #include "core/testing/test.h"
+
 #include "test_helpers.h"
+#include "field_parser.h"
 
 typedef struct parse_field_name_test
 {

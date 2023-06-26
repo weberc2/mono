@@ -1,6 +1,6 @@
 #include "core/panic/panic.h"
 #include "core/io/writer.h"
-#include "core/config_parser/field_parser.h"
+#include "field_parser.h"
 
 field field_new(str name, writer dst)
 {

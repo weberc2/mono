@@ -2,10 +2,10 @@
 #include "core/io/str_reader.h"
 #include "std/string/string.h"
 #include "std/string/string_writer.h"
-#include "core/config_parser/field_parser.h"
 #include "core/testing/test.h"
 
 #include "test_helpers.h"
+#include "field_parser.h"
 
 typedef struct match_name_test
 {

@@ -1,6 +1,7 @@
-#include "core/config_parser/field_parser.h"
 #include "core/io/str_reader.h"
+
 #include "test_helpers.h"
+#include "field_parser.h"
 
 #define LIT_READER(lit)                            \
     (reader)                                       \
