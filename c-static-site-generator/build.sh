@@ -32,19 +32,6 @@ function buildLibrary() {
             libraries="$libraries -l$lib"
         fi
     done
-
-    subdir="app"
-    for dir in $SCRIPTDIR/src/$subdir/*; do
-        if [[ -d $dir ]]; then
-            lib=$(basename $dir)
-            objdir=$LIBDIR/src/$subdir/$lib
-            mkdir -p $objdir
-
-            (cd $objdir && $CC -I $SCRIPTDIR/include -c $dir/*.c)
-            ar -crs $LIBDIR/lib${lib}.a $objdir/*.o
-            libraries="$libraries -l$lib"
-        fi
-    done
 }
 
 # function buildBinary() {
