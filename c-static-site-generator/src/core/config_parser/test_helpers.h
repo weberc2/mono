@@ -4,7 +4,8 @@
 #include "core/testing/test.h"
 #include "std/string/string_writer.h"
 
-#include "field_parser.h"
+#include "fields_match_name.h"
+#include "parse_field_name.h"
 
 #define EMPTY_STRING_WRITER STRING_WRITER(&STRING_NEW)
 
@@ -59,13 +60,13 @@ static inline bool assert_fields_eq(fields wanted_fields, fields found_fields)
                 f);
         }
 
-        if (wanted.match_failed != found.match_failed)
+        if (wanted.match_status != found.match_status)
         {
             return test_fail(
                 "fields[%zu]: match_failed: wanted `%s`; found `%s`",
                 i,
-                wanted.match_failed ? "true" : "false",
-                found.match_failed ? "true" : "false");
+                field_match_status_str(wanted.match_status).data,
+                field_match_status_str(found.match_status).data);
         }
     }
 

@@ -1,7 +1,7 @@
 #include "core/io/str_reader.h"
 
 #include "test_helpers.h"
-#include "field_parser.h"
+#include "parse_field_value.h"
 
 #define LIT_READER(lit)                            \
     (reader)                                       \
@@ -29,7 +29,7 @@ parse_field_value_test parse_field_value_tests[] = {
         .cursor = 0,
         .last_read_end = 0,
         .wanted_data = STR_LIT(""),
-        .wanted_result = PARSE_FIELD_VALUE_RESULT_OK(0, 0),
+        .wanted_result = PARSE_FIELD_VALUE_OK(0),
     },
     {
         .name = "test_parse_field_value:eof",
@@ -38,7 +38,7 @@ parse_field_value_test parse_field_value_tests[] = {
         .cursor = 0,
         .last_read_end = 0,
         .wanted_data = STR_LIT("hello"),
-        .wanted_result = PARSE_FIELD_VALUE_RESULT_OK(5, 5),
+        .wanted_result = PARSE_FIELD_VALUE_OK(0),
     },
     {
         .name = "test_parse_field_value:input-ends-with-newline",
@@ -47,7 +47,7 @@ parse_field_value_test parse_field_value_tests[] = {
         .cursor = 0,
         .last_read_end = 0,
         .wanted_data = STR_LIT("hello"),
-        .wanted_result = PARSE_FIELD_VALUE_RESULT_OK(5, 5),
+        .wanted_result = PARSE_FIELD_VALUE_OK(5),
     },
     {
         .name = "test_parse_field_value:newline-in-middle-of-input",
@@ -56,7 +56,7 @@ parse_field_value_test parse_field_value_tests[] = {
         .cursor = 0,
         .last_read_end = 0,
         .wanted_data = STR_LIT("hello"),
-        .wanted_result = PARSE_FIELD_VALUE_RESULT_OK(5, 5),
+        .wanted_result = PARSE_FIELD_VALUE_OK(5),
     },
     {
         .name = "test_parse_field_value:multi-iterations-to-find-newline",
@@ -65,7 +65,7 @@ parse_field_value_test parse_field_value_tests[] = {
         .cursor = 0,
         .last_read_end = 0,
         .wanted_data = STR_LIT("hello world"),
-        .wanted_result = PARSE_FIELD_VALUE_RESULT_OK(11, 1),
+        .wanted_result = PARSE_FIELD_VALUE_OK(2),
     },
     {
         .name = "test_parse_field_value:search-initial-buffer-first",
@@ -74,7 +74,7 @@ parse_field_value_test parse_field_value_tests[] = {
         .cursor = 8,
         .last_read_end = 13,
         .wanted_data = STR_LIT("hello world"),
-        .wanted_result = PARSE_FIELD_VALUE_RESULT_OK(11, 6),
+        .wanted_result = PARSE_FIELD_VALUE_OK(6),
     },
 };
 
@@ -96,23 +96,14 @@ bool parse_field_value_test_run(parse_field_value_test *tc)
             parse_status_str(found_result.tag).data);
     }
 
-    if (tc->wanted_result.tag != parse_ok)
+    if (tc->wanted_result.tag == parse_ok &&
+        tc->wanted_result.result.buffer_position !=
+            found_result.result.buffer_position)
     {
-        if (tc->wanted_result.buffer_position != found_result.buffer_position)
-        {
-            return test_fail(
-                "result.buffer_position: wanted `%zu`; found `%zu`",
-                tc->wanted_result.buffer_position,
-                found_result.buffer_position);
-        }
-
-        if (tc->wanted_result.total_size != found_result.total_size)
-        {
-            return test_fail(
-                "result.total_size: wanted `%zu`; found `%zu`",
-                tc->wanted_result.total_size,
-                found_result.total_size);
-        }
+        return test_fail(
+            "result.buffer_position: wanted `%zu`; found `%zu`",
+            tc->wanted_result.result.buffer_position,
+            found_result.result.buffer_position);
     }
 
     if (!str_eq(tc->wanted_data, string_borrow(&found_data)))

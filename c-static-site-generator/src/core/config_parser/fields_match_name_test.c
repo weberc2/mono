@@ -5,7 +5,6 @@
 #include "core/testing/test.h"
 
 #include "test_helpers.h"
-#include "field_parser.h"
 
 typedef struct match_name_test
 {
@@ -20,29 +19,41 @@ typedef struct match_name_test
 match_name_test match_name_tests[] = {
     {
         .name = "test_fields_match_name:no-matches",
-        .fields = FIELDS(FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, false)),
+        .fields = FIELDS(
+            FIELD(
+                STR_LIT("hello"),
+                EMPTY_STRING_WRITER,
+                field_match_in_progress)),
         .field_name_cursor = 0,
         .buf = STR_LIT("foobar"),
         .wanted_fields = FIELDS(
-            FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, true)),
+            FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, field_match_failed)),
         .wanted_result = FIELDS_MATCH_FAILURE,
     },
     {
         .name = "test_fields_match_name:match-at-buffer-start",
-        .fields = FIELDS(FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, false)),
+        .fields = FIELDS(FIELD(
+            STR_LIT("hello"), EMPTY_STRING_WRITER, field_match_in_progress)),
         .field_name_cursor = 0,
         .buf = STR_LIT("hello:"),
         .wanted_fields = FIELDS(
-            FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, false)),
+            FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, field_match_success)),
         .wanted_result = FIELDS_MATCH_OK(0, 5),
     },
     {
         .name = "test_fields_match_name:buffer-matches-field-name-minus-delim",
-        .fields = FIELDS(FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, false)),
+        .fields = FIELDS(
+            FIELD(
+                STR_LIT("hello"),
+                EMPTY_STRING_WRITER,
+                field_match_in_progress)),
         .field_name_cursor = 0,
         .buf = STR_LIT("hello"),
         .wanted_fields = FIELDS(
-            FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, false)),
+            FIELD(
+                STR_LIT("hello"),
+                EMPTY_STRING_WRITER,
+                field_match_in_progress)),
         .wanted_result = FIELDS_MATCH_FAILURE,
     },
     {
@@ -50,11 +61,15 @@ match_name_test match_name_tests[] = {
         // a previous iteration, but we need to find the delimiter at the start
         // of the next buffer.
         .name = "test_fields_match_name:resuming-match-at-buffer-start",
-        .fields = FIELDS(FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, false)),
+        .fields = FIELDS(
+            FIELD(
+                STR_LIT("hello"),
+                EMPTY_STRING_WRITER,
+                field_match_in_progress)),
         .field_name_cursor = 5,
         .buf = STR_LIT(":foo"),
         .wanted_fields = FIELDS(
-            FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, false)),
+            FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, field_match_success)),
         .wanted_result = FIELDS_MATCH_OK(0, 0),
     },
     {
@@ -63,11 +78,15 @@ match_name_test match_name_tests[] = {
         // of the next buffer; however, the buffer does not start with the
         // delimiter and thus it is not a match.
         .name = "test_fields_match_name:resuming-match-at-buffer-start",
-        .fields = FIELDS(FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, false)),
+        .fields = FIELDS(
+            FIELD(
+                STR_LIT("hello"),
+                EMPTY_STRING_WRITER,
+                field_match_in_progress)),
         .field_name_cursor = 5,
         .buf = STR_LIT("foo"),
         .wanted_fields = FIELDS(
-            FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, true)),
+            FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, field_match_failed)),
         .wanted_result = FIELDS_MATCH_FAILURE,
     },
     {
@@ -78,14 +97,14 @@ match_name_test match_name_tests[] = {
         .fields = FIELDS((field){
             .name = STR_LIT("foohello"),
             .dst = EMPTY_STRING_WRITER,
-            .match_failed = true,
+            .match_status = field_match_failed,
         }),
         .field_name_cursor = 3,
         .buf = STR_LIT("hello:"),
         .wanted_fields = FIELDS((field){
             .name = STR_LIT("foohello"),
             .dst = EMPTY_STRING_WRITER,
-            .match_failed = true,
+            .match_status = field_match_failed,
         }),
         .wanted_result = FIELDS_MATCH_FAILURE,
     },
@@ -98,14 +117,14 @@ match_name_test match_name_tests[] = {
         .fields = FIELDS((field){
             .name = STR_LIT("hello"),
             .dst = EMPTY_STRING_WRITER,
-            .match_failed = false,
+            .match_status = field_match_in_progress,
         }),
         .field_name_cursor = 0,
         .buf = STR_LIT("hell"),
         .wanted_fields = FIELDS((field){
             .name = STR_LIT("hello"),
             .dst = EMPTY_STRING_WRITER,
-            .match_failed = false,
+            .match_status = field_match_in_progress,
         }),
         .wanted_result = FIELDS_MATCH_FAILURE,
     },
@@ -119,14 +138,14 @@ match_name_test match_name_tests[] = {
         .fields = FIELDS((field){
             .name = STR_LIT("hello"),
             .dst = EMPTY_STRING_WRITER,
-            .match_failed = false,
+            .match_status = field_match_in_progress,
         }),
         .field_name_cursor = 2,
         .buf = STR_LIT("ll"),
         .wanted_fields = FIELDS((field){
             .name = STR_LIT("hello"),
             .dst = EMPTY_STRING_WRITER,
-            .match_failed = false,
+            .match_status = field_match_in_progress,
         }),
         .wanted_result = FIELDS_MATCH_FAILURE,
     },
