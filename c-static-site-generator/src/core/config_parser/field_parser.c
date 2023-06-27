@@ -117,32 +117,32 @@ field_match_result parse_field_name(
     size_t field_name_cursor = 0;
     while (fields_has_valid(fields))
     {
-        field_match_result res = FIELD_MATCH_RESULT_FAILURE;
-        size_t nr = reader_read(r, buf, &res.io_error);
+        field_match_result match_res = FIELD_MATCH_RESULT_FAILURE;
+        result res = result_new();
+        size_t nr = reader_read(r, buf, &res);
+        if (!res.ok)
+        {
+            match_res.io_err = res.err;
+            match_res.buffer_position = nr;
+        }
         if (nr < 1)
         {
-            return res;
+            return match_res;
         }
 
         str gooddata = str_slice(buf, 0, nr);
 
-        res = fields_match_name(
+        match_res = fields_match_name(
             fields,
             field_name_cursor,
             gooddata);
-        if (res.match)
+        // if we found a match *or* if the reader encountered an io error
+        // return the match result (in the latter case, the match result
+        // contains the error information already, so we'll still be
+        // communicating the error).
+        if (match_res.match || !res.ok)
         {
-            return res;
-        }
-
-        // if the reader encountered an io error, propagate it (we're checking
-        // this after we check for matches in the buffer because io operations
-        // can return some good data before they encounter an error, so we
-        // prefer to handle that good data before propagating errors).
-        if (!res.io_error.ok)
-        {
-            res.buffer_position = gooddata.len;
-            return res;
+            return match_res;
         }
 
         // otherwise we're still matching, so add the size of the gooddata to
