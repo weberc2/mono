@@ -10,7 +10,9 @@ typedef struct parse_field_name_test
     str input;
     fields fields;
     str buf;
-    field_match_result wanted_match_result;
+    size_t cursor;
+    size_t last_read_end;
+    parse_field_name_result wanted_match_result;
     fields wanted_fields;
 } parse_field_name_test;
 
@@ -27,7 +29,9 @@ parse_field_name_test parse_field_name_tests[] = {
             .match_failed = false,
         }),
         .buf = STR_ARR((char[32]){0}),
-        .wanted_match_result = FIELD_MATCH_RESULT_FAILURE,
+        .cursor = 0,
+        .last_read_end = 0,
+        .wanted_match_result = PARSE_FIELD_NAME_MATCH_FAILURE,
         .wanted_fields = FIELDS((field){
             .name = STR_LIT("hello"),
             .dst = EMPTY_STRING_WRITER,
@@ -45,7 +49,9 @@ parse_field_name_test parse_field_name_tests[] = {
             .match_failed = true,
         }),
         .buf = STR_ARR((char[32]){0}),
-        .wanted_match_result = FIELD_MATCH_RESULT_FAILURE,
+        .cursor = 0,
+        .last_read_end = 0,
+        .wanted_match_result = PARSE_FIELD_NAME_MATCH_FAILURE,
         .wanted_fields = FIELDS(
             FIELD(STR_LIT("bar"), EMPTY_STRING_WRITER, true)),
     },
@@ -54,7 +60,9 @@ parse_field_name_test parse_field_name_tests[] = {
         .input = STR_LIT("foo:bar"),
         .fields = FIELDS(FIELD(STR_LIT("foo"), EMPTY_STRING_WRITER, false)),
         .buf = STR_ARR((char[32]){0}),
-        .wanted_match_result = FIELD_MATCH_RESULT_SUCCESS(0, 3),
+        .cursor = 0,
+        .last_read_end = 0,
+        .wanted_match_result = PARSE_FIELD_NAME_OK(0, 3),
         .wanted_fields = FIELDS(
             FIELD(STR_LIT("foo"), EMPTY_STRING_WRITER, false)),
     },
@@ -65,7 +73,9 @@ parse_field_name_test parse_field_name_tests[] = {
         .input = STR_LIT("foo:bar"),
         .fields = FIELDS(FIELD(STR_LIT("foo"), EMPTY_STRING_WRITER, false)),
         .buf = STR_ARR((char[3]){0}),
-        .wanted_match_result = FIELD_MATCH_RESULT_SUCCESS(0, 0),
+        .cursor = 0,
+        .last_read_end = 0,
+        .wanted_match_result = PARSE_FIELD_NAME_OK(0, 0),
         .wanted_fields = FIELDS(
             FIELD(STR_LIT("foo"), EMPTY_STRING_WRITER, false)),
     },
@@ -75,9 +85,22 @@ parse_field_name_test parse_field_name_tests[] = {
         .input = STR_LIT("hello\n:world"),
         .fields = FIELDS(FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, false)),
         .buf = STR_ARR((char[10]){0}),
-        .wanted_match_result = FIELD_MATCH_RESULT_FAILURE,
+        .cursor = 0,
+        .last_read_end = 0,
+        .wanted_match_result = PARSE_FIELD_NAME_MATCH_FAILURE,
         .wanted_fields = FIELDS(
             FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, true)),
+    },
+    {
+        .name = "test_parse_field_name:search-initial-buffer-first",
+        .input = STR_LIT("llo:world"),
+        .fields = FIELDS(FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, false)),
+        .buf = STR_ARR((char[22]){"OLDDATA-he-BADDATA"}),
+        .cursor = 8,
+        .last_read_end = 10,
+        .wanted_match_result = PARSE_FIELD_NAME_OK(0, 3),
+        .wanted_fields = FIELDS(
+            FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, false)),
     },
 };
 
@@ -90,11 +113,13 @@ bool parse_field_name_test_run(parse_field_name_test *tc)
     TEST_DEFER(string_writer_fields_drop, &tc->fields);
     TEST_DEFER(string_writer_fields_drop, &tc->wanted_fields);
 
-    field_match_result found_match_result = parse_field_name(
+    parse_field_name_result found_match_result = parse_field_name(
         str_reader_to_reader(&STR_READER(tc->input)),
         tc->fields,
-        tc->buf);
-    ASSERT_FIELD_MATCH_RESULT_EQ(tc->wanted_match_result, found_match_result);
+        tc->buf,
+        tc->cursor,
+        tc->last_read_end);
+    ASSERT_PARSE_FIELD_NAME_RESULT_EQ(tc->wanted_match_result, found_match_result);
     ASSERT_FIELDS_EQ(tc->wanted_fields, tc->fields);
     return test_success();
 }

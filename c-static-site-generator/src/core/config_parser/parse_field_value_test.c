@@ -68,7 +68,7 @@ parse_field_value_test parse_field_value_tests[] = {
         .wanted_result = PARSE_FIELD_VALUE_RESULT_OK(11, 1),
     },
     {
-        .name = "test_parse_field_value:search_initial_buffer_first",
+        .name = "test_parse_field_value:search-initial-buffer-first",
         .input = LIT_READER(" world\ngreetings"),
         .buf = STR_ARR((char[21]){"OLDDATA:hello:BADDATA"}),
         .cursor = 8,

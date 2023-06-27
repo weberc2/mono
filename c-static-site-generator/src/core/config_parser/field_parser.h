@@ -63,37 +63,79 @@ static inline str parse_status_str(parse_status status)
 
 typedef size_t field_handle;
 
-typedef struct field_match_result
+typedef struct fields_match_result
 {
-    parse_status tag;
+    bool match;
     size_t buffer_position;
-    field_handle field_handle;
-    error io_err;
-} field_match_result;
+    size_t field_handle;
+} fields_match_result;
 
-#define FIELD_MATCH_RESULT_SUCCESS(fh, bp) \
-    (field_match_result)                   \
-    {                                      \
-        .tag = parse_ok,                   \
-        .field_handle = fh,                \
-        .buffer_position = bp,             \
-    }
-
-#define FIELD_MATCH_RESULT_FAILURE  \
-    (field_match_result)            \
-    {                               \
-        .tag = parse_match_failure, \
-        .field_handle = 0,          \
-        .buffer_position = 0,       \
-        .io_err = ERROR_NULL,       \
-    }
-
-field_match_result fields_match_name(
+fields_match_result fields_match_name(
     fields fields,
     size_t field_name_cursor,
     str buf);
 
-field_match_result parse_field_name(reader r, fields fields, str buf);
+#define FIELDS_MATCH_OK(fh, bp)  \
+    (fields_match_result)        \
+    {                            \
+        .match = true,           \
+        .buffer_position = (bp), \
+        .field_handle = (fh),    \
+    }
+
+#define FIELDS_MATCH_FAILURE  \
+    (fields_match_result)     \
+    {                         \
+        .match = false,       \
+        .buffer_position = 0, \
+        .field_handle = 0,    \
+    }
+
+typedef struct parse_field_name_result
+{
+    parse_status tag;
+    union
+    {
+        struct
+        {
+            size_t buffer_position;
+            field_handle field_handle;
+        } ok;
+        error io_err;
+        struct
+        {
+        } match_failure;
+    } result;
+} parse_field_name_result;
+
+#define PARSE_FIELD_NAME_OK(fh, bp)      \
+    (parse_field_name_result)            \
+    {                                    \
+        .tag = parse_ok,                 \
+        .result.ok.field_handle = fh,    \
+        .result.ok.buffer_position = bp, \
+    }
+
+#define PARSE_FIELD_NAME_MATCH_FAILURE \
+    (parse_field_name_result)          \
+    {                                  \
+        .tag = parse_match_failure,    \
+        .result.match_failure = {},    \
+    }
+
+#define PARSE_FIELD_NAME_IO_ERROR(e) \
+    (parse_field_name_result)        \
+    {                                \
+        .tag = parse_io_error,       \
+        .result.io_err = (e),        \
+    }
+
+parse_field_name_result parse_field_name(
+    reader r,
+    fields fields,
+    str buf,
+    size_t cursor,
+    size_t last_read_end);
 
 typedef struct parse_field_value_result
 {

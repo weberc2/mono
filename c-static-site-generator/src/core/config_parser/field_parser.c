@@ -24,20 +24,18 @@ bool fields_has_valid(fields fields)
     return false;
 }
 
-field_match_result fields_match_name(
+fields_match_result fields_match_name(
     fields fields,
     size_t field_name_cursor,
     str buf)
 {
     const char DELIM = ':';
-    // throw this check in here because there's at least one instance where we
-    // look at the first character in the buffer later in the function.
     if (buf.len < 1)
     {
-        panic("fields_match_name(): zero-length buffer!");
+        return FIELDS_MATCH_FAILURE;
     }
 
-    for (size_t i = 0; i < fields.len; i++)
+    for (field_handle i = 0; i < fields.len; i++)
     {
         // if the field is already disqualified, then continue to the next
         // field
@@ -63,7 +61,7 @@ field_match_result fields_match_name(
         {
             if (buf.data[0] == DELIM)
             {
-                return FIELD_MATCH_RESULT_SUCCESS(i, 0);
+                return FIELDS_MATCH_OK(i, 0);
             }
             else
             {
@@ -91,7 +89,7 @@ field_match_result fields_match_name(
                 str_has_prefix(buf, field_name) &&
                 buf.data[field_name.len] == DELIM)
             {
-                return FIELD_MATCH_RESULT_SUCCESS(i, field_name.len);
+                return FIELDS_MATCH_OK(i, field_name.len);
             }
             fields.data[i].match_failed = true;
             continue;
@@ -106,52 +104,54 @@ field_match_result fields_match_name(
         fields.data[i].match_failed = !str_eq(buf, field_name);
     }
 
-    return FIELD_MATCH_RESULT_FAILURE;
+    return FIELDS_MATCH_FAILURE;
 }
 
-field_match_result parse_field_name(
+parse_field_name_result parse_field_name(
     reader r,
     fields fields,
-    str buf)
+    str buf,
+    size_t cursor,
+    size_t last_read_end)
 {
     size_t field_name_cursor = 0;
     while (fields_has_valid(fields))
     {
-        field_match_result match_res = FIELD_MATCH_RESULT_FAILURE;
-        result res = result_new();
-        size_t nr = reader_read(r, buf, &res);
-        if (!res.ok)
-        {
-            match_res.io_err = res.err;
-            match_res.buffer_position = nr;
-        }
-        if (nr < 1)
-        {
-            return match_res;
-        }
+        str gooddata = str_slice(buf, cursor, last_read_end);
 
-        str gooddata = str_slice(buf, 0, nr);
-
-        match_res = fields_match_name(
+        fields_match_result match_res = fields_match_name(
             fields,
             field_name_cursor,
             gooddata);
-        // if we found a match *or* if the reader encountered an io error
-        // return the match result (in the latter case, the match result
-        // contains the error information already, so we'll still be
-        // communicating the error).
-        if (match_res.tag == parse_ok || !res.ok)
+        if (match_res.match)
         {
-            return match_res;
+            return PARSE_FIELD_NAME_OK(
+                match_res.field_handle,
+                match_res.buffer_position);
         }
 
         // otherwise we're still matching, so add the size of the gooddata to
         // the field_name_cursor and continue with another buffer's worth of
         // data.
         field_name_cursor += gooddata.len;
+        result res = result_new();
+        last_read_end = reader_read(r, buf, &res);
+        cursor = 0;
+        if (!res.ok)
+        {
+            return PARSE_FIELD_NAME_IO_ERROR(res.err);
+        }
+
+        if (last_read_end < 1)
+        {
+            // if we got here, then we still have valid fields, but we've hit
+            // the end of the file, which means we haven't matched anything.
+            // Return `parse_match_failure`.
+            return PARSE_FIELD_NAME_MATCH_FAILURE;
+        }
     }
 
-    return FIELD_MATCH_RESULT_FAILURE;
+    return PARSE_FIELD_NAME_MATCH_FAILURE;
 }
 
 parse_field_value_result parse_field_value(

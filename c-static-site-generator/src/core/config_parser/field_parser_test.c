@@ -14,7 +14,7 @@ typedef struct match_name_test
     size_t field_name_cursor;
     str buf;
     fields wanted_fields;
-    field_match_result wanted_result;
+    fields_match_result wanted_result;
 } match_name_test;
 
 match_name_test match_name_tests[] = {
@@ -25,7 +25,7 @@ match_name_test match_name_tests[] = {
         .buf = STR_LIT("foobar"),
         .wanted_fields = FIELDS(
             FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, true)),
-        .wanted_result = FIELD_MATCH_RESULT_FAILURE,
+        .wanted_result = FIELDS_MATCH_FAILURE,
     },
     {
         .name = "test_fields_match_name:match-at-buffer-start",
@@ -34,7 +34,7 @@ match_name_test match_name_tests[] = {
         .buf = STR_LIT("hello:"),
         .wanted_fields = FIELDS(
             FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, false)),
-        .wanted_result = FIELD_MATCH_RESULT_SUCCESS(0, 5),
+        .wanted_result = FIELDS_MATCH_OK(0, 5),
     },
     {
         .name = "test_fields_match_name:buffer-matches-field-name-minus-delim",
@@ -43,7 +43,7 @@ match_name_test match_name_tests[] = {
         .buf = STR_LIT("hello"),
         .wanted_fields = FIELDS(
             FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, false)),
-        .wanted_result = FIELD_MATCH_RESULT_FAILURE,
+        .wanted_result = FIELDS_MATCH_FAILURE,
     },
     {
         // this test captures the case where we've already matched `hello` in
@@ -55,7 +55,7 @@ match_name_test match_name_tests[] = {
         .buf = STR_LIT(":foo"),
         .wanted_fields = FIELDS(
             FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, false)),
-        .wanted_result = FIELD_MATCH_RESULT_SUCCESS(0, 0),
+        .wanted_result = FIELDS_MATCH_OK(0, 0),
     },
     {
         // this test captures the case where we've already matched `hello` in
@@ -68,7 +68,7 @@ match_name_test match_name_tests[] = {
         .buf = STR_LIT("foo"),
         .wanted_fields = FIELDS(
             FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, true)),
-        .wanted_result = FIELD_MATCH_RESULT_FAILURE,
+        .wanted_result = FIELDS_MATCH_FAILURE,
     },
     {
         // test that even though the current buffer matches the post-cursor
@@ -87,7 +87,7 @@ match_name_test match_name_tests[] = {
             .dst = EMPTY_STRING_WRITER,
             .match_failed = true,
         }),
-        .wanted_result = FIELD_MATCH_RESULT_FAILURE,
+        .wanted_result = FIELDS_MATCH_FAILURE,
     },
     {
         // if the buffer doesn't completely match a field name, then we return
@@ -107,7 +107,7 @@ match_name_test match_name_tests[] = {
             .dst = EMPTY_STRING_WRITER,
             .match_failed = false,
         }),
-        .wanted_result = FIELD_MATCH_RESULT_FAILURE,
+        .wanted_result = FIELDS_MATCH_FAILURE,
     },
     {
         // if we've previously matched some of the name in a previous
@@ -128,7 +128,7 @@ match_name_test match_name_tests[] = {
             .dst = EMPTY_STRING_WRITER,
             .match_failed = false,
         }),
-        .wanted_result = FIELD_MATCH_RESULT_FAILURE,
+        .wanted_result = FIELDS_MATCH_FAILURE,
     },
 };
 
@@ -147,11 +147,11 @@ bool match_name_test_run(match_name_test *tc)
         TEST_DEFER(string_drop, tc->wanted_fields.data[i].dst.data);
     }
 
-    field_match_result found_result = fields_match_name(
+    fields_match_result found_result = fields_match_name(
         tc->fields,
         tc->field_name_cursor,
         tc->buf);
-    ASSERT_FIELD_MATCH_RESULT_EQ(tc->wanted_result, found_result);
+    ASSERT_FIELDS_MATCH_RESULT_EQ(tc->wanted_result, found_result);
     ASSERT_FIELDS_EQ(tc->wanted_fields, tc->fields);
     return test_success();
 }
