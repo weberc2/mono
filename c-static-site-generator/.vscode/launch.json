@@ -11,6 +11,14 @@
             "program": "${workspaceFolder}/build/tests/tests",
             "args": [],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "config_parser",
+            "program": "${workspaceFolder}/build/src/core/config_parser/tests",
+            "args": [],
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

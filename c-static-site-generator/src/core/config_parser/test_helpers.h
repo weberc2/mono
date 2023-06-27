@@ -4,7 +4,8 @@
 #include "core/testing/test.h"
 #include "std/string/string_writer.h"
 
-#include "field_parser.h"
+#include "fields_match_name.h"
+#include "parse_field_name.h"
 
 #define EMPTY_STRING_WRITER STRING_WRITER(&STRING_NEW)
 
@@ -59,13 +60,13 @@ static inline bool assert_fields_eq(fields wanted_fields, fields found_fields)
                 f);
         }
 
-        if (wanted.match_failed != found.match_failed)
+        if (wanted.match_status != found.match_status)
         {
             return test_fail(
                 "fields[%zu]: match_failed: wanted `%s`; found `%s`",
                 i,
-                wanted.match_failed ? "true" : "false",
-                found.match_failed ? "true" : "false");
+                field_match_status_str(wanted.match_status).data,
+                field_match_status_str(found.match_status).data);
         }
     }
 
@@ -96,42 +97,85 @@ static inline bool assert_result_eq(result wanted, result found)
         return false;                     \
     }
 
-static inline bool assert_field_match_result_eq(
-    field_match_result wanted,
-    field_match_result found)
+static inline bool assert_fields_match_result_eq(
+    fields_match_result wanted,
+    fields_match_result found)
 {
-    if (!wanted.match && found.match)
+    if (wanted.match != found.match)
     {
         return test_fail(
-            "unexpected match found: field index `%zu`; buffer position `%zu`",
-            found.field_handle,
-            found.buffer_position);
+            "expected match `%s`; found `%s`",
+            wanted.match ? "true" : "false",
+            found.match ? "true" : "false");
     }
-    if (wanted.match && !found.match)
+
+    if (wanted.match)
     {
-        return test_fail("expected match but found none");
+        if (wanted.field_handle != found.field_handle)
+        {
+            return test_fail(
+                "field_handle: wanted `%zu`; found `%zu`",
+                wanted.field_handle,
+                found.field_handle);
+        }
+
+        if (wanted.buffer_position != found.buffer_position)
+        {
+            return test_fail(
+                "buffer_position: wanted `%zu`; found `%zu`",
+                wanted.buffer_position,
+                found.buffer_position);
+        }
     }
-    if (wanted.field_handle != found.field_handle)
-    {
-        return test_fail(
-            "field_handle: wanted `%zu`; found `%zu`",
-            wanted.field_handle,
-            found.field_handle);
-    }
-    if (wanted.buffer_position != found.buffer_position)
-    {
-        return test_fail(
-            "buffer_position: wanted `%zu`; found `%zu`",
-            wanted.buffer_position,
-            found.buffer_position);
-    }
+
     return true;
 }
 
-#define ASSERT_FIELD_MATCH_RESULT_EQ(wanted, found)   \
-    if (!assert_field_match_result_eq(wanted, found)) \
-    {                                                 \
-        return false;                                 \
+#define ASSERT_FIELDS_MATCH_RESULT_EQ(wanted, found)   \
+    if (!assert_fields_match_result_eq(wanted, found)) \
+    {                                                  \
+        return false;                                  \
+    }
+
+static inline bool assert_parse_field_name_result_eq(
+    parse_field_name_result wanted,
+    parse_field_name_result found)
+{
+    if (wanted.tag != found.tag)
+    {
+        return test_fail(
+            "expected status `%s`; found `%s`",
+            parse_status_str(wanted.tag).data,
+            parse_status_str(found.tag).data);
+    }
+
+    if (wanted.tag == parse_ok)
+    {
+        if (wanted.result.ok.field_handle != found.result.ok.field_handle)
+        {
+            return test_fail(
+                "field_handle: wanted `%zu`; found `%zu`",
+                wanted.result.ok.field_handle,
+                found.result.ok.field_handle);
+        }
+
+        if (wanted.result.ok.buffer_position !=
+            found.result.ok.buffer_position)
+        {
+            return test_fail(
+                "buffer_position: wanted `%zu`; found `%zu`",
+                wanted.result.ok.buffer_position,
+                found.result.ok.buffer_position);
+        }
+    }
+
+    return true;
+}
+
+#define ASSERT_PARSE_FIELD_NAME_RESULT_EQ(wanted, found)   \
+    if (!assert_parse_field_name_result_eq(wanted, found)) \
+    {                                                      \
+        return false;                                      \
     }
 
 static inline void string_writer_fields_drop(fields *fields)
