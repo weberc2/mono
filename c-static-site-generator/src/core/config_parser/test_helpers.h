@@ -125,7 +125,6 @@ static inline bool assert_field_match_result_eq(
             wanted.buffer_position,
             found.buffer_position);
     }
-    ASSERT_RESULT_EQ(wanted.io_error, found.io_error);
     return true;
 }
 

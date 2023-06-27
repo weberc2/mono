@@ -45,7 +45,7 @@ typedef struct field_match_result
     bool match;
     size_t buffer_position;
     field_handle field_handle;
-    result io_error;
+    error io_err;
 } field_match_result;
 
 #define FIELD_MATCH_RESULT_SUCCESS(fh, bp) \
@@ -62,7 +62,7 @@ typedef struct field_match_result
         .match = false,            \
         .field_handle = 0,         \
         .buffer_position = 0,      \
-        .io_error = RESULT_OK,     \
+        .io_err = ERROR_NULL,      \
     }
 
 field_match_result fields_match_name(
