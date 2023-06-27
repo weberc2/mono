@@ -140,7 +140,7 @@ field_match_result parse_field_name(
         // return the match result (in the latter case, the match result
         // contains the error information already, so we'll still be
         // communicating the error).
-        if (match_res.match || !res.ok)
+        if (match_res.tag == parse_ok || !res.ok)
         {
             return match_res;
         }
@@ -154,36 +154,30 @@ field_match_result parse_field_name(
     return FIELD_MATCH_RESULT_FAILURE;
 }
 
-parse_field_value_result parse_field_value(reader r, writer w, str buf)
+parse_field_value_result parse_field_value(
+    reader r,
+    writer w,
+    str buf,
+    size_t cursor,
+    size_t last_read_end)
 {
     size_t size = 0;
     str_find_result find_res = (str_find_result){.found = false, .index = 0};
     while (!find_res.found)
     {
-        result res = result_new();
-        size_t nr = reader_read(r, buf, &res);
-        if (nr < 1)
-        {
-            return (parse_field_value_result){
-                .ok = true,
-                .total_size = size,
-                .buffer_position = 0,
-                .err = error_null(),
-            };
-        }
-
-        str gooddata = str_slice(buf, 0, nr);
+        str gooddata = str_slice(buf, cursor, last_read_end);
         find_res = str_find_char(gooddata, '\n');
         str value = find_res.found
                         ? str_slice(gooddata, 0, find_res.index)
                         : gooddata;
+        result res = result_new();
         size_t nw = writer_write(w, value, &res);
         size += nw;
 
         if (nw != value.len)
         {
             return (parse_field_value_result){
-                .ok = false,
+                .tag = parse_io_error,
                 .total_size = size,
                 .buffer_position = nw,
                 .err = ERR_SHORT_WRITE,
@@ -193,7 +187,29 @@ parse_field_value_result parse_field_value(reader r, writer w, str buf)
         if (!res.ok)
         {
             return (parse_field_value_result){
-                .ok = false,
+                .tag = parse_io_error,
+                .total_size = size,
+                .buffer_position = nw,
+                .err = res.err,
+            };
+        }
+
+        last_read_end = reader_read(r, buf, &res);
+        cursor = 0;
+        if (last_read_end < 1)
+        {
+            return (parse_field_value_result){
+                .tag = parse_ok,
+                .total_size = size,
+                .buffer_position = 0,
+                .err = error_null(),
+            };
+        }
+
+        if (!res.ok)
+        {
+            return (parse_field_value_result){
+                .tag = parse_io_error,
                 .total_size = size,
                 .buffer_position = nw,
                 .err = res.err,
@@ -202,7 +218,7 @@ parse_field_value_result parse_field_value(reader r, writer w, str buf)
     }
 
     return (parse_field_value_result){
-        .ok = true,
+        .tag = parse_ok,
         .total_size = size,
         .buffer_position = find_res.index,
         .err = error_null(),

@@ -1,6 +1,12 @@
 {
     "files.associations": {
         "stddef.h": "c",
-        "writer.h": "c"
+        "writer.h": "c",
+        "formatter.h": "c",
+        "display.h": "c",
+        "errno.h": "c",
+        "error.h": "c",
+        "field_parser.h": "c",
+        "discard_writer.h": "c"
     }
 }

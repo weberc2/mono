@@ -100,16 +100,12 @@ static inline bool assert_field_match_result_eq(
     field_match_result wanted,
     field_match_result found)
 {
-    if (!wanted.match && found.match)
+    if (wanted.tag != found.tag)
     {
         return test_fail(
-            "unexpected match found: field index `%zu`; buffer position `%zu`",
-            found.field_handle,
-            found.buffer_position);
-    }
-    if (wanted.match && !found.match)
-    {
-        return test_fail("expected match but found none");
+            "expected status `%s`; found `%s`",
+            parse_status_str(wanted.tag).data,
+            parse_status_str(found.tag).data);
     }
     if (wanted.field_handle != found.field_handle)
     {

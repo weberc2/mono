@@ -69,6 +69,16 @@ parse_field_name_test parse_field_name_tests[] = {
         .wanted_fields = FIELDS(
             FIELD(STR_LIT("foo"), EMPTY_STRING_WRITER, false)),
     },
+    {
+        // make sure we error if there is a newline before the delimeter.
+        .name = "test_parse_field_name:newline-before-delimiter",
+        .input = STR_LIT("hello\n:world"),
+        .fields = FIELDS(FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, false)),
+        .buf = STR_ARR((char[10]){0}),
+        .wanted_match_result = FIELD_MATCH_RESULT_FAILURE,
+        .wanted_fields = FIELDS(
+            FIELD(STR_LIT("hello"), EMPTY_STRING_WRITER, true)),
+    },
 };
 
 bool parse_field_name_test_run(parse_field_name_test *tc)
