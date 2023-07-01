@@ -39,4 +39,7 @@ str_find_result str_find_char(str src, char match);
 #define STR_LIT(s) \
     (str) { .data = (s), .len = sizeof(s) - 1 }
 
+#define STR_EMPTY \
+    (str) { .data = NULL, .len = 0 }
+
 #endif // STR_H

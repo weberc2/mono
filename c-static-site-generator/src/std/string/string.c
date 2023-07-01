@@ -51,6 +51,16 @@ void string_push_slice(string *s, str src)
     string_push_raw(s, src.data, src.len);
 }
 
+void string_push_char(string *s, char c)
+{
+    if (s->cap - s->len < 1)
+    {
+        string_grow(s, 1);
+    }
+    s->data[s->len] = c;
+    s->len++;
+}
+
 void string_reset(string *s)
 {
     s->len = 0;
