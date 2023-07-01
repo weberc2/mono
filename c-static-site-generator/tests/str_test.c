@@ -241,6 +241,12 @@ static find_test find_tests[] = {
         .match = STR_LIT("qux"),
         .wanted = {.found = false, .index = 0},
     },
+    {
+        .name = "test_str_find:match-longer-than-input",
+        .input = STR_LIT("foo"),
+        .match = STR_LIT("foobar"),
+        .wanted = {.found = false, .index = 0},
+    },
 };
 
 static bool find_test_run(find_test *tc)
