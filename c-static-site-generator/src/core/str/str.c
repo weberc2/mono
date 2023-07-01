@@ -161,6 +161,11 @@ str str_trim_space(str s)
 
 str_find_result str_find(str src, str match)
 {
+    if (src.len < match.len)
+    {
+        return (str_find_result){.found = false, .index = 0};
+    }
+
     // the outer loop iterates through characters in the src string. If we get
     // to (src.len - match.len) and we still haven't matched the starting
     // character of the match string, then we've definitely failed.
