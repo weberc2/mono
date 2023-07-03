@@ -17,4 +17,9 @@ error error_null();
 bool error_display(error err, formatter f);
 void error_const(error *err, const char *message);
 
+static inline bool error_is_null(error err)
+{
+    return err.data == NULL && err.display == NULL;
+}
+
 #endif // ERROR_H
