@@ -22,10 +22,9 @@ size_t str_reader_read(str_reader *sr, str buffer)
     return n;
 }
 
-size_t str_reader_io_read(str_reader *sr, str buffer, result *res)
+io_result str_reader_io_read(str_reader *sr, str buffer)
 {
-    *res = result_ok();
-    return str_reader_read(sr, buffer);
+    return IO_RESULT_OK(str_reader_read(sr, buffer));
 }
 
 reader str_reader_to_reader(str_reader *sr)

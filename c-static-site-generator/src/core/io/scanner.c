@@ -39,13 +39,13 @@ void scanner_refresh(scanner *s)
     // doesn't complete the delimiter match (in which case we need to return
     // the delimiter prefix data).
     str write_partition = str_slice(s->buffer, s->delim_cursor, s->buffer.len);
-    result res = result_new();
-    s->last_read_size = reader_read(s->source, write_partition, &res);
-    if (!res.ok)
+    io_result res = reader_read(s->source, write_partition);
+    s->last_read_size = res.size;
+    if (io_result_is_err(res))
     {
         s->err = res.err;
     }
-    else if (s->last_read_size < 1)
+    else if (res.size < 1)
     {
         s->err = ERR_EOF;
     }

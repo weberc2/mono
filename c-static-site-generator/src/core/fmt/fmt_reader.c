@@ -38,9 +38,8 @@ FINISH_ARG:
     return buf_cursor;
 }
 
-size_t fmt_reader_read(fmt_reader *fr, str buf, result *res)
+io_result fmt_reader_read(fmt_reader *fr, str buf)
 {
-    *res = result_ok(); // always ok
     size_t buf_cursor = 0;
     if (fr->reading_arg)
     {
@@ -64,7 +63,7 @@ size_t fmt_reader_read(fmt_reader *fr, str buf, result *res)
         fr->cursor++;
     }
 
-    return buf_cursor;
+    return IO_RESULT_OK(buf_cursor);
 }
 
 reader fmt_reader_to_reader(fmt_reader *fr)

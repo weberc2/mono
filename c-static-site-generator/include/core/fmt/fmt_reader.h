@@ -19,7 +19,7 @@ typedef struct
 } fmt_reader;
 
 fmt_reader fmt_reader_new(str format, fmt_args args);
-size_t fmt_reader_read(fmt_reader *fr, str buf, result *res);
+io_result fmt_reader_read(fmt_reader *fr, str buf);
 reader fmt_reader_to_reader(fmt_reader *fr);
 
 #endif // FMT_READER_H

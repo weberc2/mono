@@ -14,7 +14,7 @@ reader reader_new(void *data, read_func read)
     return r;
 }
 
-size_t reader_read(reader r, str bs, result *res)
+io_result reader_read(reader r, str bs)
 {
-    return r.read(r.data, bs, res);
+    return r.read(r.data, bs);
 }

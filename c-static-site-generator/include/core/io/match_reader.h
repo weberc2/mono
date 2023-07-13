@@ -14,7 +14,7 @@ typedef struct
 } match_reader;
 
 match_reader match_reader_new(buffered_reader *source, str match);
-size_t match_reader_read(match_reader *mr, str buf, result *res);
+io_result match_reader_read(match_reader *mr, str buf);
 reader match_reader_to_reader(match_reader *mr);
 
 #endif // MATCH_READER_H
