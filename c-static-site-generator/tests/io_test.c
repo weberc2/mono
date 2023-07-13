@@ -15,7 +15,7 @@ bool test_str_reader()
 {
     test_init("test_str_reader");
 
-    str source = STR_LIT("helloworld");
+    str source = STR("helloworld");
     str buffer = STR_ARR((char[5]){0});
     reader r = str_reader_to_reader(&STR_READER(source));
     result res = result_new();
@@ -27,7 +27,7 @@ bool test_str_reader()
     }
     ASSERT_OK(res);
 
-    str wanted = STR_LIT("hello");
+    str wanted = STR("hello");
     if (!str_eq(wanted, buffer))
     {
         return test_fail(
@@ -45,7 +45,7 @@ bool test_str_reader()
         return test_fail("nr: wanted `%zu`; found `%zu`", buffer.len, nr);
     }
 
-    wanted = STR_LIT("world");
+    wanted = STR("world");
     if (!str_eq(wanted, buffer))
     {
         return test_fail(
@@ -70,7 +70,7 @@ bool test_copy()
 {
     test_init("test_copy");
 
-    str src = STR_LIT("helloworld");
+    str src = STR("helloworld");
     string dst = string_new();
     TEST_DEFER(string_drop, &dst);
     reader r = str_reader_to_reader(&STR_READER(src));
@@ -146,7 +146,7 @@ bool test_buffered_reader_read()
 
     char internal_buf_[5] = {0};
     str internal_buffer = str_new(internal_buf_, sizeof(internal_buf_));
-    str src = STR_LIT("helloworld!");
+    str src = STR("helloworld!");
     buffered_reader br = buffered_reader_new(
         str_reader_to_reader(&STR_READER(src)),
         internal_buffer);

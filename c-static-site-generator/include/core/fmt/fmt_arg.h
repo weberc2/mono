@@ -48,6 +48,6 @@ size_t fmt_arg_str_format(fmt_arg_str *fas, str buf);
         .format = (format_func)fmt_arg_str_format,          \
     }
 
-#define FMT_STR_LIT(s) FMT_STR(STR_LIT(s))
+#define FMT_STR_LIT(s) FMT_STR(STR(s))
 
 #endif // FMT_ARG_H

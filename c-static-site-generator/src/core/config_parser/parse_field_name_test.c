@@ -20,16 +20,16 @@ parse_field_name_test parse_field_name_tests[] = {
         // `.match_failed = true` and the returned result is marked
         // `.match = false`.
         .name = "test_parse_field_name:no-match",
-        .input = STR_LIT("world"),
+        .input = STR("world"),
         .fields = FIELDS((field){
-            .name = STR_LIT("hello"),
+            .name = STR("hello"),
             .dst = EMPTY_STRING_WRITER,
             .match_failed = false,
         }),
         .buf = STR_ARR((char[32]){0}),
         .wanted_match_result = FIELD_MATCH_RESULT_FAILURE,
         .wanted_fields = FIELDS((field){
-            .name = STR_LIT("hello"),
+            .name = STR("hello"),
             .dst = EMPTY_STRING_WRITER,
             .match_failed = true,
         }),
@@ -38,36 +38,36 @@ parse_field_name_test parse_field_name_tests[] = {
         // when all fields are marked `.match_failed = true`, then expect the
         // result is marked `.match = false`.
         .name = "test_parse_field_name:aborts-when-no-fields-match",
-        .input = STR_LIT("bar"),
+        .input = STR("bar"),
         .fields = FIELDS((field){
-            .name = STR_LIT("bar"),
+            .name = STR("bar"),
             .dst = EMPTY_STRING_WRITER,
             .match_failed = true,
         }),
         .buf = STR_ARR((char[32]){0}),
         .wanted_match_result = FIELD_MATCH_RESULT_FAILURE,
         .wanted_fields = FIELDS(
-            FIELD(STR_LIT("bar"), EMPTY_STRING_WRITER, true)),
+            FIELD(STR("bar"), EMPTY_STRING_WRITER, true)),
     },
     {
         .name = "test_parse_field_name:match-found",
-        .input = STR_LIT("foo:bar"),
-        .fields = FIELDS(FIELD(STR_LIT("foo"), EMPTY_STRING_WRITER, false)),
+        .input = STR("foo:bar"),
+        .fields = FIELDS(FIELD(STR("foo"), EMPTY_STRING_WRITER, false)),
         .buf = STR_ARR((char[32]){0}),
         .wanted_match_result = FIELD_MATCH_RESULT_SUCCESS(0, 3),
         .wanted_fields = FIELDS(
-            FIELD(STR_LIT("foo"), EMPTY_STRING_WRITER, false)),
+            FIELD(STR("foo"), EMPTY_STRING_WRITER, false)),
     },
     {
         // make sure matching works even when we have to loop multiple times to
         // match a field.
         .name = "test_parse_field_name:multi-iterations-per-match",
-        .input = STR_LIT("foo:bar"),
-        .fields = FIELDS(FIELD(STR_LIT("foo"), EMPTY_STRING_WRITER, false)),
+        .input = STR("foo:bar"),
+        .fields = FIELDS(FIELD(STR("foo"), EMPTY_STRING_WRITER, false)),
         .buf = STR_ARR((char[3]){0}),
         .wanted_match_result = FIELD_MATCH_RESULT_SUCCESS(0, 0),
         .wanted_fields = FIELDS(
-            FIELD(STR_LIT("foo"), EMPTY_STRING_WRITER, false)),
+            FIELD(STR("foo"), EMPTY_STRING_WRITER, false)),
     },
 };
 

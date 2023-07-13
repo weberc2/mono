@@ -26,7 +26,7 @@ typedef struct scanner_write_to_test
     }
 
 #define TEST_READER(input) READER( \
-    &STR_READER(STR_LIT(input)),   \
+    &STR_READER(STR(input)),   \
     str_reader_io_read)
 
 #define BUFFER(size, init) STR_ARR((char[size]){(init)})
@@ -34,79 +34,79 @@ typedef struct scanner_write_to_test
 #define TEST_SCANNER(input, buf, del) SCANNER( \
     TEST_READER(input),                        \
     (buf),                                     \
-    STR_LIT(del))
+    STR(del))
 
 scanner_write_to_test scanner_write_to_tests[] = {
     {
         .name = "empty",
         .source = TEST_READER(""),
         .buffer = BUFFER(16, 0),
-        .delim = STR_LIT("---"),
+        .delim = STR("---"),
         .wanted_new_ok = true,
-        .wanted = STR_LIT(""),
+        .wanted = STR(""),
         .wanted_err = false,
     },
     {
         .name = "no-delim",
         .source = TEST_READER("foobar"),
         .buffer = BUFFER(3, 0),
-        .delim = STR_LIT("---"),
+        .delim = STR("---"),
         .wanted_new_ok = true,
-        .wanted = STR_LIT("foobar"),
+        .wanted = STR("foobar"),
         .wanted_err = false,
     },
     {
         .name = "delim-not-straddling-buffer-boundary",
         .source = TEST_READER("foo```bar"),
         .buffer = BUFFER(6, 0),
-        .delim = STR_LIT("```"),
+        .delim = STR("```"),
         .wanted_new_ok = true,
-        .wanted = STR_LIT("foo"),
+        .wanted = STR("foo"),
         .wanted_err = false,
     },
     {
         .name = "delim-straddles-buffer-boundary",
         .source = TEST_READER("foo```bar"),
         .buffer = BUFFER(4, 0),
-        .delim = STR_LIT("```"),
+        .delim = STR("```"),
         .wanted_new_ok = true,
-        .wanted = STR_LIT("foo"),
+        .wanted = STR("foo"),
         .wanted_err = false,
     },
     {
         .name = "first-iteration-ends-in-prefix-but-second-fails-to-match",
         .source = TEST_READER("foo--baz"),
         .buffer = BUFFER(4, 0),
-        .delim = STR_LIT("---"),
+        .delim = STR("---"),
         .wanted_new_ok = true,
-        .wanted = STR_LIT("foo--baz"),
+        .wanted = STR("foo--baz"),
         .wanted_err = false,
     },
     {
         .name = "back-to-back-partial-prefix-matches",
         .source = TEST_READER("foobabaz"),
         .buffer = BUFFER(4, 0),
-        .delim = STR_LIT("bar"),
+        .delim = STR("bar"),
         .wanted_new_ok = true,
-        .wanted = STR_LIT("foobabaz"),
+        .wanted = STR("foobabaz"),
         .wanted_err = false,
     },
     {
         .name = "final-iteration-ends-with-incomplete-prefix-then-eof",
         .source = TEST_READER("fooba"),
         .buffer = BUFFER(3, 0),
-        .delim = STR_LIT("bar"),
+        .delim = STR("bar"),
         .wanted_new_ok = true,
-        .wanted = STR_LIT("fooba"),
+        .wanted = STR("fooba"),
         .wanted_err = false,
     },
     {
         .name = "delim-larger-than-buffer-is-error",
         .source = TEST_READER(""),
         .buffer = BUFFER(2, 0),
-        .delim = STR_LIT("bar"),
+        .delim = STR("bar"),
         .wanted_new_ok = false,
-        .wanted = STR_LIT(""),
+        .wanted = STR(""),
         .wanted_err = false,
     },
 

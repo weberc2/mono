@@ -15,7 +15,7 @@ typedef struct
 } fmt_result;
 
 #define FMT_FPRINTF(w, fmt, ...) \
-    fmt_fprintf((w), STR_LIT((fmt)), FMT_ARGS(__VA_ARGS__))
+    fmt_fprintf((w), STR((fmt)), FMT_ARGS(__VA_ARGS__))
 
 fmt_result fmt_fprintf_buf(writer w, str format, fmt_args args, str buf);
 fmt_result fmt_fprintf(writer w, str format, fmt_args args);

@@ -6,7 +6,7 @@
 #define LIT_READER(lit)                            \
     (reader)                                       \
     {                                              \
-        .data = (void *)&STR_READER(STR_LIT(lit)), \
+        .data = (void *)&STR_READER(STR(lit)), \
         .read = (read_func)str_reader_io_read,     \
     }
 
@@ -24,35 +24,35 @@ parse_field_value_test parse_field_value_tests[] = {
         .name = "test_parse_field_value:empty",
         .input = LIT_READER(""),
         .buf = STR_ARR((char[8]){0}),
-        .wanted_data = STR_LIT(""),
+        .wanted_data = STR(""),
         .wanted_result = PARSE_FIELD_VALUE_RESULT_OK(0, 0),
     },
     {
         .name = "test_parse_field_value:eof",
         .input = LIT_READER("hello"),
         .buf = STR_ARR((char[8]){0}),
-        .wanted_data = STR_LIT("hello"),
+        .wanted_data = STR("hello"),
         .wanted_result = PARSE_FIELD_VALUE_RESULT_OK(5, 5),
     },
     {
         .name = "test_parse_field_value:input-ends-with-newline",
         .input = LIT_READER("hello\n"),
         .buf = STR_ARR((char[8]){0}),
-        .wanted_data = STR_LIT("hello"),
+        .wanted_data = STR("hello"),
         .wanted_result = PARSE_FIELD_VALUE_RESULT_OK(5, 5),
     },
     {
         .name = "test_parse_field_value:newline-in-middle-of-input",
         .input = LIT_READER("hello\nworld"),
         .buf = STR_ARR((char[8]){0}),
-        .wanted_data = STR_LIT("hello"),
+        .wanted_data = STR("hello"),
         .wanted_result = PARSE_FIELD_VALUE_RESULT_OK(5, 5),
     },
     {
         .name = "test_parse_field_value:multi-iterations-to-find-newline",
         .input = LIT_READER("hello world\ngreetings"),
         .buf = STR_ARR((char[3]){0}),
-        .wanted_data = STR_LIT("hello world"),
+        .wanted_data = STR("hello world"),
         .wanted_result = PARSE_FIELD_VALUE_RESULT_OK(11, 1),
     },
 };

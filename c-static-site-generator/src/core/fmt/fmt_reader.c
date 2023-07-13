@@ -16,7 +16,7 @@ size_t fmt_reader_read_arg(fmt_reader *fr, str buf, size_t buf_cursor)
     fmt_arg arg = fmt_args_first(&fr->args);
     if (fmt_arg_is_null(arg))
     {
-        arg = FMT_STR(STR_LIT("{}(MISSING)"));
+        arg = FMT_STR(STR("{}(MISSING)"));
     }
 
     // read until we have a full cursor or until we've finished reading
