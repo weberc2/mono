@@ -3,7 +3,6 @@
 
 #include <stdio.h>
 #include "core/str/str.h"
-#include "core/result/result.h"
 #include "core/io/reader.h"
 #include "core/io/writer.h"
 
@@ -21,9 +20,9 @@ typedef enum
     file_mode_create,
 } file_mode;
 
-size_t file_read(file f, str buf, result *res);
-size_t file_write(file f, str buf, result *res);
-result file_close(file f);
+io_result file_read(file f, str buf);
+io_result file_write(file f, str buf);
+error file_close(file f);
 reader file_reader(file f);
 writer file_writer(file f);
 

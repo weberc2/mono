@@ -15,50 +15,35 @@ static void __attribute((constructor)) init()
     f->handle = stdin;
 }
 
-size_t file_write(file f, str buf, result *res)
+io_result file_write(file f, str buf)
 {
     if (feof(f.handle) != 0)
     {
-        return 0;
+        return IO_RESULT_OK(0);
     }
+
     size_t nw = fwrite(buf.data, 1, buf.len, f.handle);
-    if (ferror(f.handle))
-    {
-        *res = result_err(errno_error(errno));
-    }
-    else
-    {
-        *res = result_ok();
-    }
-    return nw;
+    return IO_RESULT(nw, ferror(f.handle) ? errno_error(errno) : ERROR_NULL);
 }
 
-size_t file_read(file f, str buf, result *res)
+io_result file_read(file f, str buf)
 {
     if (feof(f.handle) != 0)
     {
-        return 0;
+        return IO_RESULT_OK(0);
     }
     size_t nr = fread(buf.data, 1, buf.len, f.handle);
-    if (ferror(f.handle))
-    {
-        *res = result_err(errno_error(errno));
-    }
-    else
-    {
-        *res = result_ok();
-    }
-    return nr;
+    return IO_RESULT(nr, ferror(f.handle) ? errno_error(errno) : ERROR_NULL);
 }
 
-result file_close(file f)
+error file_close(file f)
 {
     if (fclose(f.handle) == 0)
     {
-        return result_ok();
+        return ERROR_NULL;
     }
 
-    return result_err(errno_error(errno));
+    return errno_error(errno);
 }
 
 reader file_reader(file f)
