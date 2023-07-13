@@ -2,7 +2,6 @@
 #define MATCH_READER_H
 
 #include "core/str/str.h"
-#include "core/result/result.h"
 #include "buffered_reader.h"
 
 typedef struct

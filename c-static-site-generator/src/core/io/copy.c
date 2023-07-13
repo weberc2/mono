@@ -1,5 +1,4 @@
 #include "core/io/copy.h"
-#include "core/result/result.h"
 #include "core/str/str.h"
 
 io_result copy(writer dst, reader src)

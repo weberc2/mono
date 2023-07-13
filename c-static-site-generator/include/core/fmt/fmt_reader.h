@@ -4,7 +4,6 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include "core/str/str.h"
-#include "core/result/result.h"
 #include "core/panic/panic.h"
 #include "core/io/reader.h"
 #include "core/io/writer.h"

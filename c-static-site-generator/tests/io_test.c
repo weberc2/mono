@@ -4,7 +4,6 @@
 
 #include "core/testing/test.h"
 #include "core/io/copy.h"
-#include "core/result/result.h"
 #include "core/io/str_reader.h"
 #include "core/io/buffered_reader.h"
 #include "std/string/string.h"
