@@ -44,6 +44,7 @@ io_result buffered_reader_read(buffered_reader *br, str buf)
     while (ret.size < buf.len)
     {
         io_result res = reader_read(br->source, br->buffer);
+        ret.err = res.err;
 
         // NB: we are deliberately *NOT* handling errors at this point--we
         // first want to copy anything we successfully read into the output
@@ -53,7 +54,6 @@ io_result buffered_reader_read(buffered_reader *br, str buf)
         // a partially-written output buffer.
         if (res.size < 1)
         {
-            ret.err = res.err;
             break;
         }
 
@@ -74,9 +74,8 @@ io_result buffered_reader_read(buffered_reader *br, str buf)
         br->cursor += copied;
 
         // if we filled the output buffer OR encountered errors, return.
-        if (copied >= unwritten || !io_result_is_ok(res))
+        if (copied >= unwritten || io_result_is_err(res))
         {
-            ret.err = res.err;
             break;
         }
 
