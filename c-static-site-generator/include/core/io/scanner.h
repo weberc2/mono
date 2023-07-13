@@ -6,7 +6,6 @@
 #include "core/io/reader.h"
 #include "core/io/writer.h"
 #include "core/str/str.h"
-#include "core/result/result.h"
 
 typedef struct scan_result
 {
@@ -63,7 +62,7 @@ typedef struct scanner_new_result
 scanner_new_result scanner_new(reader source, str buffer, str delim);
 scan_result scanner_next_frame(scanner *s);
 error scanner_next_section(scanner *s);
-size_t scanner_write_to(scanner *s, writer dst, result *res);
+io_result scanner_write_to(scanner *s, writer dst);
 
 error ERR_EOF;
 
