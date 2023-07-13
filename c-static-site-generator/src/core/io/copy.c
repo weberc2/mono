@@ -21,18 +21,31 @@ size_t copy_buf(writer dst, reader src, str buf, result *res)
         {
             break;
         }
-        size_t nw = writer_write(dst, str_slice(buf, 0, read_res.size), res);
-        written += nw;
+        io_result write_res = writer_write(
+            dst,
+            str_slice(buf, 0, read_res.size));
+        written += write_res.size;
 
-        if (read_res.size != nw)
+        if (read_res.size != write_res.size)
         {
             *res = result_err(ERR_SHORT_WRITE);
             break;
         }
+
+        if (io_result_is_err(write_res))
+        {
+            res->err = write_res.err;
+            res->ok = false;
+            break;
+        }
+
         if (io_result_is_err(read_res))
         {
+            res->err = read_res.err;
+            res->ok = false;
             break;
         }
     }
+
     return written;
 }

@@ -11,7 +11,7 @@
         .write = (write_func)string_write, \
     }
 
-size_t string_write(string *s, str buf, result *res);
+io_result string_write(string *s, str buf);
 writer string_writer(string *s);
 
 #endif // STRING_WRITER_H

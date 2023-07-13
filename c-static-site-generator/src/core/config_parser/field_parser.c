@@ -175,26 +175,25 @@ parse_field_value_result parse_field_value(reader r, writer w, str buf)
         str value = find_res.found
                         ? str_slice(gooddata, 0, find_res.index)
                         : gooddata;
-        result write_res = result_new();
-        size_t nw = writer_write(w, value, &write_res);
-        size += nw;
+        res = writer_write(w, value);
+        size += res.size;
 
-        if (nw != value.len)
+        if (res.size != value.len)
         {
             return (parse_field_value_result){
                 .ok = false,
                 .total_size = size,
-                .buffer_position = nw,
+                .buffer_position = res.size,
                 .err = ERR_SHORT_WRITE,
             };
         }
 
-        if (!error_is_null(write_res.err))
+        if (io_result_is_err(res))
         {
             return (parse_field_value_result){
                 .ok = false,
                 .total_size = size,
-                .buffer_position = nw,
+                .buffer_position = res.size,
                 .err = res.err,
             };
         }

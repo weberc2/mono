@@ -20,7 +20,7 @@ writer writer_new(void *data, write_func write)
     return w;
 }
 
-size_t writer_write(writer w, str s, result *res)
+io_result writer_write(writer w, str s)
 {
-    return w.write(w.data, s, res);
+    return w.write(w.data, s);
 }

@@ -6,6 +6,7 @@
 #include "core/io/reader.h"
 #include "core/io/writer.h"
 #include "core/str/str.h"
+#include "core/result/result.h"
 
 typedef struct scan_result
 {

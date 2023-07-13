@@ -78,14 +78,14 @@ static inline bool assert_fields_eq(fields wanted_fields, fields found_fields)
         return false;                     \
     }
 
-static inline bool assert_result_eq(result wanted, result found)
+static inline bool assert_result_eq(io_result wanted, io_result found)
 {
-    if (wanted.ok != found.ok)
+    if (io_result_is_ok(wanted) != io_result_is_ok(found))
     {
         return test_fail(
             "ok: wanted `%s`; found `%s`",
-            wanted.ok ? "true" : "false",
-            found.ok ? "true" : "false");
+            io_result_is_ok(wanted) ? "true" : "false",
+            io_result_is_ok(found) ? "true" : "false");
     }
     return true;
 }
