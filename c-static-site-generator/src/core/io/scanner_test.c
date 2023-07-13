@@ -114,7 +114,6 @@ bool scanner_write_to_test_run(scanner_write_to_test *tc)
     test_init(name);
     string found = string_new();
     TEST_DEFER(string_drop, &found);
-    result res = result_new();
     scanner_new_result new_res = scanner_new(
         tc->source,
         tc->buffer,
@@ -134,14 +133,14 @@ bool scanner_write_to_test_run(scanner_write_to_test *tc)
         return test_success();
     }
 
-    scanner_write_to(&new_res.scanner, string_writer(&found), &res);
+    io_result res = scanner_write_to(&new_res.scanner, string_writer(&found));
 
-    if (res.ok != tc->wanted_err)
+    if (io_result_is_ok(res) != tc->wanted_err)
     {
         return test_fail(
             "err: wanted `%s`; found `%s`",
             tc->wanted_err ? "true" : "false",
-            res.ok ? "true" : "false");
+            io_result_is_ok(res) ? "true" : "false");
     }
 
     if (!str_eq(tc->wanted, string_borrow(&found)))

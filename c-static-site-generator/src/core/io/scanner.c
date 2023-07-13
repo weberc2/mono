@@ -190,41 +190,36 @@ bool scanner_begin_next_section(scanner *s)
     }
 }
 
-size_t scanner_write_to(scanner *s, writer dst, result *res)
+io_result scanner_write_to(scanner *s, writer dst)
 {
     size_t total_written = 0;
     while (true)
     {
         scan_result scan_res = scanner_next_frame(s);
         io_result write_res = writer_write(dst, scan_res.data);
-        res->err = write_res.err;
-        res->ok = io_result_is_ok(write_res);
         total_written += write_res.size;
 
         // if there was a write error, return
-        if (!res->ok)
+        if (io_result_is_err(write_res))
         {
-            break;
+            return IO_RESULT(total_written, write_res.err);
         }
 
         // if the write was too short, return
         if (write_res.size < scan_res.data.len)
         {
-            *res = result_err(ERR_SHORT_WRITE);
-            break;
+            return IO_RESULT(total_written, ERR_SHORT_WRITE);
         }
 
         // if there was a scan error (including eof), return
         if (!error_is_null(scan_res.err))
         {
-            res->ok = false;
-            res->err = scan_res.err;
-            break;
+            return IO_RESULT(total_written, scan_res.err);
         }
 
         // otherwise loop around
     }
-    return total_written;
+    return IO_RESULT_OK(total_written);
 }
 
 static void __attribute__((constructor)) init()
