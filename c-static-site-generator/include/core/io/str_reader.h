@@ -16,7 +16,7 @@ typedef struct
 str_reader str_reader_new(str buffer);
 void str_reader_init(str_reader *sr, str buffer);
 size_t str_reader_read(str_reader *sr, str buffer);
-size_t str_reader_io_read(str_reader *sr, str buffer, result *res);
+io_result str_reader_io_read(str_reader *sr, str buffer);
 reader str_reader_to_reader(str_reader *sr);
 
 #endif // STR_READER_H

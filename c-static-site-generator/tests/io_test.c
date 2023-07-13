@@ -18,12 +18,14 @@ bool test_str_reader()
     str source = STR("helloworld");
     str buffer = STR_ARR((char[5]){0});
     reader r = str_reader_to_reader(&STR_READER(source));
-    result res = result_new();
-    size_t nr = reader_read(r, buffer, &res);
+    io_result res = reader_read(r, buffer);
 
-    if (nr != buffer.len)
+    if (res.size != buffer.len)
     {
-        return test_fail("nr: wanted `%zu`; found `%zu`", buffer.len, nr);
+        return test_fail(
+            "nr: wanted `%zu`; found `%zu`",
+            buffer.len,
+            res.size);
     }
     ASSERT_OK(res);
 
@@ -38,11 +40,14 @@ bool test_str_reader()
     ASSERT_OK(res);
 
     // Read a second time to get the rest of the data
-    nr = reader_read(r, buffer, &res);
+    res = reader_read(r, buffer);
 
-    if (nr != buffer.len)
+    if (res.size != buffer.len)
     {
-        return test_fail("nr: wanted `%zu`; found `%zu`", buffer.len, nr);
+        return test_fail(
+            "nr: wanted `%zu`; found `%zu`",
+            buffer.len,
+            res.size);
     }
 
     wanted = STR("world");
@@ -56,10 +61,10 @@ bool test_str_reader()
     ASSERT_OK(res);
 
     // read a third time to get the eof
-    nr = reader_read(r, buffer, &res);
-    if (nr != 0)
+    res = reader_read(r, buffer);
+    if (res.size != 0)
     {
-        return test_fail("nr: wanted `0`; found `%zu`", nr);
+        return test_fail("nr: wanted `0`; found `%zu`", res.size);
     }
     ASSERT_OK(res);
 
@@ -122,10 +127,10 @@ bool assert_count(const char *ctx, size_t wanted, size_t found)
     return true;
 }
 
-bool assert_read(char *wanted_c, size_t nr, str found, result res)
+bool assert_read(char *wanted_c, str found, io_result res)
 {
     size_t len = strlen(wanted_c);
-    return assert_count("bytes read", len, nr) &&
+    return assert_count("bytes read", len, res.size) &&
            assert_ok(res) &&
            assert_str_eq(wanted_c, str_slice(found, 0, len));
 }
@@ -135,9 +140,8 @@ bool assert_buffered_read(
     str buf,
     char *wanted_c)
 {
-    result res;
-    size_t nr = buffered_reader_read(br, buf, &res);
-    return assert_read(wanted_c, nr, buf, res);
+    io_result res = buffered_reader_read(br, buf);
+    return assert_read(wanted_c, buf, res);
 }
 
 bool test_buffered_reader_read()
@@ -190,19 +194,18 @@ bool test_buffered_reader_read__partial_rewind()
     buffered_reader br = buffered_reader_new(
         str_reader_to_reader(&STR_READER(src)),
         innerbuf);
-    result res = result_new();
-    size_t nr = buffered_reader_read(&br, outerbuf, &res);
+    io_result res = buffered_reader_read(&br, outerbuf);
     ASSERT_OK(res);
 
-    if (nr != sizeof(src_) - 1)
+    if (res.size != sizeof(src_) - 1)
     {
         return test_fail(
             "bytes read: wanted `%zu`; found `%zu`",
             sizeof(src_) - 1,
-            nr);
+            res.size);
     }
 
-    str found = str_slice(outerbuf, 0, nr);
+    str found = str_slice(outerbuf, 0, res.size);
     if (!str_eq(src, found))
     {
         char found_[256] = {0};
@@ -213,18 +216,18 @@ bool test_buffered_reader_read__partial_rewind()
     // try rewinding, but not all the way
     size_t new_cursor = 1;
     br.cursor = new_cursor;
-    nr = buffered_reader_read(&br, outerbuf, &res);
+    res = buffered_reader_read(&br, outerbuf);
     ASSERT_OK(res);
 
-    if (nr != sizeof(src_) - 1 - new_cursor)
+    if (res.size != sizeof(src_) - 1 - new_cursor)
     {
         return test_fail(
             "bytes read: wanted `%zu`; found `%zu`",
             sizeof(src_) - 1 - new_cursor,
-            nr);
+            res.size);
     }
 
-    found = str_slice(outerbuf, 0, nr);
+    found = str_slice(outerbuf, 0, res.size);
     str wanted = str_slice(src, new_cursor, src.len);
     if (!str_eq(wanted, found))
     {

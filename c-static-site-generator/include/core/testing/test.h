@@ -2,7 +2,7 @@
 #define TEST_H
 
 #include <stdbool.h>
-#include "core/result/result.h"
+#include "core/io/io_result.h"
 
 typedef void (*defer_func)(void *);
 
@@ -13,7 +13,7 @@ void test_defer(defer_func fn, void *data);
 bool test_fail(const char *format, ...);
 bool test_success();
 char *error_to_raw(error err, char *data, size_t size);
-bool assert_ok(result res);
+bool assert_ok(io_result res);
 
 #define ASSERT_OK(res)     \
     if (!assert_ok((res))) \

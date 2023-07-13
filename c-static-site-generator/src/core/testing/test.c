@@ -81,9 +81,9 @@ char *error_to_raw(error err, char *buf, size_t size)
     return buf;
 }
 
-bool assert_ok(result res)
+bool assert_ok(io_result res)
 {
-    if (res.ok)
+    if (io_result_is_ok(res))
     {
         return true;
     }

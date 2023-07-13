@@ -10,27 +10,26 @@ match_reader match_reader_new(buffered_reader *source, str match)
     };
 }
 
-size_t match_reader_read(match_reader *mr, str buf, result *res)
+io_result match_reader_read(match_reader *mr, str buf)
 {
     // if the last invocation was a match, return eof so the callers know there
     // was a match. further, reset the `found_match` flag so the next call will
     // begin searching for a new instance of `match`.
     if (mr->found_match)
     {
-        *res = result_ok();
         mr->found_match = false;
-        return 0;
+        return IO_RESULT_OK(0);
     }
 
-    size_t nr = buffered_reader_read(mr->source, buf, res);
-    mr->source->cursor -= nr;
+    io_result res = buffered_reader_read(mr->source, buf);
+    mr->source->cursor -= res.size;
 
-    if (nr < 1)
+    if (res.size < 1)
     {
-        return 0;
+        return res;
     }
 
-    str read_slice = str_slice(buf, 0, nr);
+    str read_slice = str_slice(buf, 0, res.size);
     for (size_t start = 0; start < read_slice.len; start++)
     {
         for (size_t end = 0; end < mr->match.len - mr->match_cursor; end++)
@@ -38,7 +37,8 @@ size_t match_reader_read(match_reader *mr, str buf, result *res)
             if (start + end > read_slice.len)
             {
                 mr->match_cursor += end;
-                return read_slice.len;
+                res.size = read_slice.len;
+                return res;
             }
 
             // check to see if there is a match--if so, continue; otherwise
@@ -64,14 +64,14 @@ size_t match_reader_read(match_reader *mr, str buf, result *res)
         // return the starting position of the match. note that the call to
         // `buffered_reader_read()` already updated `res` whether success or
         // error--we're just going to return it along with any matches.
-        nr = start;
+        res.size = start;
         break;
 
     OUTER:
         continue;
     }
 
-    return nr;
+    return res;
 }
 
 reader match_reader_to_reader(match_reader *mr)

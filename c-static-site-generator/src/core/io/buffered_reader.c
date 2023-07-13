@@ -1,5 +1,4 @@
 #include "core/math/math.h"
-#include "core/result/result.h"
 #include "core/io/buffered_reader.h"
 #include "core/io/match_reader.h"
 
@@ -18,34 +17,33 @@ buffered_reader buffered_reader_new(reader source, str buf)
     return br;
 }
 
-size_t buffered_reader_read(buffered_reader *br, str buf, result *res)
+io_result buffered_reader_read(buffered_reader *br, str buf)
 {
-    size_t n = 0;
+    io_result ret = IO_RESULT_OK(0);
     if (br->cursor > 0 && br->cursor < br->read_end)
     {
         str remaining = str_slice(br->buffer, br->cursor, br->read_end);
-        n = str_copy(buf, remaining);
-        br->cursor += n;
+        ret.size = str_copy(buf, remaining);
+        br->cursor += ret.size;
 
-        // if n >= buf.len, it means we had at least a whole `buf` left in the
-        // buffer. If n == 0, it means we've reached the end of the file. In
-        // either case, return.
-        if (n >= buf.len || n < 1)
+        // if `ret.size >= buf.len`, it means we had at least a whole `buf`
+        // left in the buffer. If `ret.size == 0`, it means we've reached the
+        // end of the file. In either case, return.
+        if (ret.size >= buf.len || ret.size < 1)
         {
-            *res = result_ok();
-            return n;
+            return ret;
         }
     }
     else
     {
-        n = 0;
+        ret.size = 0;
     }
 
     // otherwise, we only partially filled the output buffer and we need to
     // reload the internal buffer.
-    while (n < buf.len)
+    while (ret.size < buf.len)
     {
-        size_t nr = reader_read(br->source, br->buffer, res);
+        io_result res = reader_read(br->source, br->buffer);
 
         // NB: we are deliberately *NOT* handling errors at this point--we
         // first want to copy anything we successfully read into the output
@@ -53,14 +51,15 @@ size_t buffered_reader_read(buffered_reader *br, str buf, result *res)
 
         // if we don't read anything, it means we've reached eof--return with
         // a partially-written output buffer.
-        if (nr < 1)
+        if (res.size < 1)
         {
+            ret.err = res.err;
             break;
         }
 
         // if we didn't read anything because we reached eof, we don't want to
         // reset the `read_end` back to the beginning of the buffer.
-        br->read_end = nr;
+        br->read_end = res.size;
 
         // if we didn't read anything because we reached eof, we don't want to
         // reset the `cursor` back to the beginning of the buffer.
@@ -68,21 +67,22 @@ size_t buffered_reader_read(buffered_reader *br, str buf, result *res)
 
         // otherwise we read something; let's copy it to the unwritten portion
         // of the output buffer.
-        str target = str_slice(buf, n, min(buf.len, nr));
+        str target = str_slice(buf, ret.size, min(buf.len, res.size));
         size_t copied = str_copy(target, br->buffer);
-        size_t unwritten = buf.len - n;
-        n += copied;
+        size_t unwritten = buf.len - ret.size;
+        ret.size += copied;
         br->cursor += copied;
 
         // if we filled the output buffer OR encountered errors, return.
-        if (copied >= unwritten || !res->ok)
+        if (copied >= unwritten || !io_result_is_ok(res))
         {
+            ret.err = res.err;
             break;
         }
 
         // otherwise loop around and refill the buffer
     }
-    return n;
+    return ret;
 }
 
 bool buffered_reader_find(
@@ -97,20 +97,21 @@ bool buffered_reader_find(
     match_reader mr = match_reader_new(br, match);
     while (true)
     {
-        size_t nr = match_reader_read(&mr, buf, res);
-        if (nr < 1)
+        io_result read_res = match_reader_read(&mr, buf);
+        res->err = read_res.err;
+        if (read_res.size < 1)
         {
             return true;
         }
 
-        size_t nw = writer_write(w, str_slice(buf, 0, nr), res);
-        if (nr != nw)
+        size_t nw = writer_write(w, str_slice(buf, 0, read_res.size), res);
+        if (read_res.size != nw)
         {
             *res = result_err(ERR_SHORT_WRITE);
         }
 
         // if there was an error, return early
-        if (!res->ok)
+        if (io_result_is_err(read_res))
         {
             return false;
         }

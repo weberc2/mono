@@ -18,15 +18,8 @@ typedef struct scanner_write_to_test
     bool wanted_err;
 } scanner_write_to_test;
 
-#define READER(ptr, fn)          \
-    (reader)                     \
-    {                            \
-        .data = (void *)(ptr),   \
-        .read = (read_func)(fn), \
-    }
-
 #define TEST_READER(input) READER( \
-    &STR_READER(STR(input)),   \
+    &STR_READER(STR(input)),       \
     str_reader_io_read)
 
 #define BUFFER(size, init) STR_ARR((char[size]){(init)})

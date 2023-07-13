@@ -140,7 +140,7 @@ bool find_test_case_run(find_test_case *tc)
     buffered_reader_to_reader(&br, &r);
     copy(w, r, &res);
     str actual_postlude = string_borrow(&postlude);
-    ASSERT_OK(res);
+    ASSERT_OK(IO_RESULT_ERR(res.err));
     if (!str_eq(wanted_postlude, actual_postlude))
     {
         char wanted[256] = {0}, actual[256] = {0};

@@ -118,19 +118,18 @@ field_match_result parse_field_name(
     while (fields_has_valid(fields))
     {
         field_match_result match_res = FIELD_MATCH_RESULT_FAILURE;
-        result res = result_new();
-        size_t nr = reader_read(r, buf, &res);
-        if (!res.ok)
+        io_result res = reader_read(r, buf);
+        if (io_result_is_err(res))
         {
             match_res.io_err = res.err;
-            match_res.buffer_position = nr;
+            match_res.buffer_position = res.size;
         }
-        if (nr < 1)
+        if (res.size < 1)
         {
             return match_res;
         }
 
-        str gooddata = str_slice(buf, 0, nr);
+        str gooddata = str_slice(buf, 0, res.size);
 
         match_res = fields_match_name(
             fields,
@@ -140,7 +139,7 @@ field_match_result parse_field_name(
         // return the match result (in the latter case, the match result
         // contains the error information already, so we'll still be
         // communicating the error).
-        if (match_res.match || !res.ok)
+        if (match_res.match || io_result_is_err(res))
         {
             return match_res;
         }
@@ -160,9 +159,8 @@ parse_field_value_result parse_field_value(reader r, writer w, str buf)
     str_find_result find_res = (str_find_result){.found = false, .index = 0};
     while (!find_res.found)
     {
-        result res = result_new();
-        size_t nr = reader_read(r, buf, &res);
-        if (nr < 1)
+        io_result res = reader_read(r, buf);
+        if (res.size < 1)
         {
             return (parse_field_value_result){
                 .ok = true,
@@ -172,12 +170,13 @@ parse_field_value_result parse_field_value(reader r, writer w, str buf)
             };
         }
 
-        str gooddata = str_slice(buf, 0, nr);
+        str gooddata = str_slice(buf, 0, res.size);
         find_res = str_find_char(gooddata, '\n');
         str value = find_res.found
                         ? str_slice(gooddata, 0, find_res.index)
                         : gooddata;
-        size_t nw = writer_write(w, value, &res);
+        result write_res = result_new();
+        size_t nw = writer_write(w, value, &write_res);
         size += nw;
 
         if (nw != value.len)
@@ -190,7 +189,7 @@ parse_field_value_result parse_field_value(reader r, writer w, str buf)
             };
         }
 
-        if (!res.ok)
+        if (!error_is_null(write_res.err))
         {
             return (parse_field_value_result){
                 .ok = false,
