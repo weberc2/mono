@@ -68,13 +68,13 @@ bool fprintf_test_run(fprintf_test *tc)
 
     string found = string_new();
     TEST_DEFER(string_drop, &found);
-    fmt_result res = fmt_fprintf_buf(
+    io_result res = fmt_fprintf_buf(
         string_writer(&found),
         tc->format,
         tc->args,
         tc->buf);
 
-    if (!res.ok)
+    if (io_result_is_err(res))
     {
         formatter f;
         string s = string_new();

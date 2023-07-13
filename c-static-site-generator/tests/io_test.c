@@ -80,14 +80,13 @@ bool test_copy()
     TEST_DEFER(string_drop, &dst);
     reader r = str_reader_to_reader(&STR_READER(src));
     writer w = string_writer(&dst);
-    result res = result_new();
-    size_t nc = copy(w, r, &res);
-    if (nc != src.len)
+    io_result res = copy(w, r);
+    if (res.size != src.len)
     {
         return test_fail(
             "bytes copied: wanted `%zu`; found `%zu`",
             src.len,
-            nc);
+            res.size);
     }
 
     if (!str_eq(src, string_borrow(&dst)))

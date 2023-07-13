@@ -138,9 +138,7 @@ bool find_test_case_run(find_test_case *tc)
     string postlude = string_new();
     w = string_writer(&postlude);
     buffered_reader_to_reader(&br, &r);
-    result copy_res = result_new();
-    res.size = copy(w, r, &copy_res);
-    res.err = copy_res.err;
+    res = copy(w, r);
     str actual_postlude = string_borrow(&postlude);
     ASSERT_OK(IO_RESULT_ERR(res.err));
     if (!str_eq(wanted_postlude, actual_postlude))
