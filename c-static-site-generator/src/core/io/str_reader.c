@@ -1,5 +1,4 @@
 #include "core/io/str_reader.h"
-#include "core/result/result.h"
 
 str_reader str_reader_new(str buffer)
 {

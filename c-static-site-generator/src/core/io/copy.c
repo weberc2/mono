@@ -1,26 +1,24 @@
 #include "core/io/copy.h"
-#include "core/result/result.h"
 #include "core/str/str.h"
 
-size_t copy(writer dst, reader src, result *res)
+io_result copy(writer dst, reader src)
 {
     char buffer[256];
     str buf = str_new(buffer, sizeof(buffer));
-    return copy_buf(dst, src, buf, res);
+    return copy_buf(dst, src, buf);
 }
 
-size_t copy_buf(writer dst, reader src, str buf, result *res)
+io_result copy_buf(writer dst, reader src, str buf)
 {
     size_t written = 0;
     while (true)
     {
         io_result read_res = reader_read(src, buf);
-        res->err = read_res.err;
-        res->ok = io_result_is_ok(read_res);
         if (read_res.size < 1)
         {
-            break;
+            return IO_RESULT(written, read_res.err);
         }
+
         io_result write_res = writer_write(
             dst,
             str_slice(buf, 0, read_res.size));
@@ -28,24 +26,19 @@ size_t copy_buf(writer dst, reader src, str buf, result *res)
 
         if (read_res.size != write_res.size)
         {
-            *res = result_err(ERR_SHORT_WRITE);
-            break;
+            return IO_RESULT(written, ERR_SHORT_WRITE);
         }
 
         if (io_result_is_err(write_res))
         {
-            res->err = write_res.err;
-            res->ok = false;
-            break;
+            return IO_RESULT(written, write_res.err);
         }
 
         if (io_result_is_err(read_res))
         {
-            res->err = read_res.err;
-            res->ok = false;
-            break;
+            return IO_RESULT(written, read_res.err);
         }
     }
 
-    return written;
+    return IO_RESULT_OK(written);
 }

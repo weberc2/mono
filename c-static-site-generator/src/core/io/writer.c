@@ -1,5 +1,4 @@
 #include "core/io/writer.h"
-#include "core/result/result.h"
 
 static void __attribute__((constructor)) init()
 {
