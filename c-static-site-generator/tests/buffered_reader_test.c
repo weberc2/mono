@@ -92,7 +92,7 @@ bool find_test_case_run(find_test_case *tc)
     // init writer
     string s = string_new();
     writer w = string_writer(&s);
-    result res = result_new();
+    io_result res = IO_RESULT_OK(0);
 
     bool found = buffered_reader_find(&br, w, match, &res);
 
@@ -112,12 +112,12 @@ bool find_test_case_run(find_test_case *tc)
             tc->src);
     }
 
-    if (res.ok && tc->wanted_error)
+    if (io_result_is_ok(res) && tc->wanted_error)
     {
         return test_fail("expected error but found ok");
     }
 
-    if (!res.ok && !tc->wanted_error)
+    if (io_result_is_err(res) && !tc->wanted_error)
     {
         char m[256] = {0};
         return test_fail(
@@ -138,7 +138,9 @@ bool find_test_case_run(find_test_case *tc)
     string postlude = string_new();
     w = string_writer(&postlude);
     buffered_reader_to_reader(&br, &r);
-    copy(w, r, &res);
+    result copy_res = result_new();
+    res.size = copy(w, r, &copy_res);
+    res.err = copy_res.err;
     str actual_postlude = string_borrow(&postlude);
     ASSERT_OK(IO_RESULT_ERR(res.err));
     if (!str_eq(wanted_postlude, actual_postlude))

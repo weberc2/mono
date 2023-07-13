@@ -88,7 +88,7 @@ bool buffered_reader_find(
     buffered_reader *br,
     writer w,
     str match,
-    result *res)
+    io_result *res)
 {
     char buf_[256] = {0};
     str buf = str_new(buf_, sizeof(buf_));
@@ -97,21 +97,30 @@ bool buffered_reader_find(
     while (true)
     {
         io_result read_res = match_reader_read(&mr, buf);
-        res->err = read_res.err;
         if (read_res.size < 1)
         {
             return true;
         }
 
-        size_t nw = writer_write(w, str_slice(buf, 0, read_res.size), res);
-        if (read_res.size != nw)
+        io_result write_res = writer_write(
+            w,
+            str_slice(buf, 0, read_res.size));
+
+        if (io_result_is_err(write_res))
         {
-            *res = result_err(ERR_SHORT_WRITE);
+            res->err = write_res.err;
+            return false;
         }
 
-        // if there was an error, return early
         if (io_result_is_err(read_res))
         {
+            res->err = read_res.err;
+            return false;
+        }
+
+        if (read_res.size != write_res.size)
+        {
+            *res = IO_RESULT_ERR(ERR_SHORT_WRITE);
             return false;
         }
     }

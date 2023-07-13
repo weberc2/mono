@@ -20,7 +20,7 @@ bool buffered_reader_find(
     buffered_reader *br,
     writer w,
     str match,
-    result *res);
+    io_result *res);
 void buffered_reader_to_reader(buffered_reader *br, reader *r);
 
 #endif // BUFFERED_READER_H

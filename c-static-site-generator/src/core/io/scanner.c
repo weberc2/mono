@@ -196,8 +196,10 @@ size_t scanner_write_to(scanner *s, writer dst, result *res)
     while (true)
     {
         scan_result scan_res = scanner_next_frame(s);
-        size_t nw = writer_write(dst, scan_res.data, res);
-        total_written += nw;
+        io_result write_res = writer_write(dst, scan_res.data);
+        res->err = write_res.err;
+        res->ok = io_result_is_ok(write_res);
+        total_written += write_res.size;
 
         // if there was a write error, return
         if (!res->ok)
@@ -206,7 +208,7 @@ size_t scanner_write_to(scanner *s, writer dst, result *res)
         }
 
         // if the write was too short, return
-        if (nw < scan_res.data.len)
+        if (write_res.size < scan_res.data.len)
         {
             *res = result_err(ERR_SHORT_WRITE);
             break;
