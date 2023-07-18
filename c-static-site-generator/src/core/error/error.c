@@ -14,6 +14,10 @@ error error_null()
 
 bool error_display(error err, formatter f)
 {
+    if (error_is_null(err))
+    {
+        return fmt_write_str(f, STR("<NULL>"));
+    }
     return err.display(err.data, f);
 }
 
