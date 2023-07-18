@@ -10,9 +10,9 @@ typedef struct io_result
 } io_result;
 
 #define IO_RESULT(sz, e) \
-    (io_result) { .size = (sz), .err = (e) }
+    (io_result) { .size = (sz), .err = (e), }
 #define IO_RESULT_OK(sz) IO_RESULT(sz, ERROR_NULL)
-#define IO_RESULT_ERR(e) IO_RESULT(0, e)
+#define IO_RESULT_ERR(e) IO_RESULT(0, (e))
 
 static inline bool io_result_is_ok(io_result res)
 {
