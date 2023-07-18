@@ -1,5 +1,7 @@
-#include "core/io/scanner.h"
 #include <string.h>
+
+#include "core/io/err_eof.h"
+#include "core/io/scanner.h"
 
 scanner_new_result scanner_new(reader source, str buffer, str delim)
 {
@@ -23,11 +25,6 @@ scanner_new_result scanner_new(reader source, str buffer, str delim)
             .err = ERROR_NULL,
         },
     };
-}
-
-bool error_is_eof(error err)
-{
-    return (err.data == ERR_EOF.data && err.display == ERR_EOF.display);
 }
 
 void scanner_refresh(scanner *s)
@@ -133,10 +130,24 @@ scan_result scanner_next_frame(scanner *s)
     }
 
     // otherwise return the whole frame less any potential delimiter prefix at
-    // the end of the buffer (advancing the cursor accordingly)
+    // the end of the buffer (advancing the cursor accordingly). If we matched
+    // a delimiter prefix, but we previously got an EOF, then we know we can't
+    // complete the match.
     s->buffer_cursor = s->delim_cursor + s->last_read_size;
     size_t last_read_end = s->delim_cursor + s->last_read_size;
-    s->delim_cursor = ends_with_prefix(write_partition, s->delim);
+
+    // if we previously encountered the end-of-file sentinel from the
+    // underlying source reader, then we shouldn't bother checking the end of
+    // the frame for a delimiter prefix because there are no subsequent frames
+    // which might complete it. further, even though `err` might be `eof`
+    // because either we encountered the end-of-file sentinel from the
+    // underlying reader OR because we encountered a delimiter, we only need to
+    // check the former case because we would have already returned in the
+    // latter case.
+    if (!error_is_eof(s->err))
+    {
+        s->delim_cursor = ends_with_prefix(write_partition, s->delim);
+    }
 
     return (scan_result){
         // return the buffer beginning at 0 to the end of the write partition
@@ -211,18 +222,17 @@ io_result scanner_write_to(scanner *s, writer dst)
             return IO_RESULT(total_written, ERR_SHORT_WRITE);
         }
 
-        // if there was a scan error (including eof), return
+        // if there was a scan error, return
         if (!error_is_null(scan_res.err))
         {
+            if (error_is_eof(scan_res.err))
+            {
+                return IO_RESULT_OK(total_written);
+            }
             return IO_RESULT(total_written, scan_res.err);
         }
 
         // otherwise loop around
     }
     return IO_RESULT_OK(total_written);
-}
-
-static void __attribute__((constructor)) init()
-{
-    error_const(&ERR_EOF, "end of file");
 }

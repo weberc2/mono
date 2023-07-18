@@ -1,3 +1,4 @@
+#include "core/io/err_eof.h"
 #include "core/io/copy.h"
 #include "core/str/str.h"
 
@@ -31,11 +32,19 @@ io_result copy_buf(writer dst, reader src, str buf)
 
         if (io_result_is_err(write_res))
         {
+            if (error_is_eof(write_res.err))
+            {
+                return IO_RESULT_OK(written);
+            }
             return IO_RESULT(written, write_res.err);
         }
 
         if (io_result_is_err(read_res))
         {
+            if (error_is_eof(read_res.err))
+            {
+                return IO_RESULT_OK(written);
+            }
             return IO_RESULT(written, read_res.err);
         }
     }

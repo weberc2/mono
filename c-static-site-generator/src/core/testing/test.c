@@ -65,7 +65,7 @@ bool test_success()
     return true;
 }
 
-char *error_to_raw(error err, char *buf, size_t size)
+char *error_to_raw(error err, str buf)
 {
     string s = string_new();
     formatter f;
@@ -76,9 +76,9 @@ char *error_to_raw(error err, char *buf, size_t size)
         panic("failed to display error!");
     }
 
-    string_copy_to_c(buf, &s, size);
+    str_copy(buf, string_borrow(&s));
     string_drop(&s);
-    return buf;
+    return buf.data;
 }
 
 bool assert_ok(io_result res)
@@ -88,8 +88,7 @@ bool assert_ok(io_result res)
         return true;
     }
 
-    char msg[256] = {0};
     return test_fail(
         "unexpected err: %s",
-        error_to_raw(res.err, msg, sizeof(msg)));
+        error_to_raw(res.err, STR_ARR((char[256]){0})));
 }

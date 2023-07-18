@@ -64,6 +64,4 @@ scan_result scanner_next_frame(scanner *s);
 error scanner_next_section(scanner *s);
 io_result scanner_write_to(scanner *s, writer dst);
 
-error ERR_EOF;
-
 #endif // SCANNER_H
