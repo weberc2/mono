@@ -139,15 +139,15 @@ scan_result scanner_next_frame(scanner *s)
     // if we previously encountered the end-of-file sentinel from the
     // underlying source reader, then we shouldn't bother checking the end of
     // the frame for a delimiter prefix because there are no subsequent frames
-    // which might complete it. further, even though `err` might be `eof`
-    // because either we encountered the end-of-file sentinel from the
-    // underlying reader OR because we encountered a delimiter, we only need to
-    // check the former case because we would have already returned in the
-    // latter case.
-    if (!error_is_eof(s->err))
-    {
-        s->delim_cursor = ends_with_prefix(write_partition, s->delim);
-    }
+    // which might complete it, and if we previously began matching a prefix,
+    // then we should set the delim_cursor to zero. further, even though `err`
+    // might be `eof` because either we encountered the end-of-file sentinel
+    // from the underlying reader OR because we encountered a delimiter, we
+    // only need to check the former case because we would have already
+    // returned in the latter case.
+    s->delim_cursor = error_is_eof(s->err)
+                          ? 0
+                          : ends_with_prefix(write_partition, s->delim);
 
     return (scan_result){
         // return the buffer beginning at 0 to the end of the write partition
