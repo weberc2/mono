@@ -1,3 +1,4 @@
+#include "core/io/err_eof.h"
 #include "core/io/str_reader.h"
 
 str_reader str_reader_new(str buffer)
@@ -23,7 +24,10 @@ size_t str_reader_read(str_reader *sr, str buffer)
 
 io_result str_reader_io_read(str_reader *sr, str buffer)
 {
-    return IO_RESULT_OK(str_reader_read(sr, buffer));
+    size_t nr = str_reader_read(sr, buffer);
+    return IO_RESULT(
+        nr,
+        sr->cursor < sr->buffer.len ? ERROR_NULL : ERR_EOF);
 }
 
 reader str_reader_to_reader(str_reader *sr)
