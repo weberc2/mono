@@ -98,7 +98,13 @@ func (builder *Builder) Build(
 	log.Infof("validated payload")
 
 	// provision temporary working directory
-	tmpDir := os.TempDir()
+	tmpDir, err := os.MkdirTemp(os.TempDir(), "build-*")
+	if err != nil {
+		return nil, fmt.Errorf(
+			"building lambda: creating temporary build directory: %w",
+			err,
+		)
+	}
 	defer func() {
 		if err := os.RemoveAll(tmpDir); err != nil {
 			log.Errorf(
@@ -110,7 +116,7 @@ func (builder *Builder) Build(
 			)
 		}
 	}()
-	log.Infof("created temporary directory")
+	log.Infof("created temp directory: %s", tmpDir)
 
 	// extract the source archive to the temporary working directory
 	if err := extract(payload.Archive, tmpDir); err != nil {
