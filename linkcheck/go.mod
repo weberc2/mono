@@ -1,4 +1,4 @@
-module github.com/weberc2/mono/cmd/linkcheck
+module github.com/weberc2/mono/linkcheck
 
 go 1.19
 
