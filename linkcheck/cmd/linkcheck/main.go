@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
+	"time"
 )
 
 const (
@@ -15,6 +17,11 @@ const (
 )
 
 func main() {
+	slog.SetLogLoggerLevel(slog.LevelDebug)
+	start := time.Now()
+	slog.Debug("starting", "time", start)
+	defer func() { slog.Debug("completed", "elapsed", time.Since(start)) }()
+
 	if len(os.Args) < 2 {
 		fmt.Fprintf(os.Stderr, "USAGE: linkcheck URL\n")
 		os.Exit(errorCodeInsufficientArguments)

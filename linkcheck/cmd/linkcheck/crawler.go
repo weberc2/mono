@@ -1,10 +1,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -62,64 +65,56 @@ func (crawler *Crawler) Seen(url *url.URL) bool {
 }
 
 func (crawler *Crawler) Crawl(base *url.URL) error {
-	if base.Scheme != "http" &&
-		base.Scheme != "https" &&
-		base.Scheme != "file" {
-
-		// ignore non-http/https/file links (e.g., mailto)
-		return nil
-	}
-
 	base.Fragment = "" // strip fragments
 	if crawler.Seen(base) {
 		return nil
 	}
 	crawler.seen[base.String()] = struct{}{}
 
-	req, err := http.NewRequest("GET", base.String(), nil)
-	if err != nil {
-		return fmt.Errorf(
-			"checking links for url `%s`: preparing HTTP request: %w",
-			base,
-			err,
-		)
-	}
-
-	req.Header.Set("User-Agent", "linkcheck/1.0")
-
-	rsp, err := crawler.Client.Do(req)
-	if err != nil {
-		return fmt.Errorf("checking links for url `%s`: %w", base, err)
-	}
-
-	if rsp.StatusCode != http.StatusOK {
-		return ErrNotOk(rsp.StatusCode)
-	}
-
-	// If the URL's host is not part of the site we're checking, then return
-	// early
-	if base.Host != crawler.Host {
-		return nil
-	}
-
-	// Otherwise recurse into the links in the response body
-	defer func() {
-		if err := rsp.Body.Close(); err != nil {
-			log.Printf(
-				"ERROR closing response body for url `%s`: %v",
+	var body io.ReadCloser
+	if base.Scheme == "file" {
+		var err error
+		if body, err = os.Open(base.Path); err != nil {
+			return fmt.Errorf("opening file:// url `%s`: %w", base, err)
+		}
+	} else if base.Scheme == "http" || base.Scheme == "https" {
+		req, err := http.NewRequest("GET", base.String(), nil)
+		if err != nil {
+			return fmt.Errorf(
+				"checking links for url `%s`: preparing HTTP request: %w",
 				base,
 				err,
 			)
 		}
-	}()
 
-	doc, err := goquery.NewDocumentFromReader(rsp.Body)
+		req.Header.Set("User-Agent", "linkcheck/1.0")
+
+		rsp, err := crawler.Client.Do(req)
+		if err != nil {
+			return fmt.Errorf("checking links for url `%s`: %w", base, err)
+		}
+
+		if rsp.StatusCode != http.StatusOK {
+			return ErrNotOk(rsp.StatusCode)
+		}
+
+		// If the URL's host is not part of the site we're checking, then return
+		// early
+		if base.Host != crawler.Host {
+			return nil
+		}
+		body = rsp.Body
+	} else {
+		// ignore links that are not of scheme file, http, or https (e.g.,
+		// ignore `mailto` links).
+		return nil
+	}
+
+	// closes body (so we don't keep open file handles while crawling interior
+	// links)
+	doc, err := readDoc(body)
 	if err != nil {
-		return fmt.Errorf(
-			"checking links for url `%s`: parsing HTML document: %w",
-			base,
-			err,
-		)
+		return fmt.Errorf("checking links for url `%s`: %w", base, err)
 	}
 	doc.Find("a[href]").Each(func(i int, a *goquery.Selection) {
 		href, exists := a.Attr("href")
@@ -178,6 +173,21 @@ func (crawler *Crawler) Crawl(base *url.URL) error {
 	})
 
 	return nil
+}
+
+func readDoc(body io.ReadCloser) (*goquery.Document, error) {
+	doc, err := goquery.NewDocumentFromReader(body)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"parsing HTML document: %w",
+			errors.Join(err, body.Close()),
+		)
+	}
+	if err := body.Close(); err != nil {
+		return nil, fmt.Errorf("parsing HTML document: %w", err)
+	}
+
+	return doc, nil
 }
 
 type ErrNotOk int
