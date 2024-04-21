@@ -62,8 +62,11 @@ func (crawler *Crawler) Seen(url *url.URL) bool {
 }
 
 func (crawler *Crawler) Crawl(base *url.URL) error {
-	if base.Scheme != "http" && base.Scheme != "https" {
-		// ignore non-http/https links (e.g., mailto)
+	if base.Scheme != "http" &&
+		base.Scheme != "https" &&
+		base.Scheme != "file" {
+
+		// ignore non-http/https/file links (e.g., mailto)
 		return nil
 	}
 
