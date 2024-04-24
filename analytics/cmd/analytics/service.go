@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"unsafe"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go/aws"
@@ -19,7 +20,7 @@ import (
 
 type Service struct {
 	S3     *s3.S3
-	Client Client
+	Client MultiClient
 	Bucket string
 }
 
@@ -40,13 +41,43 @@ func LoadService() (svc Service, err error) {
 		return
 	}
 
-	svc = Service{
-		S3:     s3.New(sess),
-		Bucket: os.Getenv("BUCKET"),
-		Client: Client{
-			HTTP:   &http.Client{Timeout: 15 * time.Second},
-			APIKey: *rsp.SecretString,
-		},
+	svc = Service{S3: s3.New(sess), Bucket: os.Getenv("BUCKET")}
+
+	var apiKeys struct {
+		Geolocation string `json:"geolocation"`
+		Stack       string `json:"stack"`
+	}
+	if err = json.Unmarshal(
+		*(*[]byte)(unsafe.Pointer(rsp.SecretString)),
+		&apiKeys,
+	); err != nil {
+		err = fmt.Errorf(
+			"loading service from environment: unmarshaling api keys from "+
+				"secret string: %w",
+			err,
+		)
+		return
+	}
+
+	if apiKeys.Geolocation == "" && apiKeys.Stack == "" {
+		err = fmt.Errorf(
+			"loading service from environment: no api keys found in secret",
+		)
+		return
+	}
+
+	httpClient := http.Client{Timeout: 15 * time.Second}
+	if apiKeys.Geolocation != "" {
+		svc.Client.Clients = append(
+			svc.Client.Clients,
+			Client{HTTP: &httpClient, APIKey: apiKeys.Geolocation},
+		)
+	}
+	if apiKeys.Stack != "" {
+		svc.Client.Clients = append(
+			svc.Client.Clients,
+			Client{HTTP: &httpClient, APIKey: apiKeys.Stack},
+		)
 	}
 
 	return

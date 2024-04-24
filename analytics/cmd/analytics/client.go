@@ -45,16 +45,3 @@ type Location struct {
 	Latitude      float64        `json:"latitude"`
 	Longitude     float64        `json:"longitude"`
 }
-
-func (l *Location) updateMap(data map[string]interface{}) {
-	data["continent_code"] = l.ContinentCode
-	data["continent_name"] = l.ContinentName
-	data["country_code"] = l.CountryCode
-	data["country_name"] = l.CountryName
-	data["region_code"] = l.RegionCode
-	data["region_name"] = l.RegionName
-	data["city"] = l.City
-	data["zip"] = l.Zip
-	data["latitude"] = l.Latitude
-	data["longitude"] = l.Longitude
-}
