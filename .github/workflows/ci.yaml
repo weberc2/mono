@@ -63,21 +63,7 @@ jobs:
           go-version: 1.22.x
           cache-dependency-path: go.sum
 
-      - name: Install dependencies
-        run: go mod download
-      - name: Vet
-        run: go vet -v ./...
-      - name: Build
-        run: go build -v ./...
-      - name: Test
-        run: go test -v ./...
-        env:
-          PG_PASS: password
-          PG_USER: postgres
-          PG_DB_NAME: postgres
-          PG_PORT: 5432
-          PG_HOST: postgres
-      - name: Format
+      - name: Fmt
         id: fmt
         run: |
             go install github.com/segmentio/golines@v0.10.0
@@ -86,6 +72,52 @@ jobs:
                 echo "$output"
                 exit 1
             fi
+
+      - name: Vet
+        id: vet
+        run: |-
+          for dir in $(ls ./); do
+            if [ ! -d $dir ] || [ ! -f $dir/go.mod ]; then
+              break
+            fi
+            echo ""
+            echo "##################"
+            echo "# vetting $dir"
+            echo "##################"
+            (cd $dir && go vet -v ./...)
+          done
+      - name: Test
+        id: test
+        run: |-
+          for dir in $(ls ./); do
+            if [ ! -d $dir ] || [ ! -f $dir/go.mod ]; then
+              break
+            fi
+            echo ""
+            echo "##################"
+            echo "# testing $dir"
+            echo "##################"
+            (cd $dir && go test -v ./...)
+          done
+        env:
+          PG_PASS: password
+          PG_USER: postgres
+          PG_DB_NAME: postgres
+          PG_PORT: 5432
+          PG_HOST: postgres
+      - name: Build
+        id: build
+        run: |-
+          for dir in $(ls ./); do
+            if [ ! -d $dir ] || [ ! -f $dir/go.mod ]; then
+              break
+            fi
+            echo ""
+            echo "###################"
+            echo "# building $dir"
+            echo "###################"
+            (cd $dir && go build -v ./...)
+          done
       - name: Workflows
         id: workflows
         run: |
