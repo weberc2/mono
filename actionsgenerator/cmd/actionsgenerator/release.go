@@ -38,9 +38,8 @@ func JobRelease(image *Image) Job {
 		"platforms": "linux/amd64,linux/arm64",
 		"push":      true,
 		"tags": fmt.Sprintf(
-			"${{ secrets.DOCKER_USERNAME }}/%[1]s:${{ github.sha }}\n"+
-				"${{ secrets.DOCKER_USERNAME }}/%[1]s:latest",
-			image.Name,
+			"%[1]s:${{ github.sha }}\n%[1]s:latest",
+			image.FullName(),
 		),
 	}
 	if image.SinglePlatform != "" {
@@ -50,7 +49,6 @@ func JobRelease(image *Image) Job {
 	return Job{
 		RunsOn: "ubuntu-latest",
 		Steps: []Step{{
-			Name: "Checkout",
 			Uses: "actions/checkout@v4",
 		}, {
 			Name: "Set up QEMU",
