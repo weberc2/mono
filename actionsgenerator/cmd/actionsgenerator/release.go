@@ -50,6 +50,9 @@ func JobRelease(image *Image) Job {
 	return Job{
 		RunsOn: "ubuntu-latest",
 		Steps: []Step{{
+			Name: "Checkout",
+			Uses: "actions/checkout@v4",
+		}, {
 			Name: "Set up QEMU",
 			Uses: "docker/setup-qemu-action@v3",
 		}, {
