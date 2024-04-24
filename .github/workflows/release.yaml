@@ -24,6 +24,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: TARGET=auth
+          cache-from: type=gha, scope=${{ github.workflow }}
+          cache-to: type=gha, scope=${{ github.workflow }}
           context: comments
           file: docker/golang/Dockerfile
           platforms: linux/amd64,linux/arm64
@@ -49,6 +51,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: TARGET=comments
+          cache-from: type=gha, scope=${{ github.workflow }}
+          cache-to: type=gha, scope=${{ github.workflow }}
           context: comments
           file: docker/golang/Dockerfile
           platforms: linux/amd64,linux/arm64
@@ -75,6 +79,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: TARGET=gobuilder
+          cache-from: type=gha, scope=${{ github.workflow }}
+          cache-to: type=gha, scope=${{ github.workflow }}
           context: gobuilder
           file: docker/gobuilder/Dockerfile
           platforms: linux/amd64
@@ -101,6 +107,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: TARGET=linkcheck
+          cache-from: type=gha, scope=${{ github.workflow }}
+          cache-to: type=gha, scope=${{ github.workflow }}
           context: linkcheck
           file: docker/golang/Dockerfile
           platforms: linux/amd64,linux/arm64
@@ -126,6 +134,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: ""
+          cache-from: type=gha, scope=${{ github.workflow }}
+          cache-to: type=gha, scope=${{ github.workflow }}
           context: ./docker/pgbackup
           file: ./docker/pgbackup/Dockerfile
           platforms: linux/amd64,linux/arm64
@@ -151,6 +161,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: TARGET=tokens
+          cache-from: type=gha, scope=${{ github.workflow }}
+          cache-to: type=gha, scope=${{ github.workflow }}
           context: comments
           file: docker/golang/Dockerfile
           platforms: linux/amd64,linux/arm64
@@ -176,6 +188,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: TARGET=users
+          cache-from: type=gha, scope=${{ github.workflow }}
+          cache-to: type=gha, scope=${{ github.workflow }}
           context: comments
           file: docker/golang/Dockerfile
           platforms: linux/amd64,linux/arm64
