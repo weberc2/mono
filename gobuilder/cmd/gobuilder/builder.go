@@ -58,6 +58,10 @@ type Payload struct {
 	// `arm64`.
 	Architecture Architecture `json:"architecture"`
 
+	// Package is the path within the archive to the main package which is to be
+	// built. Defaults to `.`.
+	Package string `json:"package"`
+
 	// Archive contains the base64-encoded zip data containing the source code.
 	Archive string `json:"archive"`
 }
@@ -125,7 +129,11 @@ func (builder *Builder) Build(
 	log.Infof("extracted source archive")
 
 	// run the build inside the temporary working directory
-	if err := compileGoProject(tmpDir, payload.Architecture); err != nil {
+	if err := compileGoProject(
+		tmpDir,
+		payload.Package,
+		payload.Architecture,
+	); err != nil {
 		return nil, fmt.Errorf("building lambda `%s`: %w", payload.Name, err)
 	}
 	log.Infof("compiled source code")
@@ -154,8 +162,11 @@ func (builder *Builder) Build(
 	return &Response{Bucket: builder.Bucket, Key: key, Hash: checksum}, nil
 }
 
-func compileGoProject(dir string, goarch Architecture) error {
-	cmd := exec.Command("go", "build", "-v", "-o", "main")
+func compileGoProject(dir, pkg string, goarch Architecture) error {
+	if pkg == "" {
+		pkg = "."
+	}
+	cmd := exec.Command("go", "build", "-v", "-o", "main", pkg)
 	cmd.Env = append(
 		cmd.Env,
 		"GOOS=linux",
