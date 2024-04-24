@@ -1,4 +1,4 @@
-FROM golang:1.18.3
+FROM golang:1.22
 
 RUN apt-get update && apt-get install -y ca-certificates
 
