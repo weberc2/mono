@@ -6,6 +6,12 @@ import (
 )
 
 func main() {
+	ecrRegistry := Registry{
+		Type:           RegistryTypeECR,
+		ID:             "988080168334.dkr.ecr.us-east-2.amazonaws.com",
+		UsernameSecret: "GOBUILDER_AWS_ACCESS_KEY_ID",
+		PasswordSecret: "GOBUILDER_AWS_SECRET_ACCESS_KEY",
+	}
 	if err := MarshalToWriter(
 		os.Stdout,
 		WorkflowRelease(
@@ -14,6 +20,9 @@ func main() {
 				Dockerfile: "./docker/pgbackup/Dockerfile",
 				Context:    "./docker/pgbackup",
 			},
+			GoImage("analytics", "analytics").
+				SetRegistry(&ecrRegistry).
+				SetSinglePlatform("linux/arm64"),
 			GoImage("comments", "auth"),
 			GoImage("comments", "tokens"),
 			GoImage("comments", "users"),
@@ -25,12 +34,7 @@ func main() {
 				// the Go toolchain in the final image so it can build other
 				// images).
 				SetDockerfile("docker/gobuilder/Dockerfile").
-				SetRegistry(&Registry{
-					Type:           RegistryTypeECR,
-					ID:             "988080168334.dkr.ecr.us-east-2.amazonaws.com",
-					UsernameSecret: "GOBUILDER_AWS_ACCESS_KEY_ID",
-					PasswordSecret: "GOBUILDER_AWS_SECRET_ACCESS_KEY",
-				}).
+				SetRegistry(&ecrRegistry).
 				// disable multiarch for lambda (lambda can't run multiarch
 				// containers yet).
 				SetSinglePlatform("linux/amd64"),
