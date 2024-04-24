@@ -1,5 +1,24 @@
 on: push
 jobs:
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+          cache: false
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          # Require: The version of golangci-lint to use.
+          # When `install-mode` is `binary` (default) the value can be v1.2 or
+          #  v1.2.3 or `latest` to use the latest version.
+          # When `install-mode` is `goinstall` the value can be v1.2.3,
+          #  `latest`, or the hash of a commit.
+          version: v1.57
+          args: --out-format=colored-line-number
   tests:
     # Based on
     # https://remarkablemark.org/blog/2021/03/14/setup-postgresql-in-github-actions/
@@ -37,13 +56,28 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
-          go-version: 1.18.3
+          go-version: 1.22.x
+          cache-dependency-path: go.sum
 
-      - name: Fmt
+      - name: Install dependencies
+        run: go mod download
+      - name: Vet
+        run: go vet -v ./...
+      - name: Build
+        run: go build -v ./...
+      - name: Test
+        run: go test -v ./...
+        env:
+          PG_PASS: password
+          PG_USER: postgres
+          PG_DB_NAME: postgres
+          PG_PORT: 5432
+          PG_HOST: postgres
+      - name: Format
         id: fmt
         run: |
             go install github.com/segmentio/golines@v0.10.0
@@ -52,62 +86,6 @@ jobs:
                 echo "$output"
                 exit 1
             fi
-
-      # Disabling this until golangci-lint supports Go 1.18
-      # https://github.com/golangci/golangci-lint/issues/2649
-      #
-      # - name: Lint
-      #   id: lint
-      #   run: |
-      #       # binary will be $(go env GOPATH)/bin/golangci-lint
-      #       curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.43.0
-      #       golangci-lint --version
-      #       golangci-lint run
-      - name: Vet
-        id: vet
-        run: |-
-          for dir in $(ls ./); do
-            if [ ! -d $dir ] || [ ! -f $dir/go.mod ]; then
-              break
-            fi
-            echo ""
-            echo "##################"
-            echo "# vetting $dir"
-            echo "##################"
-            (cd $dir && go vet -v ./...)
-          done
-      - name: Test
-        id: test
-        run: |-
-          for dir in $(ls ./); do
-            if [ ! -d $dir ] || [ ! -f $dir/go.mod ]; then
-              break
-            fi
-            echo ""
-            echo "##################"
-            echo "# testing $dir"
-            echo "##################"
-            (cd $dir && go test -v ./...)
-          done
-        env:
-          PG_PASS: password
-          PG_USER: postgres
-          PG_DB_NAME: postgres
-          PG_PORT: 5432
-          PG_HOST: postgres
-      - name: Build
-        id: build
-        run: |-
-          for dir in $(ls ./); do
-            if [ ! -d $dir ] || [ ! -f $dir/go.mod ]; then
-              break
-            fi
-            echo ""
-            echo "###################"
-            echo "# building $dir"
-            echo "###################"
-            (cd $dir && go build -v ./...)
-          done
       - name: Workflows
         id: workflows
         run: |
