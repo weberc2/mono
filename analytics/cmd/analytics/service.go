@@ -19,9 +19,10 @@ import (
 )
 
 type Service struct {
-	S3     *s3.S3
-	Client MultiClient
-	Bucket string
+	S3      *s3.S3
+	Client  http.Client
+	Locator MultiLocator
+	Bucket  string
 }
 
 func LoadService() (svc Service, err error) {
@@ -41,49 +42,31 @@ func LoadService() (svc Service, err error) {
 		return
 	}
 
-	svc = Service{S3: s3.New(sess), Bucket: os.Getenv("BUCKET")}
-
-	var locators []struct {
-		Type   LocationSource `json:"type"`
-		User   string         `json:"user"`
-		APIKey string         `json:"apiKey"`
+	svc = Service{
+		S3:     s3.New(sess),
+		Bucket: os.Getenv("BUCKET"),
+		Client: http.Client{Timeout: 15 * time.Second},
 	}
+
 	if err = json.Unmarshal(
 		*(*[]byte)(unsafe.Pointer(rsp.SecretString)),
-		&locators,
+		&svc.Locator.Locators,
 	); err != nil {
 		err = fmt.Errorf(
-			"loading service from environment: unmarshaling clients from "+
+			"loading service from environment: unmarshaling locators from "+
 				"secret string: %w",
 			err,
 		)
 		return
 	}
 
-	if len(locators) < 1 {
+	if len(svc.Locator.Locators) < 1 {
 		err = fmt.Errorf(
-			"loading service from environment: no api keys found in secret",
+			"loading service from environment: no locators found in secret",
 		)
 		return
 	}
 
-	httpClient := http.Client{Timeout: 15 * time.Second}
-	svc.Client.Clients = make([]NamedClient, len(locators))
-	for i := range locators {
-		locator, ok := locatorsBySource[locators[i].Type]
-		if !ok {
-			err = fmt.Errorf("invalid locator type: %s", locators[i].Type)
-			return
-		}
-		svc.Client.Clients[i] = NamedClient{
-			Name: fmt.Sprintf("%s|%s", locators[i].User, locators[i].Type),
-			Client: Client{
-				HTTP:    &httpClient,
-				APIKey:  locators[i].APIKey,
-				Locator: locator,
-			},
-		}
-	}
 	return
 }
 
@@ -120,7 +103,11 @@ func (svc *Service) Handle(
 	r.SourceIP = req.RequestContext.Identity.SourceIP
 	r.Time = now
 
-	if r.Location, err = svc.Client.Locate(ctx, r.SourceIP); err != nil {
+	if r.Location, err = svc.Locator.Locate(
+		ctx,
+		&svc.Client,
+		r.SourceIP,
+	); err != nil {
 		slog.Error("locating ip", "err", err.Error(), "ip", r.SourceIP)
 		rsp.StatusCode = http.StatusInternalServerError
 		return

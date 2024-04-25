@@ -39,7 +39,7 @@ func lookupStack(
 		err = fmt.Errorf("fetching ip address `%s` from ipstack: %w", addr, err)
 	}
 
-	l.Source = LocationSourceStack
+	l.Source = LocatorTypeStack
 	l.ContinentCode = rsp.ContinentCode
 	l.ContinentName = rsp.ContinentName
 	l.CountryCode = rsp.CountryCode
