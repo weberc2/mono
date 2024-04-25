@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 )
@@ -26,14 +27,16 @@ func lookupStack(
 		Longitude     float64 `json:"longitude"`
 	}
 
+	url := fmt.Sprintf(
+		"https://api.ipstack.com/%s?access_key=%s",
+		addr,
+		apiKey,
+	)
+	slog.Debug("locating addr with ipstack.com", "addr", addr, "url", url)
 	if err = lookup(
 		ctx,
 		c,
-		fmt.Sprintf(
-			"https://api.ipstack.com/%s?access_key=%s",
-			addr,
-			apiKey,
-		),
+		url,
 		&rsp,
 	); err != nil {
 		err = fmt.Errorf("fetching ip address `%s` from ipstack: %w", addr, err)

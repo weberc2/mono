@@ -44,7 +44,7 @@ func (l *MultiLocator) Locate(
 			"addr", addr,
 			"locatorUser", locator.User,
 			"locatorIdentityProvider", locator.IdentityProvider,
-			"location", &l,
+			"location", &location,
 		)
 		return
 	}
