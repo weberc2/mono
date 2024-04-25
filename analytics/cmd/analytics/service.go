@@ -127,7 +127,8 @@ func (svc *Service) Handle(
 		"inserting data into s3",
 		"bucket", svc.Bucket,
 		"key", key,
-		"data", string(data),
+		// json.RawMessage for better readability with the JSON logger
+		"data", json.RawMessage(data),
 	)
 	if _, err = svc.S3.PutObjectWithContext(
 		ctx,
