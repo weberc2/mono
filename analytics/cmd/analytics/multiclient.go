@@ -21,6 +21,7 @@ func (c *MultiClient) Locate(
 	c.Lock.Lock()
 	start := c.Cursor
 	c.Cursor = (c.Cursor + 1) % len(c.Clients)
+	slog.Debug("multi-client locate", "start", start, "cursor", c.Cursor)
 	c.Lock.Unlock()
 
 	var errs []error
