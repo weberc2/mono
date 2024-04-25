@@ -32,7 +32,7 @@ func (l *Locator) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, (*locator)(l)); err != nil {
 		return err
 	}
-	if _, ok := locatorsByType[l.Type]; !ok {
+	if _, ok := locatorFuncsByType[l.Type]; !ok {
 		return fmt.Errorf(
 			"unmarshaling locator: %w",
 			&InvalidLocatorTypeErr{Type: l.Type},
@@ -46,19 +46,12 @@ func (l *Locator) Locate(
 	c *http.Client,
 	addr string,
 ) (location Location, err error) {
-	if locate, ok := locatorsByType[l.Type]; ok {
+	if locate, ok := locatorFuncsByType[l.Type]; ok {
 		return locate(ctx, c, addr, l.APIKey)
 	}
 	err = fmt.Errorf("invalid locator type: %s", l.Type)
 	return
 }
-
-type LocatorFunc func(
-	ctx context.Context,
-	c *http.Client,
-	addr string,
-	apiKey string,
-) (l Location, err error)
 
 type LocatorType string
 
@@ -67,9 +60,12 @@ const (
 	LocatorTypeGeolocation LocatorType = "ipgeolocation.io"
 )
 
-var locatorsByType = map[LocatorType]LocatorFunc{
-	LocatorTypeStack:       lookupStack,
-	LocatorTypeGeolocation: lookupGeolocation,
+type InvalidLocatorTypeErr struct {
+	Type LocatorType
+}
+
+func (err *InvalidLocatorTypeErr) Error() string {
+	return fmt.Sprintf("invalid locator type: %s", string(err.Type))
 }
 
 type Location struct {
@@ -86,10 +82,14 @@ type Location struct {
 	Longitude     float64     `json:"longitude"`
 }
 
-type InvalidLocatorTypeErr struct {
-	Type LocatorType
-}
+type locatorFunc func(
+	ctx context.Context,
+	c *http.Client,
+	addr string,
+	apiKey string,
+) (l Location, err error)
 
-func (err *InvalidLocatorTypeErr) Error() string {
-	return fmt.Sprintf("invalid locator type: %s", string(err.Type))
+var locatorFuncsByType = map[LocatorType]locatorFunc{
+	LocatorTypeStack:       lookupStack,
+	LocatorTypeGeolocation: lookupGeolocation,
 }
