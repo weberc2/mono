@@ -15,6 +15,11 @@ func lookupStack(
 	apiKey string,
 ) (l Location, err error) {
 	var rsp struct {
+		Success bool `json:"success"`
+		Error   struct {
+			Code int    `json:"code"`
+			Info string `json:"info"`
+		} `json:"error"`
 		ContinentCode string  `json:"continent_code"`
 		ContinentName string  `json:"continent_name"`
 		CountryCode   string  `json:"country_code"`
@@ -36,6 +41,17 @@ func lookupStack(
 		&rsp,
 	); err != nil {
 		err = fmt.Errorf("fetching ip address `%s` from ipstack: %w", addr, err)
+		return
+	}
+
+	if !rsp.Success {
+		err = fmt.Errorf(
+			"fetching ip address `%s` from ipstack: code `%d`: %s",
+			addr,
+			rsp.Error.Code,
+			rsp.Error.Info,
+		)
+		return
 	}
 
 	l.Source = LocatorTypeStack
