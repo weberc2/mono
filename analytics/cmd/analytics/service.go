@@ -72,8 +72,8 @@ func LoadService() (svc Service, err error) {
 
 func (svc *Service) Handle(
 	ctx context.Context,
-	req events.APIGatewayProxyRequest,
-) (rsp events.APIGatewayProxyResponse, err error) {
+	req events.APIGatewayV2HTTPRequest,
+) (rsp events.APIGatewayV2HTTPResponse, err error) {
 	const keyFmt = "%d/%02d/%02d/%02d/%02d/%02d.%06d"
 	var (
 		now     = time.Now().UTC()
@@ -99,8 +99,8 @@ func (svc *Service) Handle(
 	r.Host = req.QueryStringParameters["host"]
 	r.Proto = req.QueryStringParameters["proto"]
 	r.Referer = req.QueryStringParameters["referer"]
-	r.UserAgent = req.RequestContext.Identity.UserAgent
-	r.SourceIP = req.RequestContext.Identity.SourceIP
+	r.UserAgent = req.RequestContext.HTTP.UserAgent
+	r.SourceIP = req.RequestContext.HTTP.SourceIP
 	r.Time = now
 
 	if r.Location, err = svc.Locator.Locate(
