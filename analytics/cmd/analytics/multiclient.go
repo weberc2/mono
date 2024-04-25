@@ -11,7 +11,7 @@ import (
 type MultiClient struct {
 	Cursor  int
 	Lock    sync.RWMutex
-	Clients []Client
+	Clients []NamedClient
 }
 
 func (c *MultiClient) Locate(
@@ -21,24 +21,27 @@ func (c *MultiClient) Locate(
 	c.Lock.Lock()
 	start := c.Cursor
 	c.Cursor = (c.Cursor + 1) % len(c.Clients)
-	slog.Debug("multi-client locate", "start", start, "cursor", c.Cursor)
 	c.Lock.Unlock()
 
 	var errs []error
 	for i := range c.Clients {
-		if l, err = c.Clients[(i+start)%len(c.Clients)].Locate(
-			ctx,
-			addr,
-		); err != nil {
+		client := &c.Clients[(i+start)%len(c.Clients)]
+		if l, err = client.Locate(ctx, addr); err != nil {
 			slog.Info(
 				"multiclient: failed to locate addr",
 				"err", err.Error(),
-				"client", i,
+				"client", client.Name,
 				"addr", addr,
 			)
 			errs = append(errs, err)
 			continue
 		}
+		slog.Debug(
+			"multi-client locate",
+			"client", client.Name,
+			"addr", addr,
+			"location", &l,
+		)
 		return
 	}
 	err = fmt.Errorf(
@@ -48,4 +51,9 @@ func (c *MultiClient) Locate(
 		errors.Join(errs...),
 	)
 	return
+}
+
+type NamedClient struct {
+	Name string
+	Client
 }

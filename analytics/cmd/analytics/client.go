@@ -32,6 +32,11 @@ const (
 	LocationSourceGeolocation LocationSource = "ipgeolocation.io"
 )
 
+var locatorsBySource = map[LocationSource]LocatorFunc{
+	LocationSourceStack:       lookupStack,
+	LocationSourceGeolocation: lookupGeolocation,
+}
+
 type Location struct {
 	Source        LocationSource `json:"location_source"`
 	ContinentCode string         `json:"continent_code"`

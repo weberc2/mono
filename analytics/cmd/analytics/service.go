@@ -43,23 +43,24 @@ func LoadService() (svc Service, err error) {
 
 	svc = Service{S3: s3.New(sess), Bucket: os.Getenv("BUCKET")}
 
-	var apiKeys struct {
-		Geolocation string `json:"geolocation"`
-		Stack       string `json:"stack"`
+	var clients []struct {
+		Name   string         `json:"name"`
+		Type   LocationSource `json:"type"`
+		APIKey string         `json:"apiKey"`
 	}
 	if err = json.Unmarshal(
 		*(*[]byte)(unsafe.Pointer(rsp.SecretString)),
-		&apiKeys,
+		&clients,
 	); err != nil {
 		err = fmt.Errorf(
-			"loading service from environment: unmarshaling api keys from "+
+			"loading service from environment: unmarshaling clients from "+
 				"secret string: %w",
 			err,
 		)
 		return
 	}
 
-	if apiKeys.Geolocation == "" && apiKeys.Stack == "" {
+	if len(clients) < 1 {
 		err = fmt.Errorf(
 			"loading service from environment: no api keys found in secret",
 		)
@@ -67,27 +68,22 @@ func LoadService() (svc Service, err error) {
 	}
 
 	httpClient := http.Client{Timeout: 15 * time.Second}
-	if apiKeys.Geolocation != "" {
-		svc.Client.Clients = append(
-			svc.Client.Clients,
-			Client{
+	svc.Client.Clients = make([]NamedClient, len(clients))
+	for i := range clients {
+		locator, ok := locatorsBySource[clients[i].Type]
+		if !ok {
+			err = fmt.Errorf("invalid client/locator type: %s", clients[i].Type)
+			return
+		}
+		svc.Client.Clients[i] = NamedClient{
+			Name: clients[i].Name,
+			Client: Client{
 				HTTP:    &httpClient,
-				APIKey:  apiKeys.Geolocation,
-				Locator: lookupGeolocation,
+				APIKey:  clients[i].APIKey,
+				Locator: locator,
 			},
-		)
+		}
 	}
-	if apiKeys.Stack != "" {
-		svc.Client.Clients = append(
-			svc.Client.Clients,
-			Client{
-				HTTP:    &httpClient,
-				APIKey:  apiKeys.Stack,
-				Locator: lookupStack,
-			},
-		)
-	}
-
 	return
 }
 
