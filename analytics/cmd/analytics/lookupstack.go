@@ -27,11 +27,7 @@ func lookupStack(
 		Longitude     float64 `json:"longitude"`
 	}
 
-	url := fmt.Sprintf(
-		"https://api.ipstack.com/%s?access_key=%s",
-		addr,
-		apiKey,
-	)
+	url := fmt.Sprintf("https://api.ipstack.com/%s?access_key=%s", addr, apiKey)
 	slog.Debug("locating addr with ipstack.com", "addr", addr, "url", url)
 	if err = lookup(
 		ctx,
