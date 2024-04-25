@@ -15,8 +15,7 @@ func lookupStack(
 	apiKey string,
 ) (l Location, err error) {
 	var rsp struct {
-		Success bool `json:"success"`
-		Error   struct {
+		Error struct {
 			Code int    `json:"code"`
 			Info string `json:"info"`
 		} `json:"error"`
@@ -44,7 +43,7 @@ func lookupStack(
 		return
 	}
 
-	if !rsp.Success {
+	if rsp.Error.Code != 0 {
 		err = fmt.Errorf(
 			"fetching ip address `%s` from ipstack: code `%d`: %s",
 			addr,
