@@ -18,13 +18,24 @@ import (
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 )
 
+// Service handles requests. For each request, it stores analytics information
+// in s3, including location information for the source IP address.
 type Service struct {
-	S3      *s3.S3
-	Client  http.Client
+	// S3 is the s3 client.
+	S3 *s3.S3
+
+	// Bucket is the s3 bucket where analytics information is written.
+	Bucket string
+
+	// Client is the HTTP client used to look up location information from
+	// locator services.
+	Client http.Client
+
+	// Locator abstracts over different locator services.
 	Locator MultiLocator
-	Bucket  string
 }
 
+// LoadService loads a `Service` from the environment.
 func LoadService() (svc Service, err error) {
 	sess, err := session.NewSession(aws.NewConfig())
 	if err != nil {
@@ -70,10 +81,15 @@ func LoadService() (svc Service, err error) {
 	return
 }
 
+// Handle handles the API Gateway request. It stores request data and attempts
+// to look up the location of the source IP address.
 func (svc *Service) Handle(
 	ctx context.Context,
 	req events.APIGatewayV2HTTPRequest,
 ) (rsp events.APIGatewayV2HTTPResponse, err error) {
+	// always return OK--users don't need to see failed requests
+	rsp.StatusCode = http.StatusOK
+
 	const keyFmt = "%d/%02d/%02d/%02d/%02d/%02d.%06d"
 	var (
 		now     = time.Now().UTC()
@@ -103,48 +119,45 @@ func (svc *Service) Handle(
 	r.SourceIP = req.RequestContext.HTTP.SourceIP
 	r.Time = now
 
+	// try to write the record to s3 even if there is a problem fetching
+	// location information.
+	defer func() {
+		if data, err = json.Marshal(&r); err != nil {
+			slog.Error(
+				"marshaling record to json",
+				"err", err.Error(),
+				"record", &r,
+			)
+			return
+		}
+
+		slog.Info(
+			"inserting data into s3",
+			"bucket", svc.Bucket,
+			"key", key,
+			"data", json.RawMessage(data),
+		)
+		if _, err = svc.S3.PutObjectWithContext(
+			ctx,
+			&s3.PutObjectInput{
+				Body:          bytes.NewReader(data),
+				Bucket:        &svc.Bucket,
+				ContentLength: aws.Int64(int64(len(data))),
+				ContentType:   aws.String("application/json"),
+				Key:           &key,
+			},
+		); err != nil {
+			slog.Error("inserting data into s3", "err", err.Error())
+		}
+	}()
+
 	if r.Location, err = svc.Locator.Locate(
 		ctx,
 		&svc.Client,
 		r.SourceIP,
 	); err != nil {
 		slog.Error("locating ip", "err", err.Error(), "ip", r.SourceIP)
-		rsp.StatusCode = http.StatusInternalServerError
-		return
 	}
 
-	if data, err = json.Marshal(&r); err != nil {
-		slog.Error(
-			"marshaling record to json",
-			"err", err.Error(),
-			"record", &r,
-		)
-		rsp.StatusCode = http.StatusInternalServerError
-		return
-	}
-
-	slog.Info(
-		"inserting data into s3",
-		"bucket", svc.Bucket,
-		"key", key,
-		// json.RawMessage for better readability with the JSON logger
-		"data", json.RawMessage(data),
-	)
-	if _, err = svc.S3.PutObjectWithContext(
-		ctx,
-		&s3.PutObjectInput{
-			Body:          bytes.NewReader(data),
-			Bucket:        &svc.Bucket,
-			ContentLength: aws.Int64(int64(len(data))),
-			ContentType:   aws.String("application/json"),
-			Key:           &key,
-		},
-	); err != nil {
-		slog.Error("inserting data into s3", "err", err.Error())
-		rsp.StatusCode = http.StatusInternalServerError
-		return
-	}
-
-	rsp.StatusCode = http.StatusOK
 	return
 }
