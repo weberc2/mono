@@ -70,13 +70,21 @@ func LoadService() (svc Service, err error) {
 	if apiKeys.Geolocation != "" {
 		svc.Client.Clients = append(
 			svc.Client.Clients,
-			Client{HTTP: &httpClient, APIKey: apiKeys.Geolocation},
+			Client{
+				HTTP:    &httpClient,
+				APIKey:  apiKeys.Geolocation,
+				Locator: lookupGeolocation,
+			},
 		)
 	}
 	if apiKeys.Stack != "" {
 		svc.Client.Clients = append(
 			svc.Client.Clients,
-			Client{HTTP: &httpClient, APIKey: apiKeys.Stack},
+			Client{
+				HTTP:    &httpClient,
+				APIKey:  apiKeys.Stack,
+				Locator: lookupStack,
+			},
 		)
 	}
 
