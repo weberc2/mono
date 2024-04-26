@@ -14,6 +14,14 @@ func main() {
 				Dockerfile: "./docker/pgbackup/Dockerfile",
 				Context:    "./docker/pgbackup",
 			},
+			GoImage("analytics", "analytics").
+				SetRegistry(&Registry{
+					Type:           RegistryTypeECR,
+					ID:             "988080168334.dkr.ecr.us-east-2.amazonaws.com",
+					UsernameSecret: "ANALYTICS_AWS_ACCESS_KEY_ID",
+					PasswordSecret: "ANALYTICS_AWS_SECRET_ACCESS_KEY",
+				}).
+				SetSinglePlatform("linux/arm64"),
 			GoImage("comments", "auth"),
 			GoImage("comments", "tokens"),
 			GoImage("comments", "users"),
