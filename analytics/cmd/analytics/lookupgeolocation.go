@@ -18,8 +18,7 @@ func lookupGeolocation(
 		ContinentName string `json:"continent_name"`
 		CountryCode   string `json:"country_code2"`
 		CountryName   string `json:"country_name"`
-		RegionCode    string `json:"state_prov"`
-		RegionName    string `json:"region_name"`
+		RegionName    string `json:"state_prov"`
 		City          string `json:"city"`
 		Zip           string `json:"zipcode"`
 		Latitude      string `json:"latitude"`
@@ -49,7 +48,6 @@ func lookupGeolocation(
 	l.ContinentName = rsp.ContinentName
 	l.CountryCode = rsp.CountryCode
 	l.CountryName = rsp.CountryName
-	l.RegionCode = rsp.RegionCode
 	l.RegionName = rsp.RegionName
 	l.City = rsp.City
 	l.Zip = rsp.Zip
