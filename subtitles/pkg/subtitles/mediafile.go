@@ -1,5 +1,32 @@
 package subtitles
 
+type ShowVideoFile struct {
+	ShowMediaFile
+	Mediahash string `json:"mediahash"`
+}
+
+type ShowSubtitleFile struct {
+	ShowMediaFile
+	Language string `json:"language"`
+}
+
+type ShowMediaFile struct {
+	Filepath string `json:"filepath"`
+	Title string `json:"title"`
+	Season string `json:"season"`
+	Episode string `json:"episode"`
+}
+
+func (file *ShowMediaFile) Subtitle() (sub ShowSubtitleFile) {
+	sub = ShowSubtitleFile{
+		Filepath: file.Filepath,
+		Title: file.Title,
+		Season: file.Season,
+		Episode: file.Episode,
+		Language:
+	}
+}
+
 type MediaFile struct {
 	// Filepath is the path to the media file.
 	Filepath string `json:"filepath"`

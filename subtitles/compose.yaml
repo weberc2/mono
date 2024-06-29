@@ -1,0 +1,42 @@
+x-pgenv: &pgenv
+  PGHOST: &pghost postgres
+  PGPORT: &pgport "5432"
+  PGUSER: &pguser postgres
+  PGPASSWORD: &pgpassword postgres
+  PGDATABASE: &pgdatabase subtitles
+  PGSSLMODE: &pgsslmode disable
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      <<: *pgenv
+      POSTGRES_USER: *pguser
+      POSTGRES_PASSWORD: *pgpassword
+      POSTGRES_DB: *pgdatabase
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: "pg_isready"
+      interval: 3s
+      timeout: 10s
+      retries: 5
+
+  migrations:
+    build:
+      context: .
+      dockerfile: docker/migrations.Dockerfile
+    command:
+    - migrate
+    - -database
+    - postgres:///
+    - -path
+    - ./db/migrations
+    - up
+    environment: *pgenv
+    working_dir: "/work"
+    volumes:
+    - "./db:/work/db"
+    depends_on:
+      postgres:
+        condition: service_healthy
