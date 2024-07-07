@@ -12,6 +12,7 @@ import (
 type SeasonIterator struct {
 	Directory   string
 	Show        string
+	Year        string
 	Season      string
 	Files       []fs.DirEntry
 	CurrentFile int
@@ -20,10 +21,12 @@ type SeasonIterator struct {
 func IterateSeason(
 	fsys fs.FS,
 	show string,
+	year string,
 	showDirectory string,
 	seasonFileName string,
 ) (iter SeasonIterator, err error) {
 	iter.Show = show
+	iter.Year = year
 	iter.Directory = filepath.Join(showDirectory, seasonFileName)
 
 	if iter.Season, err = ParseSeasonFileName(seasonFileName); err != nil {
@@ -39,7 +42,7 @@ func IterateSeason(
 	return
 }
 
-func (iter *SeasonIterator) Next(fsys fs.FS) (mf MediaFile, err error) {
+func (iter *SeasonIterator) Next(fsys fs.FS) (mf MediaFile[Episode], err error) {
 NEXT_FILE:
 	if iter.CurrentFile < len(iter.Files) {
 		file := iter.Files[iter.CurrentFile]
@@ -54,26 +57,19 @@ NEXT_FILE:
 			goto NEXT_FILE
 		}
 
-		if mf, err = ParseShowMediaFile(
+		fileName := file.Name()
+		if mf.ID.Episode, mf.Language, mf.IsSubtitle, err = ParseShowMediaFile(
 			fsys,
 			iter.Directory,
-			file.Name(),
+			fileName,
 		); err != nil {
 			err = fmt.Errorf("parsing season `%s`: %w", iter.Season, err)
 			return
 		}
-
-		if mf.Season != iter.Season {
-			err = fmt.Errorf(
-				"parsing season: %w",
-				&IncorrectSeasonNumberErr{
-					WantedSeason:    iter.Season,
-					MediaFileName:   file.Name(),
-					MediaFileSeason: mf.Season,
-				},
-			)
-			return
-		}
+		mf.ID.Title = iter.Show
+		mf.ID.Year = iter.Year
+		mf.ID.Season = iter.Season
+		mf.Filepath = filepath.Join(iter.Directory, fileName)
 
 		iter.CurrentFile++
 		return
@@ -98,24 +94,6 @@ func ParseSeasonFileName(fileName string) (season string, err error) {
 	return
 }
 
-type IncorrectSeasonNumberErr struct {
-	MediaFileName   string
-	WantedSeason    string
-	MediaFileSeason string
-}
-
-func (err *IncorrectSeasonNumberErr) Error() string {
-	return fmt.Sprintf(
-		"parsing media file `%s`: mismatched season number: wanted `%s`; "+
-			"found `%s`",
-		err.MediaFileName,
-		err.WantedSeason,
-		err.MediaFileSeason,
-	)
-}
-
 var seasonRegex = regexp.MustCompile(`^Season (?P<season>[0-9]{2})$`)
 
-const (
-	seasonRegexSeasonIndex = 1
-)
+const seasonRegexSeasonIndex = 1

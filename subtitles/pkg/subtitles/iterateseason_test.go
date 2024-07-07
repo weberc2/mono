@@ -16,7 +16,7 @@ func TestIterateSeason(t *testing.T) {
 		fileSystem fstest.MapFS
 		directory  string
 		fileName   string
-		wanted     []MediaFile
+		wanted     []MediaFile[Episode]
 		wantedErr  func(error) error
 	}{
 		{
@@ -33,87 +33,115 @@ func TestIterateSeason(t *testing.T) {
 		{
 			name: "single-video-file",
 			fileSystem: fstest.MapFS{
-				"shows/Test (2024)/Season 01/Test S01E01.mkv": &empty64kFile,
+				"shows/Test (2024)/Season 01/Episode 01.mkv": &emptyFile,
 			},
 			directory: "shows/Test (2024)",
 			fileName:  "Season 01",
-			wanted: []MediaFile{{
-				Filepath:  "shows/Test (2024)/Season 01/Test S01E01.mkv",
-				Type:      MediaTypeShow,
-				Kind:      MediaFileKindVideo,
-				Title:     "Test",
-				Season:    "01",
-				Episode:   "01",
-				Mediahash: empty64kFileMediahash,
+			wanted: []MediaFile[Episode]{{
+				SubtitleFile: SubtitleFile[Episode]{
+					VideoFile: VideoFile[Episode]{
+						Filepath: "shows/Test (2024)/Season 01/Episode 01.mkv",
+						ID: Episode{
+							Title:   "Test",
+							Year:    "2024",
+							Season:  "01",
+							Episode: "01",
+						},
+					},
+				},
 			}},
 		},
 		{
 			name: "single-subtitle-file",
 			fileSystem: fstest.MapFS{
-				"shows/Test (2024)/Season 01/Test S01E01.en.srt": &empty64kFile,
+				"shows/Test (2024)/Season 01/Episode 01.en.srt": &emptyFile,
 			},
 			directory: "shows/Test (2024)",
 			fileName:  "Season 01",
-			wanted: []MediaFile{{
-				Filepath:         "shows/Test (2024)/Season 01/Test S01E01.en.srt",
-				Type:             MediaTypeShow,
-				Kind:             MediaFileKindSubtitle,
-				Title:            "Test",
-				Season:           "01",
-				Episode:          "01",
-				SubtitleLanguage: "en",
+			wanted: []MediaFile[Episode]{{
+				SubtitleFile: SubtitleFile[Episode]{
+					VideoFile: VideoFile[Episode]{
+						Filepath: "shows/Test (2024)/Season 01/Episode 01.en.srt",
+						ID: Episode{
+							Title:   "Test",
+							Year:    "2024",
+							Season:  "01",
+							Episode: "01",
+						},
+					},
+					Language: "en",
+				},
+				IsSubtitle: true,
 			}},
 		},
 		{
 			name: "video-and-subtitle",
 			fileSystem: fstest.MapFS{
-				"shows/Test (2024)/Season 01/Test S01E01.en.srt": &empty64kFile,
-				"shows/Test (2024)/Season 01/Test S01E01.mkv":    &empty64kFile,
+				"shows/Test (2024)/Season 01/Episode 01.en.srt": &emptyFile,
+				"shows/Test (2024)/Season 01/Episode 01.mkv":    &emptyFile,
 			},
 			directory: "shows/Test (2024)",
 			fileName:  "Season 01",
-			wanted: []MediaFile{{
-				Filepath:         "shows/Test (2024)/Season 01/Test S01E01.en.srt",
-				Type:             MediaTypeShow,
-				Kind:             MediaFileKindSubtitle,
-				Title:            "Test",
-				Season:           "01",
-				Episode:          "01",
-				SubtitleLanguage: "en",
+			wanted: []MediaFile[Episode]{{
+				SubtitleFile: SubtitleFile[Episode]{
+					VideoFile: VideoFile[Episode]{
+						Filepath: "shows/Test (2024)/Season 01/Episode 01.en.srt",
+						ID: Episode{
+							Title:   "Test",
+							Year:    "2024",
+							Season:  "01",
+							Episode: "01",
+						},
+					},
+					Language: "en",
+				},
+				IsSubtitle: true,
 			}, {
-				Filepath:  "shows/Test (2024)/Season 01/Test S01E01.mkv",
-				Type:      MediaTypeShow,
-				Kind:      MediaFileKindVideo,
-				Title:     "Test",
-				Season:    "01",
-				Episode:   "01",
-				Mediahash: empty64kFileMediahash,
+				SubtitleFile: SubtitleFile[Episode]{
+					VideoFile: VideoFile[Episode]{
+						Filepath: "shows/Test (2024)/Season 01/Episode 01.mkv",
+						ID: Episode{
+							Title:   "Test",
+							Year:    "2024",
+							Season:  "01",
+							Episode: "01",
+						},
+					},
+				},
 			}},
 		},
 		{
 			name: "multi-episodes",
 			fileSystem: fstest.MapFS{
-				"shows/Test (2024)/Season 01/Test S01E01.mkv": &empty64kFile,
-				"shows/Test (2024)/Season 01/Test S01E02.mkv": &empty64kFile,
+				"shows/Test (2024)/Season 01/Episode 01.mkv": &emptyFile,
+				"shows/Test (2024)/Season 01/Episode 02.mkv": &emptyFile,
 			},
 			directory: "shows/Test (2024)",
 			fileName:  "Season 01",
-			wanted: []MediaFile{{
-				Filepath:  "shows/Test (2024)/Season 01/Test S01E01.mkv",
-				Type:      MediaTypeShow,
-				Kind:      MediaFileKindVideo,
-				Title:     "Test",
-				Season:    "01",
-				Episode:   "01",
-				Mediahash: empty64kFileMediahash,
+			wanted: []MediaFile[Episode]{{
+				SubtitleFile: SubtitleFile[Episode]{
+					VideoFile: VideoFile[Episode]{
+						Filepath: "shows/Test (2024)/Season 01/Episode 01.mkv",
+						ID: Episode{
+							Title:   "Test",
+							Year:    "2024",
+							Season:  "01",
+							Episode: "01",
+						},
+					},
+				},
 			}, {
-				Filepath:  "shows/Test (2024)/Season 01/Test S01E02.mkv",
-				Type:      MediaTypeShow,
-				Kind:      MediaFileKindVideo,
-				Title:     "Test",
-				Season:    "01",
-				Episode:   "02",
-				Mediahash: empty64kFileMediahash,
+				SubtitleFile: SubtitleFile[Episode]{
+					VideoFile: VideoFile[Episode]{
+						Filepath: "shows/Test (2024)/Season 01/Episode 02.mkv",
+						ID: Episode{
+							Title:   "Test",
+							Year:    "2024",
+							Season:  "01",
+							Episode: "02",
+						},
+					},
+				},
 			}},
 		},
 	}
@@ -164,13 +192,13 @@ func TestIterateSeason(t *testing.T) {
 	}
 }
 
-func collectSeason(fsys fs.FS, dir, fileName string) ([]MediaFile, error) {
-	it, err := IterateSeason(fsys, "Test", dir, fileName)
+func collectSeason(fsys fs.FS, dir, fileName string) ([]MediaFile[Episode], error) {
+	it, err := IterateSeason(fsys, "Test", "2024", dir, fileName)
 	if err != nil {
 		return nil, err
 	}
 
-	var out []MediaFile
+	var out []MediaFile[Episode]
 	for {
 		mf, err := it.Next(fsys)
 		if err != nil {

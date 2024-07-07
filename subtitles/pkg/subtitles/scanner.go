@@ -1,6 +1,7 @@
 package subtitles
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -13,7 +14,7 @@ type Scanner struct {
 	ShowsDirectory string
 }
 
-func (s *Scanner) Scan() error {
+func (s *Scanner) Scan(ctx context.Context) error {
 	shows, err := IterateShows(s.FileSystem, s.ShowsDirectory)
 	if err != nil {
 		return fmt.Errorf("scanning media: %w", err)
@@ -28,7 +29,13 @@ func (s *Scanner) Scan() error {
 			return fmt.Errorf("scanning media: %w", err)
 		}
 
-		if err := s.Model.InsertMediaFile(&file); err != nil {
+		if file.IsSubtitle {
+			err = s.Model.InsertEpisodeSubtitleFile(ctx, &file.SubtitleFile)
+		} else {
+			err = s.Model.InsertEpisodeVideoFile(ctx, &file.VideoFile)
+		}
+
+		if err != nil {
 			return fmt.Errorf("scanning media: %w", err)
 		}
 	}

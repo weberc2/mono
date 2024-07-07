@@ -40,3 +40,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  scanner:
+    build:
+      context: .
+      dockerfile: docker/scanner.Dockerfile
+    environment: *pgenv
+    working_dir: "/work"
+    volumes:
+    - "./tests/TV:/work/"

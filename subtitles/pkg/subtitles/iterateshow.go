@@ -40,7 +40,7 @@ func IterateShow(
 	return
 }
 
-func (iter *ShowIterator) Next(fsys fs.FS) (mf MediaFile, err error) {
+func (iter *ShowIterator) Next(fsys fs.FS) (mf MediaFile[Episode], err error) {
 TOP:
 	// try getting the next media file from the current season iterator. if no
 	// error is returned, return the media file immediately.
@@ -79,6 +79,7 @@ NEXT_FILE:
 		if iter.CurrentSeason, err = IterateSeason(
 			fsys,
 			iter.Title,
+			iter.Year,
 			iter.Directory,
 			file.Name(),
 		); err != nil {

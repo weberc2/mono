@@ -14,7 +14,7 @@ func TestIterateShows(t *testing.T) {
 		name       string
 		fileSystem fstest.MapFS
 		directory  string
-		wanted     []MediaFile
+		wanted     []MediaFile[Episode]
 		wantedErr  func(error) error
 	}{
 		{
@@ -53,96 +53,132 @@ func TestIterateShows(t *testing.T) {
 		{
 			name: "single-show-single-season-single-episode",
 			fileSystem: fstest.MapFS{
-				"shows/Test (2024)/Season 01/Test S01E01.mkv": &empty64kFile,
+				"shows/Test (2024)/Season 01/Episode 01.mkv": &emptyFile,
 			},
 			directory: "shows",
-			wanted: []MediaFile{{
-				Filepath:  "shows/Test (2024)/Season 01/Test S01E01.mkv",
-				Type:      MediaTypeShow,
-				Kind:      MediaFileKindVideo,
-				Title:     "Test",
-				Season:    "01",
-				Episode:   "01",
-				Mediahash: empty64kFileMediahash,
+			wanted: []MediaFile[Episode]{{
+				SubtitleFile: SubtitleFile[Episode]{
+					VideoFile: VideoFile[Episode]{
+						Filepath: "shows/Test (2024)/Season 01/Episode 01.mkv",
+						ID: Episode{
+							Title:   "Test",
+							Season:  "01",
+							Episode: "01",
+							Year:    "2024",
+						},
+					},
+				},
 			}},
 		},
 		{
 			name: "multi-shows-multi-seasons-multi-episodes",
 			fileSystem: fstest.MapFS{
-				"shows/Test-01 (2024)/Season 01/Test-01 S01E01.mkv": &empty64kFile,
-				"shows/Test-01 (2024)/Season 01/Test-01 S01E02.mkv": &empty64kFile,
-				"shows/Test-01 (2024)/Season 02/Test-01 S02E01.mkv": &empty64kFile,
-				"shows/Test-01 (2024)/Season 02/Test-01 S02E02.mkv": &empty64kFile,
-				"shows/Test-02 (2024)/Season 01/Test-02 S01E01.mkv": &empty64kFile,
-				"shows/Test-02 (2024)/Season 01/Test-02 S01E02.mkv": &empty64kFile,
-				"shows/Test-02 (2024)/Season 02/Test-02 S02E01.mkv": &empty64kFile,
-				"shows/Test-02 (2024)/Season 02/Test-02 S02E02.mkv": &empty64kFile,
+				"shows/Test-01 (2024)/Season 01/Episode 01.mkv": &emptyFile,
+				"shows/Test-01 (2024)/Season 01/Episode 02.mkv": &emptyFile,
+				"shows/Test-01 (2024)/Season 02/Episode 01.mkv": &emptyFile,
+				"shows/Test-01 (2024)/Season 02/Episode 02.mkv": &emptyFile,
+				"shows/Test-02 (2024)/Season 01/Episode 01.mkv": &emptyFile,
+				"shows/Test-02 (2024)/Season 01/Episode 02.mkv": &emptyFile,
+				"shows/Test-02 (2024)/Season 02/Episode 01.mkv": &emptyFile,
+				"shows/Test-02 (2024)/Season 02/Episode 02.mkv": &emptyFile,
 			},
 			directory: "shows",
-			wanted: []MediaFile{{
-				Filepath:  "shows/Test-01 (2024)/Season 01/Test-01 S01E01.mkv",
-				Type:      MediaTypeShow,
-				Kind:      MediaFileKindVideo,
-				Title:     "Test-01",
-				Season:    "01",
-				Episode:   "01",
-				Mediahash: empty64kFileMediahash,
+			wanted: []MediaFile[Episode]{{
+				SubtitleFile: SubtitleFile[Episode]{
+					VideoFile: VideoFile[Episode]{
+						Filepath: "shows/Test-01 (2024)/Season 01/Episode 01.mkv",
+						ID: Episode{
+							Title:   "Test-01",
+							Year:    "2024",
+							Season:  "01",
+							Episode: "01",
+						},
+					},
+				},
 			}, {
-				Filepath:  "shows/Test-01 (2024)/Season 01/Test-01 S01E02.mkv",
-				Type:      MediaTypeShow,
-				Kind:      MediaFileKindVideo,
-				Title:     "Test-01",
-				Season:    "01",
-				Episode:   "02",
-				Mediahash: empty64kFileMediahash,
+				SubtitleFile: SubtitleFile[Episode]{
+					VideoFile: VideoFile[Episode]{
+						Filepath: "shows/Test-01 (2024)/Season 01/Episode 02.mkv",
+						ID: Episode{
+							Title:   "Test-01",
+							Year:    "2024",
+							Season:  "01",
+							Episode: "02",
+						},
+					},
+				},
 			}, {
-				Filepath:  "shows/Test-01 (2024)/Season 02/Test-02 S02E01.mkv",
-				Type:      MediaTypeShow,
-				Kind:      MediaFileKindVideo,
-				Title:     "Test-01",
-				Season:    "02",
-				Episode:   "01",
-				Mediahash: empty64kFileMediahash,
+				SubtitleFile: SubtitleFile[Episode]{
+					VideoFile: VideoFile[Episode]{
+						Filepath: "shows/Test-01 (2024)/Season 02/Episode 01.mkv",
+						ID: Episode{
+							Title:   "Test-01",
+							Year:    "2024",
+							Season:  "02",
+							Episode: "01",
+						},
+					},
+				},
 			}, {
-				Filepath:  "shows/Test-01 (2024)/Season 02/Test-02 S02E02.mkv",
-				Type:      MediaTypeShow,
-				Kind:      MediaFileKindVideo,
-				Title:     "Test-01",
-				Season:    "02",
-				Episode:   "02",
-				Mediahash: empty64kFileMediahash,
+				SubtitleFile: SubtitleFile[Episode]{
+					VideoFile: VideoFile[Episode]{
+						Filepath: "shows/Test-01 (2024)/Season 02/Episode 02.mkv",
+						ID: Episode{
+							Title:   "Test-01",
+							Year:    "2024",
+							Season:  "02",
+							Episode: "02",
+						},
+					},
+				},
 			}, {
-				Filepath:  "shows/Test-02 (2024)/Season 01/Test-01 S01E01.mkv",
-				Type:      MediaTypeShow,
-				Kind:      MediaFileKindVideo,
-				Title:     "Test-02",
-				Season:    "01",
-				Episode:   "01",
-				Mediahash: empty64kFileMediahash,
+				SubtitleFile: SubtitleFile[Episode]{
+					VideoFile: VideoFile[Episode]{
+						Filepath: "shows/Test-02 (2024)/Season 01/Episode 01.mkv",
+						ID: Episode{
+							Title:   "Test-02",
+							Year:    "2024",
+							Season:  "01",
+							Episode: "01",
+						},
+					},
+				},
 			}, {
-				Filepath:  "shows/Test-02 (2024)/Season 01/Test-01 S01E02.mkv",
-				Type:      MediaTypeShow,
-				Kind:      MediaFileKindVideo,
-				Title:     "Test-02",
-				Season:    "01",
-				Episode:   "02",
-				Mediahash: empty64kFileMediahash,
+				SubtitleFile: SubtitleFile[Episode]{
+					VideoFile: VideoFile[Episode]{
+						Filepath: "shows/Test-02 (2024)/Season 01/Episode 02.mkv",
+						ID: Episode{
+							Title:   "Test-02",
+							Year:    "2024",
+							Season:  "01",
+							Episode: "02",
+						},
+					},
+				},
 			}, {
-				Filepath:  "shows/Test-02 (2024)/Season 02/Test-02 S02E01.mkv",
-				Type:      MediaTypeShow,
-				Kind:      MediaFileKindVideo,
-				Title:     "Test-02",
-				Season:    "02",
-				Episode:   "01",
-				Mediahash: empty64kFileMediahash,
+				SubtitleFile: SubtitleFile[Episode]{
+					VideoFile: VideoFile[Episode]{
+						Filepath: "shows/Test-02 (2024)/Season 02/Episode 01.mkv",
+						ID: Episode{
+							Title:   "Test-02",
+							Year:    "2024",
+							Season:  "02",
+							Episode: "01",
+						},
+					},
+				},
 			}, {
-				Filepath:  "shows/Test-02 (2024)/Season 02/Test-02 S02E02.mkv",
-				Type:      MediaTypeShow,
-				Kind:      MediaFileKindVideo,
-				Title:     "Test-02",
-				Season:    "02",
-				Episode:   "02",
-				Mediahash: empty64kFileMediahash,
+				SubtitleFile: SubtitleFile[Episode]{
+					VideoFile: VideoFile[Episode]{
+						Filepath: "shows/Test-02 (2024)/Season 02/Episode 02.mkv",
+						ID: Episode{
+							Title:   "Test-02",
+							Year:    "2024",
+							Season:  "02",
+							Episode: "02",
+						},
+					},
+				},
 			}},
 		},
 	}
@@ -193,13 +229,13 @@ func TestIterateShows(t *testing.T) {
 	}
 }
 
-func collectShows(fsys fs.FS, dir string) ([]MediaFile, error) {
+func collectShows(fsys fs.FS, dir string) ([]MediaFile[Episode], error) {
 	it, err := IterateShows(fsys, dir)
 	if err != nil {
 		return nil, err
 	}
 
-	var out []MediaFile
+	var out []MediaFile[Episode]
 	for {
 		mf, err := it.Next(fsys)
 		if err != nil {

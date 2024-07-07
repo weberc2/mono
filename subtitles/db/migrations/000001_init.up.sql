@@ -1,31 +1,39 @@
 CREATE TABLE showvideofiles (
     filepath TEXT NOT NULL PRIMARY KEY,
     title TEXT NOT NULL,
-    -- TODO: year TEXT NOT NULL,
+    year TEXT NOT NULL,
     season TEXT NOT NULL,
-    episode TEXT NOT NULL,
-    mediahash TEXT NOT NULL
+    episode TEXT NOT NULL
 );
 
-CREATE TABLE showsubtitles (
+CREATE TABLE showsubtitlefiles (
     filepath TEXT NOT NULL PRIMARY KEY,
     title TEXT NOT NULL,
-    -- TODO: year TEXT NOT NULL,
+    year TEXT NOT NULL,
     season TEXT NOT NULL,
     episode TEXT NOT NULL,
     language TEXT NOT NULL
 );
 
-CREATE TABLE filmvideofiles (
-    filepath TEXT NOT NULL PRIMARY KEY,
-    title TEXT NOT NULL,
-    year TEXT NOT NULL,
-    mediahash TEXT NOT NULL
+CREATE TYPE downloadstatus AS ENUM (
+    'PENDING',
+    'SEARCHING',
+    'FETCHING_URL',
+    'DOWNLOADING',
+    'COMPLETE'
 );
 
-CREATE TABLE filmsubtitles (
-    filepath TEXT NOT NULL PRIMARY KEY,
+CREATE TABLE showdownloads (
     title TEXT NOT NULL,
     year TEXT NOT NULL,
-    language TEXT NOT NULL
+    season TEXT NOT NULL,
+    episode TEXT NOT NULL,
+    language TEXT NOT NULL,
+    opensubtitlesid TEXT NOT NULL,
+    url TEXT NOT NULL,
+    filepath TEXT NOT NULL,
+    status downloadstatus NOT NULL,
+    created TIMESTAMPTZ NOT NULL,
+    lastreserved TIMESTAMPTZ,
+    PRIMARY KEY(title, year, season, episode, language)
 );

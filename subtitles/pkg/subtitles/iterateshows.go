@@ -23,7 +23,7 @@ func IterateShows(fsys fs.FS, directory string) (it ShowsIterator, err error) {
 	return
 }
 
-func (iter *ShowsIterator) Next(fsys fs.FS) (mf MediaFile, err error) {
+func (iter *ShowsIterator) Next(fsys fs.FS) (mf MediaFile[Episode], err error) {
 TOP:
 	if mf, err = iter.CurrentShow.Next(fsys); err == nil {
 		return
