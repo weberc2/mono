@@ -14,6 +14,48 @@ type Model struct {
 	DB *sql.DB
 }
 
+func (m Model) ForceDeleteDownload(
+	ctx context.Context,
+	episode *Episode,
+	language string,
+) (err error) {
+	const query = `DELETE FROM showdownloads
+	WHERE title=$1 AND year=$2 AND season=$3 AND episode=$4 AND language=$5;`
+
+	if _, err = m.DB.ExecContext(
+		ctx,
+		query,
+		episode.Title,
+		episode.Year,
+		episode.Season,
+		episode.Episode,
+		language,
+	); err != nil {
+		err = fmt.Errorf(
+			"force-deleting download `%s (%s)`: %w",
+			SDebug(episode),
+			language,
+			err,
+		)
+	}
+	return
+}
+
+func (m Model) YieldEpisodeReservations(
+	ctx context.Context,
+	token Reservation,
+	downloads []DownloadID[Episode],
+) (err error) {
+	slog.Debug(
+		"model: yielding episode reservations",
+		"reservation", token,
+		"downloads", downloads,
+	)
+
+	const query = `UPDATE showdownloads SET reservationexpiry=NOW()
+	WHERE title=$1 AND year=$2 AND season=$3 AND episode=$4 AND language=$5;`
+}
+
 func (m Model) TryReserveDownloads(
 	ctx context.Context,
 	count int,
@@ -25,14 +67,16 @@ func (m Model) TryReserveDownloads(
 
 	// this query reserves all downloads which have not been completed AND which
 	// are not already reserved. a download is considered "reserved" if fewer
-	// than $TTL seconds have transpired since the download's `lastreserved`
-	// time. the mechanism by which this query reserves the download is by
-	// setting its `lastreserved` field to the current timestamp.
-	const query = `UPDATE showdownloads SET lastreserved=NOW()
-		WHERE title, year, season, episode, language IN (
+	// than $TTL seconds have transpired since the download's
+	// `reservationexpiry` time. the mechanism by which this query reserves the
+	// download is by setting its `reservationexpiry` field to the current
+	// timestamp.
+	const query = `UPDATE showdownloads SET reservationexpiry=NOW()+'10s'
+		WHERE EXISTS (
 			SELECT FROM showdownloads
-			WHERE lastreserved + 10s < NOW()
-			AND status != 'COMPLETED'
+			WHERE reservationexpiry < NOW()
+			AND status != 'COMPLETE'
+			ORDER BY created
 			LIMIT $1
 		)
 	RETURNING
@@ -45,7 +89,8 @@ func (m Model) TryReserveDownloads(
 		url,
 		filepath,
 		status,
-		created;`
+		created,
+		reservationexpiry;`
 
 	var rows *sql.Rows
 	if rows, err = m.DB.QueryContext(
@@ -63,11 +108,10 @@ func (m Model) TryReserveDownloads(
 		downloads = append(downloads, Download[Episode]{})
 		d := &downloads[len(downloads)-1]
 		if err = rows.Scan(
-			&d.ID,
-			&d.VideoID.Title,
-			&d.VideoID.Year,
-			&d.VideoID.Season,
-			&d.VideoID.Episode,
+			&d.Video.Title,
+			&d.Video.Year,
+			&d.Video.Season,
+			&d.Video.Episode,
 			&d.Language,
 			&d.OpenSubtitlesID,
 			&d.URL,
@@ -84,35 +128,58 @@ func (m Model) TryReserveDownloads(
 	return
 }
 
-func (m Model) SetOpenSubtitlesID(
-	ctx context.Context,
-	reservation Reservation,
-	episode *Episode,
-	language string,
-	openSubtitlesID string,
-) (download Download[Episode], err error) {
-	slog.Debug(
-		"model: updating download with OpenSubtitles ID",
-		"title", episode.Title,
-		"year", episode.Year,
-		"season", episode.Season,
-		"episode", episode.Episode,
-		"language", language,
-		"openSubtitlesID", openSubtitlesID,
-	)
-
-	if err = reservation.Valid(); err != nil {
-		err = fmt.Errorf(
-			"setting opensubtitlesid for `%s (%s): %w",
-			SDebug(episode),
-			language,
-			err,
-		)
-		return
-	}
-
-	const query = `UPDATE showdownloads SET opensubtitlesid=$6`
-}
+// func (m Model) SetOpenSubtitlesID(
+// 	ctx context.Context,
+// 	reservation Reservation,
+// 	episode *Episode,
+// 	language string,
+// 	openSubtitlesID string,
+// ) (download Download[Episode], err error) {
+// 	slog.Debug(
+// 		"model: updating download with OpenSubtitles ID",
+// 		"title", episode.Title,
+// 		"year", episode.Year,
+// 		"season", episode.Season,
+// 		"episode", episode.Episode,
+// 		"language", language,
+// 		"openSubtitlesID", openSubtitlesID,
+// 	)
+//
+// 	if err = reservation.Valid(); err != nil {
+// 		err = fmt.Errorf(
+// 			"setting opensubtitlesid for `%s (%s): %w",
+// 			SDebug(episode),
+// 			language,
+// 			err,
+// 		)
+// 		return
+// 	}
+//
+// 	const query = `
+// WITH download_exists AS (
+// 	SELECT
+// 		title,
+// 		year,
+// 		season,
+// 		episode,
+// 		language,
+// 		opensubtitlesid,
+// 		url,
+// 		filepath,
+// 		status,
+// 		created
+// 	FROM showdownloads
+// ), doupdate AS (
+// 	UPDATE showdownloads SET opensubtitlesid=$6
+// 	WHERE title=$1
+// 		AND year=$2
+// 		AND season=$3
+// 		AND episode=$4
+// 		AND language=$5
+// 		AND NOW() > reservationexpiry
+// )
+// SELECT
+// }
 
 func (m Model) InsertPendingEpisodeDownload(
 	ctx context.Context,
@@ -129,18 +196,18 @@ func (m Model) InsertPendingEpisodeDownload(
 	)
 
 	const query = `INSERT INTO showdownloads (
-		title,           -- 1
-		year,            -- 2
-		season,          -- 3
-		episode,         -- 4
-		language,        -- 5
-		opensubtitlesid, -- 6
-		url,             -- 7
-		filepath,        -- 8
-		status           -- 9
-		created          -- 10
-		lastreserved     -- 11
-	) VALUES ($1, $2, $3, $4, $5, '', '', '', 'PENDING', NOW(), NULL)
+		title,            -- 1
+		year,             -- 2
+		season,           -- 3
+		episode,          -- 4
+		language,         -- 5
+		opensubtitlesid,  -- 6
+		url,              -- 7
+		filepath,         -- 8
+		status,           -- 9
+		created,          -- 10
+		reservationexpiry -- 11
+	) VALUES ($1, $2, $3, $4, $5, '', '', '', 'PENDING', NOW(), NOW())
 	RETURNING
 		title,
 		year,
@@ -162,10 +229,10 @@ func (m Model) InsertPendingEpisodeDownload(
 		episode.Episode,
 		language,
 	).Scan(
-		&download.VideoID.Title,
-		&download.VideoID.Year,
-		&download.VideoID.Season,
-		&download.VideoID.Episode,
+		&download.Video.Title,
+		&download.Video.Year,
+		&download.Video.Season,
+		&download.Video.Episode,
 		&download.Language,
 		&download.OpenSubtitlesID,
 		&download.URL,
@@ -267,6 +334,10 @@ func (m Model) InsertEpisodeSubtitleFile(
 }
 
 type Reservation time.Time
+
+func (r Reservation) String() string {
+	return time.Time(r).String()
+}
 
 func (r Reservation) Valid() error {
 	if time.Now().Before(time.Time(r)) {

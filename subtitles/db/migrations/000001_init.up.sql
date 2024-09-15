@@ -34,6 +34,6 @@ CREATE TABLE showdownloads (
     filepath TEXT NOT NULL,
     status downloadstatus NOT NULL,
     created TIMESTAMPTZ NOT NULL,
-    lastreserved TIMESTAMPTZ,
+    reservationexpiry TIMESTAMPTZ NOT NULL,
     PRIMARY KEY(title, year, season, episode, language)
 );

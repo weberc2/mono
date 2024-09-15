@@ -28,3 +28,7 @@ func (dc *DownloadController) Run(ctx context.Context) error {
 		<-ticker.C
 	}
 }
+
+func (dc *DownloadController) runLoop(ctx context.Context) error {
+	panic("control loop not configured")
+}

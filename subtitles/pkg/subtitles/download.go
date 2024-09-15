@@ -7,9 +7,7 @@ import (
 )
 
 type Download[T Debug] struct {
-	ID              DownloadID
-	VideoID         T
-	Language        string
+	ID              DownloadID[T]
 	OpenSubtitlesID string
 	URL             string
 	Filepath        string
@@ -18,11 +16,10 @@ type Download[T Debug] struct {
 }
 
 func (d *Download[T]) Debug(sb *strings.Builder) {
-	d.VideoID.Debug(sb)
+	d.ID.Debug(sb)
 	fmt.Fprintf(
 		sb,
-		", language=%s, openSubtitlesID=%s, url=%s, filepath=%s, status=%s",
-		d.Language,
+		", openSubtitlesID=%s, url=%s, filepath=%s, status=%s",
 		d.OpenSubtitlesID,
 		d.URL,
 		d.Filepath,
@@ -30,7 +27,15 @@ func (d *Download[T]) Debug(sb *strings.Builder) {
 	)
 }
 
-type DownloadID string
+type DownloadID[T Debug] struct {
+	Video    T
+	Language string
+}
+
+func (d DownloadID[T]) Debug(sb *strings.Builder) {
+	d.Video.Debug(sb)
+	fmt.Fprintf(sb, ", language=%s", d.Language)
+}
 
 type DownloadStatus string
 
