@@ -55,3 +55,5 @@ func (store transformationStore) ListTransformations(
 	}
 	return
 }
+
+type Context = context.Context
