@@ -1,0 +1,7 @@
+{
+    "addr": ":8080",
+    "rainServerURL": "http://rain:7246",
+    "downloadsDirectory": "/rain/data",
+    "filmsDirectory": "/rain/data/Movies",
+    "showsDirectory": "/rain/data/TV"
+}

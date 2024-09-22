@@ -42,6 +42,7 @@ func main() {
 				// disable multiarch for lambda (lambda can't run multiarch
 				// containers yet).
 				SetSinglePlatform("linux/amd64"),
+			GoImage("mediamanager", "mediamanager"),
 		),
 	); err != nil {
 		log.Fatalf("marshaling release workflow: %v", err)
