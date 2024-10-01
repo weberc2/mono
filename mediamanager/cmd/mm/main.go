@@ -2,11 +2,8 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"log"
 	"log/slog"
 	"net/http"
-	"sort"
 	"time"
 
 	"github.com/cenkalti/rain/rainrpc"
@@ -14,51 +11,8 @@ import (
 
 func main() {
 	// slog.SetLogLoggerLevel(slog.LevelDebug)
-	results, err := Search(
-		http.DefaultClient,
-		context.Background(),
-		"laura kaiser",
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].Seeders > results[j].Seeders
-	})
-
-	const choice = 0
-	magnet := MagnetLink(
-		results[choice].Name,
-		results[choice].InfoHash,
-		"udp://open.demonii.com:1337",
-		"udp://tracker.coppersurfer.tk:6969",
-		"udp://tracker.leechers-paradise.org:6969",
-		"udp://tracker.pomf.se:80",
-		"udp://tracker.publicbt.com:80",
-		"udp://tracker.openbittorrent.com:80",
-		"udp://tracker.istole.it:80",
-		"udp://explodie.org:6969",
-		"udp://tracker.empire-js.us:1337",
-		"udp://tracker.opentrackr.org:1337",
-	)
-	log.Println(magnet)
 
 	rain := rainrpc.NewClient("http://rain:7246")
-	if _, err := rain.AddURI(
-		magnet,
-		&rainrpc.AddTorrentOptions{ID: string(results[choice].InfoHash)},
-	); err != nil {
-		var payload struct {
-			Message string `json:"message"`
-		}
-		if err := json.Unmarshal([]byte(err.Error()), &payload); err != nil {
-			log.Fatalf("unmarshaling error: %v", err)
-		}
-		if payload.Message != "duplicate torrent id" {
-			log.Fatal(err)
-		}
-	}
 
 	transforms := MemoryTransformStore{}
 
@@ -125,17 +79,6 @@ func main() {
 		slog.Error("running controller", "err", err.Error())
 		return
 	}
-
-	// rain := rainrpc.NewClient("http://localhost:7246")
-
-	// const choice = 0
-
-	// data, err := json.Marshal(&results[choice])
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Printf("%s\n", data)
-
 }
 
 type Context = context.Context
