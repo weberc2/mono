@@ -1,10 +1,26 @@
 services:
-  mediamanager:
+  # mediamanager:
+  #   build:
+  #     context: .
+  #     dockerfile: ../docker/golang/Dockerfile
+  #     args:
+  #     - TARGET=mediamanager
+  #   command: ["/bin/app"]
+  #   user: root
+  #   ports:
+  #   - 8080:8080
+  #   environment:
+  #   - RAIN_SERVER_URL=http://rain:7246
+  #   - ADDR=:8080
+  #   volumes:
+  #   - /tmp/rain:/rain
+  #   - ./config.json:/config.json
+  mm:
     build:
       context: .
       dockerfile: ../docker/golang/Dockerfile
       args:
-      - TARGET=mediamanager
+      - TARGET=mm
     command: ["/bin/app"]
     user: root
     ports:
@@ -17,10 +33,11 @@ services:
     - ./config.json:/config.json
   
   rain:
-    image: weberc2/rain
+    build:
+      context: ../docker/rain
     command: ["rain", "server", "--config", "/tmp/rain/config.yaml"]
     ports:
-    - 7246
+    - 7246:7246
     user: root
     volumes:
     - /tmp/rain:/tmp/rain
