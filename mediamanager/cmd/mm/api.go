@@ -64,8 +64,8 @@ func (api *API) Bind(mux *http.ServeMux) {
 		api.handle("searching", api.search),
 	)
 	mux.HandleFunc(
-		"GET /downloads/{infoHash}",
-		api.handle("fetching download", api.listDownloads),
+		"GET /downloads/{download}",
+		api.handle("fetching download", api.fetchDownload),
 	)
 	mux.HandleFunc(
 		"POST /downloads",
@@ -131,9 +131,9 @@ func (api *API) fetchDownload(
 	r *http.Request,
 	logger *slog.Logger,
 ) (rsp response) {
-	infoHash := InfoHash(r.PathValue("infoHash"))
-	logger.With(slog.String("infoHash", string(infoHash)))
-	download, err := api.Downloads.FetchDownload(r.Context(), infoHash)
+	id := r.PathValue("download")
+	logger.With(slog.String("infoHash", id))
+	download, err := api.Downloads.FetchDownload(r.Context(), DownloadID(id))
 	if err != nil {
 		handleErr(logger, &rsp, err)
 		return

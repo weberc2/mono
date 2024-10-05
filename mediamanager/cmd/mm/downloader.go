@@ -55,19 +55,20 @@ func (d *Downloader) CreateDownload(
 
 func (d *Downloader) FetchDownload(
 	ctx context.Context,
-	infoHash InfoHash,
+	id DownloadID,
 ) (download Download, err error) {
 	if err = ctx.Err(); err != nil {
-		err = fmt.Errorf("fetching download `%s`: %w", infoHash, err)
+		err = fmt.Errorf("fetching download `%s`: %w", id, err)
 		return
 	}
 
-	stats, e := d.Client.GetTorrentStats(string(infoHash))
+	stats, e := d.Client.GetTorrentStats(string(id))
 	if e != nil {
-		err = fmt.Errorf("fetching download `%s`: %w", infoHash, e)
+		err = fmt.Errorf("fetching download `%s`: %w", id, e)
 		return
 	}
 
+	download.ID = DownloadID(id)
 	download.InfoHash = InfoHash(stats.InfoHash)
 	if stats.Status == "Downloading Metadata" {
 		download.Status = DownloadStatusFetchingMetadata
@@ -81,11 +82,11 @@ func (d *Downloader) FetchDownload(
 	if download.Files, err = d.cache.fetch(
 		ctx,
 		d.Client,
-		string(infoHash),
+		string(id),
 	); err != nil {
 		err = fmt.Errorf(
 			"fetching download `%s`: fetching file stats: %w",
-			infoHash,
+			id,
 			err,
 		)
 		return
@@ -111,7 +112,7 @@ func (d *Downloader) ListDownloads(
 	// could just keep all of the download information synced all the time).
 	downloads := make([]Download, len(torrents))
 	for i := range torrents {
-		downloads[i], err = d.FetchDownload(ctx, InfoHash(torrents[i].ID))
+		downloads[i], err = d.FetchDownload(ctx, DownloadID(torrents[i].ID))
 		if err != nil {
 			return nil, fmt.Errorf("listing downloads: %w", err)
 		}

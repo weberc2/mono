@@ -252,6 +252,6 @@ type TransformStore interface {
 
 type DownloadStore interface {
 	CreateDownload(ctx Context, d *Download) (Download, error)
-	FetchDownload(ctx Context, infoHash InfoHash) (Download, error)
+	FetchDownload(ctx Context, id DownloadID) (Download, error)
 	ListDownloads(ctx Context) ([]Download, error)
 }
