@@ -1,0 +1,42 @@
+services:
+  rain:
+    build:
+      context: ../docker/rain
+    command: ["rain", "server", "--config", "/rain/config.yaml"]
+    ports:
+    - 7246:7246
+    user: root
+    volumes:
+    - /tmp/rain:/rain
+    - ./rain.yaml:/rain/config.yaml
+
+  postgres:
+    image: postgres
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - PGDATA=/pgdata
+    ports:
+    - 5432:5432
+    volumes:
+    - pgdata:/pgdata
+
+  mm:
+    build:
+      context: .
+      dockerfile: ../docker/golang/Dockerfile
+      args:
+        - TARGET=mm
+    environment:
+    - PGUSER=postgres
+    - PGPASSWORD=postgres
+    - PGHOST=postgres
+    - PGPORT=5432
+    - PGSSLMODE=disable
+    ports:
+    - 8080:8080
+    user: root
+    volumes:
+    - /tmp/rain:/rain
+
+volumes:
+  pgdata:
