@@ -135,7 +135,6 @@ func (api *API) CreateImport(w http.ResponseWriter, r *http.Request) {
 	if _, err := w.Write(data); err != nil {
 		logger.Error("writing response body", "err", err.Error())
 	}
-	return
 }
 
 func (api *API) ListImports(w http.ResponseWriter, r *http.Request) {
@@ -173,7 +172,7 @@ func (api *API) CreateDownload(w http.ResponseWriter, r *http.Request) {
 	logger := api.requestLogger(r)
 	defer func() {
 		if err := r.Body.Close(); err != nil {
-			logger.Error("closing request body: %w", err)
+			logger.Error("closing request body", "err", err.Error())
 		}
 	}()
 
@@ -209,7 +208,6 @@ func (api *API) CreateDownload(w http.ResponseWriter, r *http.Request) {
 	if _, err := w.Write(data); err != nil {
 		logger.Error("writing response", "err", err.Error())
 	}
-	return
 }
 
 func (api *API) ListDownloads(w http.ResponseWriter, r *http.Request) {

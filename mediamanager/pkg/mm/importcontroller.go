@@ -28,7 +28,7 @@ func (c *ImportController) Run(
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	for range ticker.C {
+	for ; ; <-ticker.C {
 		if err := c.RunLoop(ctx); err != nil {
 			if errors.Is(err, context.Canceled) ||
 				errors.Is(err, context.DeadlineExceeded) {
@@ -37,8 +37,6 @@ func (c *ImportController) Run(
 			c.Logger.Error("running control loop", "err", err.Error())
 		}
 	}
-
-	return nil
 }
 
 func (c *ImportController) RunLoop(ctx context.Context) error {
@@ -117,7 +115,7 @@ func (c *ImportController) reconcile(
 		return
 	}
 
-	if imp.Film != nil {
+	if imp.Film != nil && imp.Status != ImportStatusComplete {
 		clone := *imp
 		clone.Status, clone.Files = c.importFilm(
 			logger,
@@ -134,8 +132,6 @@ func (c *ImportController) reconcile(
 			wg.Done()
 		}()
 	}
-
-	return
 }
 
 func (c *ImportController) importFilm(

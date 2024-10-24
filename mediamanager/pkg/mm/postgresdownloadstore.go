@@ -28,7 +28,6 @@ func (store PostgresDownloadStore) ListDownloads(
 
 	var rows pgx.Rows
 	if rows, err = store.DB.Query(ctx, listDownloadsQuery); err != nil {
-		err = fmt.Errorf("executing query: %w", err)
 		return
 	}
 	defer rows.Close()
@@ -256,3 +255,27 @@ DELETE FROM downloadfiles WHERE download=$1;`
 const putDownloadsQuery2 = `
 INSERT INTO downloadfiles (download, path, size, progress)
 VALUES($1, $2, $3, $4)`
+
+func (store PostgresDownloadStore) DeleteDownload(
+	ctx context.Context,
+	infoHash InfoHash,
+) (err error) {
+	var sentinel int
+	if err = store.DB.QueryRow(
+		ctx,
+		deleteDownloadQuery,
+		infoHash,
+	).Scan(&sentinel); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = fmt.Errorf(
+				"deleting download: %w",
+				&DownloadNotFoundErr{InfoHash: infoHash},
+			)
+		} else {
+			err = fmt.Errorf("deleting download `%s`: %w", infoHash, err)
+		}
+	}
+	return
+}
+
+const deleteDownloadQuery = `DELETE FROM downloads WHERE id=$1;`

@@ -1,5 +1,7 @@
 package mm
 
+import "github.com/danielgtaylor/huma/v2"
+
 type Import struct {
 	ID       ImportID     `json:"id"`
 	InfoHash InfoHash     `json:"infoHash"`
@@ -11,10 +13,10 @@ type Import struct {
 type ImportID string
 
 type Film struct {
-	Title            string         `json:"title"`
-	Year             string         `json:"year"`
-	PrimaryVideoFile string         `json:"primaryVideoFile"`
-	PrimarySubtitles []SubtitleFile `json:"primarySubtitles,omitempty"`
+	Title            string              `json:"title"`
+	Year             string              `json:"year"`
+	PrimaryVideoFile string              `json:"primaryVideoFile"`
+	PrimarySubtitles Slice[SubtitleFile] `json:"primarySubtitles,omitempty"`
 }
 
 type SubtitleFile struct {
@@ -42,7 +44,15 @@ const (
 	ImportFileStatusComplete ImportFileStatus = "COMPLETE"
 )
 
-type ImportFiles []ImportFile
+type ImportFiles Slice[ImportFile]
+
+func (files *ImportFiles) Schema(r huma.Registry) *huma.Schema {
+	return (*Slice[ImportFile])(files).Schema(r)
+}
+
+func (files *ImportFiles) MarshalJSON() ([]byte, error) {
+	return (*Slice[ImportFile])(files).MarshalJSON()
+}
 
 func (files ImportFiles) FromPath(path string) *ImportFile {
 	for i := range files {

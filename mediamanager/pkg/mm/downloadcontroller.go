@@ -187,13 +187,6 @@ func (c *DownloadController) updateDownloads(
 		}
 
 		_, exists := downloads[torrent.download.ID]
-		slog.Debug(
-			"deciding whether or not to update download",
-			"exists", exists,
-			"prospectiveProgress", prospective.Progress,
-			"prospectiveSize", prospective.Size,
-			"torrentDownloadProgress", torrent.download.Progress,
-		)
 		if !exists || prospective.Progress >= torrent.download.Progress {
 			downloads[torrent.download.ID] = &prospective
 		}

@@ -1,5 +1,7 @@
 package mm
 
+import "github.com/danielgtaylor/huma/v2"
+
 type Download struct {
 	ID       InfoHash       `json:"id"`
 	Status   DownloadStatus `json:"status"`
@@ -18,6 +20,14 @@ const (
 )
 
 type DownloadFiles []DownloadFile
+
+func (files *DownloadFiles) MarshalJSON() ([]byte, error) {
+	return (*Slice[DownloadFile])(files).MarshalJSON()
+}
+
+func (files *DownloadFiles) Schema(r huma.Registry) *huma.Schema {
+	return (*Slice[DownloadFile])(files).Schema(r)
+}
 
 func (files DownloadFiles) ToMap() map[string]*DownloadFile {
 	out := map[string]*DownloadFile{}

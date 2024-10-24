@@ -9,8 +9,8 @@ import (
 type ImportStore interface {
 	ListImports(ctx context.Context) ([]Import, error)
 	CreateImport(ctx context.Context, imp *Import) error
-	UpdateImport(ctx context.Context, imp *Import) error
 	DeleteImport(ctx context.Context, imp ImportID) error
+	UpdateImport(ctx context.Context, imp *Import) error
 }
 
 type ImportNotFoundErr struct {

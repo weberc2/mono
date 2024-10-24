@@ -6,6 +6,7 @@ import (
 	"log"
 	"log/slog"
 	"mediamanager/pkg/mm"
+	"mediamanager/pkg/mm/api"
 	"time"
 
 	"github.com/cenkalti/rain/rainrpc"
@@ -28,9 +29,9 @@ func Run(ctx context.Context) error {
 	defer conn.Close()
 
 	downloads := mm.PostgresDownloadStore{DB: conn}
-	imports := mm.MemoryImportStore{}
+	imports := mm.PostgresImportStore{DB: conn}
 
-	api := mm.API{
+	api := api.API{
 		Downloads: downloads,
 		Imports:   &imports,
 		Logger:    slog.Default().With("component", "DOWNLOAD-API"),
@@ -90,7 +91,7 @@ func Run(ctx context.Context) error {
 
 	go func() { results <- importController.Run(ctx, 4*time.Second) }()
 	go func() { results <- downloadController.Run(ctx, 4*time.Second) }()
-	go func() { results <- api.Run(ctx) }()
+	go func() { results <- api.Run(ctx, "0.0.0.0:8080") }()
 
 	for range 3 {
 		if err := <-results; err != nil {

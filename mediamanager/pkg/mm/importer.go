@@ -16,10 +16,16 @@ type Importer struct {
 func (i *Importer) ImportFile(file *LibraryFile) (err error) {
 	target := filepath.Join(i.libraryDirectory(file), file.LibraryPath())
 	source := filepath.Join(i.DownloadsDirectory, file.DownloadPath())
-	temp := filepath.Join(i.ScratchDirectory, filepath.Base(target))
+	scratch := filepath.Join(i.ScratchDirectory, file.InfoHash.String())
+	temp := filepath.Join(scratch, filepath.Base(target))
 
-	if err = os.MkdirAll(i.ScratchDirectory, 0766); err != nil {
+	if err = os.MkdirAll(scratch, 0766); err != nil {
 		err = fmt.Errorf("importing film file: creating scratch dir: %w", err)
+		return
+	}
+
+	if err = os.Remove(temp); err != nil && !os.IsNotExist(err) {
+		err = fmt.Errorf("importing film file: %w", err)
 		return
 	}
 

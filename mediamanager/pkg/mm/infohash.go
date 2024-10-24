@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/danielgtaylor/huma/v2"
 )
 
 type InfoHash struct {
@@ -18,7 +20,7 @@ func NewInfoHash(s string) (infoHash InfoHash) {
 
 func (infoHash InfoHash) String() string { return infoHash.lowercase }
 
-func (infoHash *InfoHash) MarshalJSON() ([]byte, error) {
+func (infoHash InfoHash) MarshalJSON() ([]byte, error) {
 	data, err := json.Marshal(infoHash.lowercase)
 	if err != nil {
 		err = fmt.Errorf("marshaling info hash: %w", err)
@@ -33,6 +35,10 @@ func (infoHash *InfoHash) UnmarshalJSON(data []byte) error {
 	}
 	*infoHash = NewInfoHash(s)
 	return nil
+}
+
+func (infoHash *InfoHash) Schema(huma.Registry) *huma.Schema {
+	return &huma.Schema{Type: "string"}
 }
 
 func (infoHash InfoHash) Value() driver.Value {
