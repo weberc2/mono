@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"mediamanager/pkg/mm"
 	"mediamanager/pkg/mm/api"
+	"os"
 	"time"
 
 	"github.com/cenkalti/rain/rainrpc"
@@ -21,6 +22,16 @@ func main() {
 
 func Run(ctx context.Context) error {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
+
+	configFile := os.Getenv("CONFIG_FILE")
+	if configFile == "" {
+		configFile = "config.json"
+	}
+
+	config, err := LoadConfigFile(configFile)
+	if err != nil {
+		return err
+	}
 
 	conn, err := pgxpool.New(ctx, "")
 	if err != nil {
@@ -42,14 +53,14 @@ func Run(ctx context.Context) error {
 		Imports:   &imports,
 		Logger:    slog.Default().With("component", "IMPORT-CONTROLLER"),
 		Importer: mm.Importer{
-			DownloadsDirectory: "/rain/data",
-			FilmsDirectory:     "/rain/data/Movies",
-			ScratchDirectory:   "/rain/data/.scratch",
+			DownloadsDirectory: config.DownloadsDirectory,
+			FilmsDirectory:     config.FilmsDirectory,
+			ScratchDirectory:   config.ScratchDirectory,
 		},
 	}
 
 	downloadController := mm.DownloadController{
-		Torrents:  rainrpc.NewClient("http://rain:7246"),
+		Torrents:  rainrpc.NewClient(config.RainServerURL),
 		Downloads: &downloads,
 		Logger:    slog.Default().With("component", "DOWNLOAD-CONTROLLER"),
 		Trackers: []string{

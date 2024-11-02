@@ -58,6 +58,7 @@ func (api *API) Handler() http.Handler {
 	OperationImportCreate.Register(&registry)
 	OperationImportDelete.Register(&registry)
 	OperationDownloadList.Register(&registry)
+	OperationDownloadFetch.Register(&registry)
 	OperationDownloadCreate.Register(&registry)
 	OperationDownloadDelete.Register(&registry)
 	return &mux

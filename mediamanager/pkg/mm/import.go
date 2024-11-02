@@ -27,9 +27,9 @@ type SubtitleFile struct {
 type ImportStatus string
 
 const (
-	ImportStatusPending  = "PENDING"
-	ImportStatusComplete = "COMPLETE"
-	ImportStatusError    = "ERROR"
+	ImportStatusPending  ImportStatus = "PENDING"
+	ImportStatusComplete ImportStatus = "COMPLETE"
+	ImportStatusError    ImportStatus = "ERROR"
 )
 
 type ImportFile struct {

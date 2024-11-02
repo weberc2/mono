@@ -19,7 +19,7 @@ const (
 	DownloadStatusComplete DownloadStatus = "COMPLETE"
 )
 
-type DownloadFiles []DownloadFile
+type DownloadFiles Slice[DownloadFile]
 
 func (files *DownloadFiles) MarshalJSON() ([]byte, error) {
 	return (*Slice[DownloadFile])(files).MarshalJSON()

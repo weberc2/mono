@@ -3,6 +3,7 @@ package mm
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -87,12 +88,62 @@ SELECT
 FROM downloads d
 LEFT JOIN downloadfiles f ON d.id = f.download;`
 
+func (store PostgresDownloadStore) FetchDownload(
+	ctx context.Context,
+	infoHash InfoHash,
+) (download Download, err error) {
+	var filesJSON []byte
+	if err = store.DB.QueryRow(
+		ctx,
+		fetchDownloadQuery,
+		infoHash,
+	).Scan(
+		&download.ID,
+		&download.Status,
+		&download.Size,
+		&download.Progress,
+		&filesJSON,
+	); err != nil {
+		err = fmt.Errorf(
+			"fetching download: scanning row: %w",
+			err,
+		)
+		return
+	}
+
+	if err = json.Unmarshal(filesJSON, &download.Files); err != nil {
+		err = fmt.Errorf(
+			"fetching download: deserializing download files: %w",
+			err,
+		)
+	}
+	return
+}
+
+const fetchDownloadQuery = `
+SELECT
+	d.id,
+	d.status,
+	d.size,
+	d.progress,
+	JSONB_AGG(JSONB_BUILD_OBJECT(
+		'path', f.path,
+		'size', f.size,
+		'progress', f.progress)) AS files
+FROM downloads d
+LEFT JOIN downloadfiles f ON d.id = f.download
+WHERE d.id = $1
+GROUP BY d.id;`
+
 func (store PostgresDownloadStore) CreateDownload(
 	ctx context.Context,
 	download *Download,
 ) (err error) {
 	defer func() {
 		if err != nil {
+			if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
+				err = &DownloadExistsErr{InfoHash: download.ID}
+			}
 			err = fmt.Errorf("creating download `%s`: %w", download.ID, err)
 		}
 	}()
@@ -150,9 +201,7 @@ func (store PostgresDownloadStore) CreateDownload(
 
 	for range batch.QueuedQueries {
 		if _, err = results.Exec(); err != nil {
-			if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
-				return &DownloadExistsErr{InfoHash: download.ID}
-			}
+			return
 		}
 	}
 
@@ -278,4 +327,4 @@ func (store PostgresDownloadStore) DeleteDownload(
 	return
 }
 
-const deleteDownloadQuery = `DELETE FROM downloads WHERE id=$1;`
+const deleteDownloadQuery = `DELETE FROM downloads WHERE id=$1 RETURNING 1;`

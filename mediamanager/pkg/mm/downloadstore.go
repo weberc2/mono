@@ -8,6 +8,7 @@ import (
 
 type DownloadStore interface {
 	ListDownloads(ctx context.Context) ([]Download, error)
+	FetchDownload(ctx context.Context, infoHash InfoHash) (Download, error)
 	CreateDownload(ctx context.Context, download *Download) error
 	PutDownloads(ctx context.Context, downloads []Download) error
 	DeleteDownload(ctx context.Context, infoHash InfoHash) error
