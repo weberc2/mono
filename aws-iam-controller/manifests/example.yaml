@@ -1,0 +1,6 @@
+apiVersion: iam.aws.weberc2.com/v1
+kind: User
+metadata:
+  namespace: default
+  name: test
+userName: test

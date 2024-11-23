@@ -1,14 +1,8 @@
-FROM golang:1.22
-
-RUN apt-get update && apt-get install -y ca-certificates
+FROM golang:1.23
 
 WORKDIR /workspace
 
 COPY go.mod go.sum ./
-
-RUN go mod download
-
-COPY *.go ./
 
 COPY ./pkg ./pkg
 
@@ -16,15 +10,16 @@ ARG TARGET
 
 COPY ./cmd/${TARGET} ./cmd/${TARGET}
 
-RUN CGO_ENABLED=0 go build -ldflags '-s' -v -o /bin/app ./cmd/${TARGET}
+ENV GOCACHE=/root/.cache/go-build
+RUN --mount=type=cache,target="/root/.cache/go-build" \
+    --mount=type=cache,target="/go/pkg/mod" \
+    CGO_ENABLED=0 go build -ldflags '-s' -v -o /bin/app ./cmd/${TARGET}
 
-FROM scratch
-
-COPY --from=0 /etc/passwd /etc/passwd
+# `debug-nonroot` variant contains a shell and weighs about 3.3MB vs 1.9MB for
+# the `nonroot`.
+FROM gcr.io/distroless/static-debian12:debug-nonroot
 
 COPY --from=0 /bin/app /bin/app
-
-COPY --from=0 /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
 USER nobody
 
