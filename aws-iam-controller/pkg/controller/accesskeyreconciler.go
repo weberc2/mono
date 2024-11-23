@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iam/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -20,6 +21,7 @@ import (
 )
 
 type AccessKeyReconciler struct {
+	Recorder       record.EventRecorder
 	Client         client.Client
 	Users          UserClient
 	ResyncInterval time.Duration
@@ -28,6 +30,7 @@ type AccessKeyReconciler struct {
 func (reconciler *AccessKeyReconciler) Configure(
 	manager manager.Manager,
 ) error {
+	reconciler.Recorder = manager.GetEventRecorderFor("access-key-controller")
 	if reconciler.ResyncInterval == 0 {
 		reconciler.ResyncInterval = 5 * time.Minute
 	}
@@ -93,9 +96,22 @@ func (reconciler *AccessKeyReconciler) Reconcile(
 					"--aborting",
 				"ownerReferences", secret.OwnerReferences,
 			)
+			reconciler.Recorder.Event(
+				&secret,
+				"Warning",
+				"OwningUserNotFound",
+				"Owning user not found for secret"+
+					"--reconciler should not have been invoked",
+			)
 			return
 		}
 
+		reconciler.Recorder.Event(
+			&secret,
+			"Normal",
+			"MarkedForDeletion",
+			"Deleting access key from AWS",
+		)
 		logger.Info(
 			"deleting access key",
 			"user", user,
@@ -143,9 +159,16 @@ func (reconciler *AccessKeyReconciler) Reconcile(
 	}
 
 	if userName == "" {
-		logger.Warn(
-			"secret is missing required field `%s`: " +
-				"repairing based on owning user resource",
+		logger.Warn(fmt.Sprintf(
+			"secret is missing required field `%s`: %s",
+			envUserName,
+			"repairing based on owning user resource",
+		))
+		reconciler.Recorder.Event(
+			&secret,
+			"Warning",
+			"MissingUsernameField",
+			fmt.Sprintf("Secret is missing required `%s` field", envUserName),
 		)
 		key := client.ObjectKey{
 			Namespace: secret.Namespace,
@@ -158,6 +181,13 @@ func (reconciler *AccessKeyReconciler) Reconcile(
 					"--aborting",
 				"ownerReferences", secret.OwnerReferences,
 			)
+			reconciler.Recorder.Event(
+				&secret,
+				"Warning",
+				"OwningUserNotFound",
+				"Owning user not found for secret"+
+					"--reconciler should not have been invoked",
+			)
 			return
 		}
 
@@ -168,6 +198,13 @@ func (reconciler *AccessKeyReconciler) Reconcile(
 					"owning kubernetes resource doesn't exist! "+
 						"deleting access key secret!",
 					"owningUser", key.Name,
+				)
+				reconciler.Recorder.AnnotatedEventf(
+					&secret,
+					map[string]string{"owningUser": key.Name},
+					"Warning",
+					"OwningResourceNotFound",
+					"Owning resource doesn't exist--deleting access key secret",
 				)
 				if err = reconciler.Client.Delete(ctx, &secret); err != nil {
 					err = fmt.Errorf("deleting orphaned secret: %w", err)
@@ -206,6 +243,16 @@ func (reconciler *AccessKeyReconciler) Reconcile(
 			logger.Info(
 				"aws user deleted; deleting corresponding secret",
 				"awsUser", userName,
+			)
+
+			reconciler.Recorder.AnnotatedEventf(
+				&secret,
+				map[string]string{"awsUser": userName},
+				"Normal",
+				"UserNotFound",
+				"User named `%s` not found in AWS"+
+					"--deleting corresponding secret",
+				userName,
 			)
 
 			// user no longer exists for the secret; delete the secret and let
@@ -263,6 +310,17 @@ RECREATE:
 			"awsUser", userName,
 			"accessKey", *accessKeys[i].AccessKeyId,
 		)
+		reconciler.Recorder.AnnotatedEventf(
+			&secret,
+			map[string]string{
+				"awsUser":   userName,
+				"accessKey": *accessKeys[i].AccessKeyId,
+			},
+			"Normal",
+			"DeletingUnknownAccessKey",
+			"Cleaning up unknown access key associated with user before "+
+				"creating new one",
+		)
 		if err = reconciler.Users.DeleteAccessKey(
 			ctx,
 			userName,
@@ -275,6 +333,14 @@ RECREATE:
 
 	// create a new access key for the user
 	logger.Info("creating new access key", "awsUser", userName)
+	reconciler.Recorder.AnnotatedEventf(
+		&secret,
+		map[string]string{"awsUser": userName},
+		"Normal",
+		"CreatingAccessKey",
+		"Creating new access key for user named: %s",
+		userName,
+	)
 	var accessKey *types.AccessKey
 	if accessKey, err = reconciler.Users.CreateAccessKey(
 		ctx,

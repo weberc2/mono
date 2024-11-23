@@ -11,6 +11,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/record"
 
 	"github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -22,12 +23,14 @@ import (
 )
 
 type UserReconciler struct {
+	Recorder       record.EventRecorder
 	Client         client.Client
 	Users          UserClient
 	ResyncInterval time.Duration
 }
 
 func (reconciler *UserReconciler) Configure(manager manager.Manager) error {
+	reconciler.Recorder = manager.GetEventRecorderFor("user-controller")
 	if reconciler.ResyncInterval == 0 {
 		reconciler.ResyncInterval = 5 * time.Minute
 	}
@@ -61,6 +64,14 @@ func (reconciler *UserReconciler) Reconcile(
 	// and clean up any associated resources.
 	if !user.ObjectMeta.DeletionTimestamp.IsZero() {
 		slog.Info("deleting user from aws", "awsUser", user.UserName)
+		reconciler.Recorder.AnnotatedEventf(
+			&user,
+			map[string]string{"awsUser": user.UserName},
+			"Normal",
+			"DeletingUser",
+			"Deleting user `%s` from aws",
+			user.UserName,
+		)
 		if err = reconciler.Users.DeleteUser(ctx, user.UserName); err != nil {
 			// if the user is already deleted; continue removing the finalizer;
 			// otherwise, return the error.
@@ -112,6 +123,14 @@ func (reconciler *UserReconciler) Reconcile(
 			// if there is no user with the desired name, create it
 			logger.Info(
 				"external user not found in AWS; creating external user",
+			)
+			reconciler.Recorder.AnnotatedEventf(
+				&user,
+				map[string]string{"awsUser": user.UserName},
+				"Normal",
+				"CreatingUser",
+				"Creating user `%s` in AWS",
+				user.UserName,
 			)
 			err = reconciler.Users.CreateUser(ctx, &user)
 		} else {
@@ -167,6 +186,29 @@ func (reconciler *UserReconciler) reconcileSecrets(
 				)
 				return
 			}
+			logger.Info(
+				"creating secret for user",
+				slog.Group(
+					"secret",
+					"namespace", secret.Namespace,
+					"name", secret.Name,
+				),
+				"awsUser", user.UserName,
+			)
+			reconciler.Recorder.AnnotatedEventf(
+				user,
+				map[string]string{
+					"awsUser":         user.UserName,
+					"secretNamespace": secret.Namespace,
+					"secretName":      secret.Name,
+				},
+				"Normal",
+				"CreatingSecret",
+				"Creating secret `%s/%s` for user `%s`",
+				secret.Namespace,
+				secret.Name,
+				user.UserName,
+			)
 			secret.StringData = map[string]string{envUserName: user.UserName}
 			if err = reconciler.Client.Create(ctx, &secret); err != nil {
 				err = fmt.Errorf("creating new user secret: %w", err)
