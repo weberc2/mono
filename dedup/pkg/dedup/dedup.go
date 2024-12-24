@@ -16,13 +16,11 @@ func Dedup(notify Notifier, directory string) error {
 	notify.ScanningDirectory(directory)
 	inos := make(map[uint64]struct{})
 	var uniqueInos []File
-	for opt := files.Next(); opt.Exists; opt = files.Next() {
-		result := opt.Some
-		if result.Err != nil {
-			return result.Err
+	for file, err, ok := files.Next(); ok; file, err, ok = files.Next() {
+		if err != nil {
+			return err
 		}
 
-		file := result.OK
 		if _, exists := inos[file.Ino]; exists {
 			continue
 		}

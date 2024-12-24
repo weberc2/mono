@@ -27,24 +27,22 @@ func (n Notifier) ScanningDirectory(directory string) {
 }
 
 func (n Notifier) CollectedUniqueInoFiles(count int) {
-	fmt.Fprintf(
+	green.Fprintf(
 		n.w,
-		"%s collected %d files with distinct inos\n",
+		"✅ %s collected %d files with distinct inos\n",
 		nowStr(),
 		count,
 	)
 }
 
 func (n Notifier) IgnoringUniqueSizes(ignored int) {
-	fmt.Fprintf(
+	green.Fprintf(
 		n.w,
-		"%s ignoring %d files with unique sizes\n",
+		"✅ %s ignoring %d files with unique sizes\n",
 		nowStr(),
 		ignored,
 	)
 }
-
-var bold = color.New(color.Bold)
 
 func (n Notifier) ProcessingSizeGroup(groups [][]File, index int) {
 	bold.Fprintf(
@@ -62,7 +60,8 @@ func (n Notifier) IgnoringUniqueChecksums(size int64, ignored, remaining int) {
 	if ignored < 1 {
 		return
 	}
-	color.Green(
+	green.Fprintf(
+		n.w,
 		"%s  ignoring %d files with unique checksums (%d groups remaining)\n",
 		nowStr(),
 		ignored,
@@ -85,7 +84,8 @@ func (n Notifier) ChecksummingFile(path string) {
 }
 
 func (n Notifier) RemovingDuplicateFile(size int64, path string) {
-	color.Green(
+	green.Fprintf(
+		n.w,
 		"%s    removing duplicate file (size: %s) [%s]\n",
 		nowStr(),
 		human(size),
@@ -132,3 +132,8 @@ func human(n int64) string {
 func nowStr() string {
 	return time.Now().Format("2006-01-02 15:04:05")
 }
+
+var (
+	bold  = color.New(color.Bold)
+	green = color.New(color.FgGreen)
+)

@@ -8,14 +8,26 @@ import (
 	"os"
 )
 
+// File is the metadata for a file.
 type File struct {
-	Path               string
-	Size               int64
-	Ino                uint64
+	// Path is the path to the file.
+	Path string
+
+	// Size is the size of the file.
+	Size int64
+
+	// Ino identifies the file's inode.
+	Ino uint64
+
+	// FirstBlockChecksum is the checksum of the first block in the file.
 	FirstBlockChecksum uint32
+
+	// FinalBlockChecksum is the checksum of the final block in the file.
 	FinalBlockChecksum uint32
 }
 
+// ChecksumBoundingBlocks computes the first and final block checksums for the
+// file.
 func (f *File) ChecksumBoundingBlocks() (err error) {
 	defer func() {
 		if err != nil {
