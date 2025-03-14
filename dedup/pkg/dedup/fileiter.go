@@ -20,7 +20,7 @@ func NewFileIter(directory string) (iter FileIter) {
 	return
 }
 
-func (iter *FileIter) Next() (result Option[Result[File]]) {
+func (iter *FileIter) Next() (file File, err error, ok bool) {
 	for {
 		// loop over the remaining entries until we hit a file. if the
 		// entries point to a directory, push it onto the queue
@@ -37,21 +37,21 @@ func (iter *FileIter) Next() (result Option[Result[File]]) {
 			}
 
 			var info fs.FileInfo
-			info, result.Some.Err = iter.entries[iter.cursor].Info()
-			if result.Some.Err != nil {
-				result.Some.Err = fmt.Errorf(
+			info, err = iter.entries[iter.cursor].Info()
+			if err != nil {
+				err = fmt.Errorf(
 					"fetching info for file `%s`: %w",
 					path,
-					result.Some.Err,
+					err,
 				)
-				result.Exists = true
+				ok = true
 				return
 			}
 
-			result.Some.OK.Path = path
-			result.Some.OK.Ino = info.Sys().(*syscall.Stat_t).Ino
-			result.Some.OK.Size = info.Size()
-			result.Exists = true
+			file.Path = path
+			file.Ino = info.Sys().(*syscall.Stat_t).Ino
+			file.Size = info.Size()
+			ok = true
 			iter.cursor++
 			return
 		}
@@ -69,15 +69,15 @@ func (iter *FileIter) Next() (result Option[Result[File]]) {
 		iter.directories = iter.directories[1:]
 
 		// read the next directory
-		if iter.entries, result.Some.Err = os.ReadDir(
+		if iter.entries, err = os.ReadDir(
 			iter.directory,
-		); result.Some.Err != nil {
-			result.Some.Err = fmt.Errorf(
+		); err != nil {
+			err = fmt.Errorf(
 				"reading dir `%s`: %w",
 				iter.directory,
-				result.Some.Err,
+				err,
 			)
-			result.Exists = true
+			ok = true
 			return
 		}
 	}
