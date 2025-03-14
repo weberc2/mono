@@ -10,6 +10,11 @@ func main() {
 		os.Stdout,
 		WorkflowRelease(
 			&Image{
+				Name: "rain",
+				Dockerfile: "./docker/rain/Dockerfile",
+				Context: "./docker/rain",
+			},
+			&Image{
 				Name:       "pgbackup",
 				Dockerfile: "./docker/pgbackup/Dockerfile",
 				Context:    "./docker/pgbackup",
