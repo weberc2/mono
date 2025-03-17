@@ -1,34 +1,73 @@
 package main
 
 import (
+	"context"
+	"log"
+	"log/slog"
 	"os"
+	"time"
 
-	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/sirupsen/logrus"
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 )
 
 func main() {
-	logrus.SetFormatter(&logrus.JSONFormatter{})
+	slog.SetLogLoggerLevel(slog.LevelDebug)
+	start := time.Now()
+	slog.Debug("starting", "time", start)
+	defer func() { slog.Debug("completed", "elapsed", time.Since(start)) }()
 
-	bucketPrefix, exists := os.LookupEnv("BUCKET_PREFIX")
-	if !exists {
-		bucketPrefix = "gobuilder"
+	repo := "git@github.com:weberc2/mono.git"
+	key, err := ssh.NewPublicKeysFromFile(
+		"git",
+		"/Users/weberc2/.ssh/id_ecdsa",
+		"",
+	)
+	if err != nil {
+		log.Fatalf("loading private key: %v", err)
 	}
 
-	builder := &Builder{
-		Client: s3.New(session.Must(session.NewSession())),
-		Bucket: os.Getenv("BUCKET"),
-		Prefix: bucketPrefix,
+	var bucket Bucket = "weberc2"
+
+	service := Service{
+		Secrets: &Secrets{
+			RepositoryAuthMethods: map[string]transport.AuthMethod{repo: key},
+			S3BucketCredentials: map[Bucket]*AWSCredentials{
+				bucket: {
+					AccessKeyID:     os.Getenv("AWS_ACCESS_KEY_ID"),
+					SecretAccessKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
+				},
+			},
+		},
+		BuildParentDirectory: "/tmp",
 	}
 
-	if builder.Bucket == "" {
-		logrus.Fatalf("missing required env var: `BUCKET`")
+	if err := service.Build(
+		context.Background(),
+		&Build{
+			Context: BuildContext{
+				Type: BuildContextTypeGit,
+				Backend: &BuildContextGit{
+					Repository: repo,
+					Branch:     "master",
+					Directory:  "gobuilder",
+				},
+			},
+			Package: "./cmd/gobuilder",
+			Output:  "gobuilder",
+			Destination: BuildDestination{
+				Type: BuildDestinationTypeS3,
+				Backend: &BuildDestinationS3{
+					Region: "us-east-1",
+					Bucket: bucket,
+					Prefix: "delete-me",
+				},
+			},
+			Stdout: os.Stdout,
+			Stderr: os.Stderr,
+			Stdin:  os.Stdin,
+		},
+	); err != nil {
+		log.Fatal(err)
 	}
-
-	logrus.WithField("bucket", builder.Bucket).
-		WithField("prefix", builder.Prefix).
-		Infof("starting lambda function")
-	lambda.Start(builder.Build)
 }
