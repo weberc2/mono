@@ -2,13 +2,9 @@ FROM golang:1.22
 
 WORKDIR /workspace
 
-RUN go install github.com/cenkalti/rain@latest && cp $GOPATH/bin/rain /bin/rain
+RUN go install github.com/cenkalti/rain@2.2.0 && cp $GOPATH/bin/rain /bin/rain
 
-FROM debian:stable-slim
-
-RUN apt-get update && apt-get install -y ca-certificates curl
-
-USER nobody
+FROM tailscale/tailscale:latest
 
 COPY --from=0 /bin/rain /bin/rain
 
