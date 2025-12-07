@@ -33,11 +33,33 @@ func run(ctx context.Context) error {
 		addr = ":8080"
 	}
 
+	var ready bool
+
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+
+	http.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+		var (
+			status = http.StatusOK
+			body   = readyBody
+		)
+		if !ready {
+			body = notReadyBody
+			status = http.StatusServiceUnavailable
+			return
+		}
+		w.WriteHeader(status)
+		w.Write(body)
+	})
+
 	clientset, err := newClientset()
 	if err != nil {
 		return err
 	}
 	podClient := newPodCache(clientset)
+	ready = true
 
 	http.HandleFunc("/pods/", func(w http.ResponseWriter, r *http.Request) {
 		var (
@@ -87,4 +109,8 @@ func run(ctx context.Context) error {
 	return srv.ListenAndServe()
 }
 
-var internalServerErrorBody = []byte("Internal Server Error")
+var (
+	notReadyBody            = []byte("Not Ready")
+	readyBody               = []byte("Ready")
+	internalServerErrorBody = []byte("Internal Server Error")
+)

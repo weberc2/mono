@@ -3,6 +3,8 @@ kind: Service
 metadata:
   namespace: serverstatus
   name: serverstatus
+  labels:
+    app: serverstatus
 spec:
   type: ClusterIP
   selector:
