@@ -1,0 +1,17 @@
+apiVersion: networking/v1
+kind: Ingress
+metadata:
+  namespace: serverstatus
+  name: serverstatus
+spec:
+  rules:
+    - host: serverstatus
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: serverstatus
+                port:
+                  number: 80
