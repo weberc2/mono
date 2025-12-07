@@ -2,9 +2,9 @@ name: release
 "on":
   push:
     branches:
-      - "*"
+      - '*'
     tags:
-      - "*"
+      - '*'
 jobs:
   linkcheck:
     runs-on: ubuntu-latest
