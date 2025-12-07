@@ -168,7 +168,10 @@ func run(ctx context.Context) error {
 	g.Go(func() error {
 		<-ctx.Done()
 		slog.Info("context canceled, shutting down http server")
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		shutdownCtx, cancel := context.WithTimeout(
+			context.Background(),
+			5*time.Second,
+		)
 		defer cancel()
 		return srv.Shutdown(shutdownCtx)
 	})
