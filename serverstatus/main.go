@@ -8,8 +8,11 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
+	"golang.org/x/sync/errgroup"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -24,42 +27,79 @@ func run(ctx context.Context) error {
 		level       slog.Level
 		levelString = os.Getenv("LOG_LEVEL")
 		addr        = os.Getenv("ADDR")
+		ready       bool
+		podClient   podCache
 	)
-	if err := level.UnmarshalText([]byte(levelString)); err != nil {
-		return fmt.Errorf("unmarshaling log level `%s`: %w", levelString, err)
+
+	// Setup signal handling to cancel context on SIGINT (Ctrl+C) or SIGTERM
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	go func() {
+		sig := <-sigChan
+		slog.Info("received signal", "signal", sig)
+		cancel()
+	}()
+
+	g, ctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		clientset, err := newClientset()
+		if err == nil {
+			podClient = newPodCache(clientset)
+			// Start the pod informer and wait for the initial cache sync before
+			// marking the application as ready. This ensures ListPods() returns
+			// cached pod entries instead of an empty list.
+			podClient.Start(ctx)
+
+			ready = true
+		}
+		return err
+	})
+
+	if levelString != "" {
+		if err := level.UnmarshalText([]byte(levelString)); err != nil {
+			return fmt.Errorf(
+				"unmarshaling log level `%s`: %w",
+				levelString,
+				err,
+			)
+		}
 	}
 
 	if addr == "" {
 		addr = ":8080"
 	}
 
-	var ready bool
+	// Register HTTP handlers (do this synchronously so handlers are ready
+	// before the server starts).
+	http.HandleFunc(
+		"/health",
+		func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("OK"))
+		},
+	)
 
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
-	})
-
-	http.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
-		var (
-			status = http.StatusOK
-			body   = readyBody
-		)
-		if !ready {
-			body = notReadyBody
-			status = http.StatusServiceUnavailable
-			return
-		}
-		w.WriteHeader(status)
-		w.Write(body)
-	})
-
-	clientset, err := newClientset()
-	if err != nil {
-		return err
-	}
-	podClient := newPodCache(clientset)
-	ready = true
+	http.HandleFunc(
+		"/ready",
+		func(w http.ResponseWriter, r *http.Request) {
+			var (
+				status = http.StatusOK
+				body   = readyBody
+			)
+			if !ready {
+				body = notReadyBody
+				status = http.StatusServiceUnavailable
+				w.WriteHeader(status)
+				w.Write(body)
+				return
+			}
+			w.WriteHeader(status)
+			w.Write(body)
+		},
+	)
 
 	http.HandleFunc("/pods/", func(w http.ResponseWriter, r *http.Request) {
 		var (
@@ -70,7 +110,16 @@ func run(ctx context.Context) error {
 			pods   []*v1.Pod
 			err    error
 		)
+
+		if !ready {
+			attrs = append(attrs, slog.String("err", "service unavailable"))
+			status = http.StatusServiceUnavailable
+			data = notReadyBody
+			goto RETURN
+		}
+
 		if pods, err = podClient.ListPods(); err == nil {
+			slog.Debug("listing pods", "count", len(pods))
 			type pod struct {
 				Namespace string `json:"namespace"`
 				Name      string `json:"name"`
@@ -95,7 +144,7 @@ func run(ctx context.Context) error {
 		attrs = append(attrs, slog.String("err", err.Error()))
 
 	RETURN:
-		slog.LogAttrs(ctx, level, "listing pods", attrs...)
+		slog.LogAttrs(r.Context(), level, "listing pods", attrs...)
 		w.WriteHeader(status)
 		w.Write(data)
 	})
@@ -105,8 +154,26 @@ func run(ctx context.Context) error {
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
 	}
-	slog.Info("starting http server", "addr", addr)
-	return srv.ListenAndServe()
+
+	// Start server in its own goroutine so we can also listen for ctx.Done()
+	g.Go(func() error {
+		slog.Info("starting http server", "addr", addr)
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			return err
+		}
+		return nil
+	})
+
+	// Shutdown the server when the context is canceled.
+	g.Go(func() error {
+		<-ctx.Done()
+		slog.Info("context canceled, shutting down http server")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		return srv.Shutdown(shutdownCtx)
+	})
+
+	return g.Wait()
 }
 
 var (
