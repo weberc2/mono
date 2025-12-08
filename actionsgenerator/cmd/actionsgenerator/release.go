@@ -57,12 +57,15 @@ func JobRelease(image *Image) Job {
 			Uses: "actions/setup-go@v4",
 			With: Args{"go-version": "1.x"},
 		}, {
+			Name: "Determine Go cache paths",
+			Run:  "echo \"GOCACHE=$(go env GOCACHE)\" >> $GITHUB_ENV && echo \"GOMODCACHE=$(go env GOMODCACHE)\" >> $GITHUB_ENV",
+		}, {
 			Name: "Cache Go modules and build cache",
 			Uses: "actions/cache@v4",
 			With: Args{
 				"path": strings.Join([]string{
-					"~/.cache/go-build",
-					"~/go/pkg/mod",
+					"${{ env.GOCACHE }}",
+					"${{ env.GOMODCACHE }}",
 				}, "\n"),
 				"key":          "${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}",
 				"restore-keys": "${{ runner.os }}-go-",
