@@ -60,10 +60,14 @@ func JobRelease(image *Image) Job {
 			Name: "Setup Go Build Cache",
 			Uses: "actions/cache@v4",
 			With: Args{
-				"path":        `/go-cache`,
-				"key":         "go-cache", // fixed key, always use the same cache
-				"save-always": true,
+				"path": `
+/go-cache/cache
+/go-cache/mod`,
+				"key": "go-cache", // fixed key, always use the same cache
 			},
+		}, {
+			Name: "Debug",
+			Run:  "ls -l /go-cache",
 		}, {
 			Name: fmt.Sprintf("Login to %s", RegistryTitles[image.Registry]),
 			If:   "github.event_name != 'pull_request'",
