@@ -39,6 +39,8 @@
                     }
                 });
                 Object.keys(data).forEach(node => {
+                    // if a node does not have a corresponding element, create
+                    // one and add it to the node map.
                     if (!nodes.has(node)) {
                         const pods = data[node].sort(
                             (a, b) => {
@@ -100,6 +102,8 @@
                     }
                 });
 
+                // update the DOM based on the values in the node map, sorting
+                // them for stability
                 const sorted = Object.keys(data).sort(
                     (a, b) => {
                         const countDiff = data[b].length - data[a].length;
