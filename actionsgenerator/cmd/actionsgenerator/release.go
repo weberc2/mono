@@ -55,7 +55,11 @@ func JobRelease(image *Image) Job {
 		}, {
 			Name: "Set up Go",
 			Uses: "actions/setup-go@v4",
-			With: Args{"go-version": "1.x"},
+			With: Args{
+				"go-version":            "1.x",
+				"cache":                 true,
+				"cache-dependency-path": image.Context + "/go.sum",
+			},
 		}, {
 			Name: "Determine Go cache paths",
 			Run:  "echo \"GOCACHE=$(go env GOCACHE)\" >> $GITHUB_ENV && echo \"GOMODCACHE=$(go env GOMODCACHE)\" >> $GITHUB_ENV",
