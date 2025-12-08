@@ -50,9 +50,9 @@ func JobRelease(image *Image) Job {
 		RunsOn: "ubuntu-latest",
 		Steps: []Step{{
 			Uses: "actions/checkout@v4",
-		}, {
-			Name: "Setup QEMU",
-			Uses: "docker/setup-qemu-action@v3",
+			// }, {
+			// 	Name: "Setup QEMU",
+			// 	Uses: "docker/setup-qemu-action@v3",
 		}, {
 			Name: "Setup Docker Buildx",
 			Uses: "docker/setup-buildx-action@v3",
@@ -60,8 +60,9 @@ func JobRelease(image *Image) Job {
 			Name: "Setup Go Build Cache",
 			Uses: "actions/cache@v4",
 			With: Args{
-				"path": `/go-cache`,
-				"key":  "go-cache", // fixed key, always use the same cache
+				"path":        `/go-cache`,
+				"key":         "go-cache", // fixed key, always use the same cache
+				"save-always": true,
 			},
 		}, {
 			Name: fmt.Sprintf("Login to %s", RegistryTitles[image.Registry]),
