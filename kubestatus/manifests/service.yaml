@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  namespace: serverstatus
-  name: serverstatus
+  namespace: status
+  name: status
   labels:
-    app: serverstatus
+    app: status
 spec:
   type: ClusterIP
   selector:
-    app: serverstatus
+    app: status
   ports:
     - name: http
       targetPort: 8080

@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  namespace: serverstatus
-  name: serverstatus
+  namespace: status
+  name: status
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: serverstatus
+      app: status
   template:
     metadata:
       labels:
-        app: serverstatus
+        app: status
     spec:
       containers:
         - name: main
-          image: ghcr.io/weberc2/serverstatus
+          image: ghcr.io/weberc2/kubestatus
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

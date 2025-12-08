@@ -9,7 +9,7 @@ func main() {
 	if err := MarshalToWriter(
 		os.Stdout,
 		WorkflowRelease(
-			GoImage("serverstatus", "serverstatus").SetRegistry(RegistryGHCR),
+			GoImage("kubestatus", "kubestatus").SetRegistry(RegistryGHCR),
 			&Image{
 				Name:       "rain",
 				Dockerfile: "./docker/rain/Dockerfile",

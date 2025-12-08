@@ -1,18 +1,18 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  namespace: serverstatus
-  name: serverstatus
+  namespace: status
+  name: status
 spec:
   ingressClassName: nginx
   rules:
-    - host: serverstatus
+    - host: status
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: serverstatus
+                name: status
                 port:
                   number: 80
