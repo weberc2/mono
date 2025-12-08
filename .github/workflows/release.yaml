@@ -31,8 +31,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: TARGET=kubestatus
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=go-cache-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=go-cache-${{ matrix.platform }}
           context: kubestatus
           file: docker/golang/Dockerfile
           platforms: linux/amd64,linux/arm64
@@ -64,8 +64,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: TARGET=linkcheck
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=go-cache-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=go-cache-${{ matrix.platform }}
           context: linkcheck
           file: docker/golang/Dockerfile
           platforms: linux/amd64,linux/arm64
@@ -97,8 +97,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: ""
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=go-cache-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=go-cache-${{ matrix.platform }}
           context: ./docker/rain
           file: ./docker/rain/Dockerfile
           platforms: linux/amd64,linux/arm64

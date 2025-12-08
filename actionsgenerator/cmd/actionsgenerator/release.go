@@ -41,8 +41,8 @@ func JobRelease(image *Image) Job {
 			"%[1]s:${{ github.sha }}\n%[1]s:latest",
 			image.FullName(),
 		),
-		"cache-to":   "type=gha,mode=max",
-		"cache-from": "type=gha",
+		"cache-to":   "type=gha,mode=max,scope=go-cache-${{ matrix.platform }}",
+		"cache-from": "type=gha,scope=go-cache-${{ matrix.platform }}",
 	}
 	if image.SinglePlatform != "" {
 		buildArgs["platforms"] = image.SinglePlatform
