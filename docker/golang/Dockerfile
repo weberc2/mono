@@ -7,8 +7,9 @@ WORKDIR /workspace
 
 COPY go.mod go.sum ./
 
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
+ENV GOMODCACHE=/go-cache/mod
+ENV GOCACHE=/go-cache/build
+RUN --mount=type=bind,target=/go-cache \
     go mod download
 
 COPY *.go ./
@@ -19,9 +20,7 @@ ARG TARGET
 
 COPY cmd/${TARGET} cmd/${TARGET}
 
-ENV GOCACHE=/root/.cache/go-build
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
+RUN --mount=type=bind,target=/go-cache \
     CGO_ENABLED=0 go build -ldflags '-s' -v -o /bin/app ./cmd/${TARGET}
 
 FROM scratch
