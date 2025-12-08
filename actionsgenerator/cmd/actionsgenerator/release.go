@@ -71,6 +71,9 @@ func JobRelease(image *Image) Job {
 				"restore-keys": "${{ runner.os }}-go-",
 			},
 		}, {
+			Name: "Debug Go cache contents",
+			Run:  "echo \"GOMODCACHE=$GOMODCACHE\"; echo \"listing $GOMODCACHE\"; ls -la \"$GOMODCACHE\" || true; echo \"GOCACHE=$GOCACHE\"; echo \"listing $GOCACHE\"; ls -la \"$GOCACHE\" || true",
+		}, {
 			Name: "Set up QEMU",
 			Uses: "docker/setup-qemu-action@v3",
 		}, {
