@@ -58,13 +58,11 @@
                     countEl.className = 'pod-count';
                     countEl.textContent = `${pods.length} pod${pods.length !== 1 ? 's' : ''}`;
 
-                    headerEl.appendChild(toggleEl);
-                    headerEl.appendChild(nameEl);
-                    headerEl.appendChild(countEl);
+                    headerEl.replaceChildren(toggleEl, nameEl, countEl);
 
                     const podsEl = document.createElement('div');
                     podsEl.className = 'pods hidden';
-                    podsEl.replaceChildren(pods.map(pod => {
+                    podsEl.replaceChildren(...pods.map(pod => {
                         const div = document.createElement("div");
                         div.className = "pod";
 
