@@ -15,7 +15,7 @@ var (
 
 	RegistryPrefixes = [...]string{
 		RegistryDocker: "${{ secrets.DOCKER_USERNAME }}",
-		RegistryGHCR:   "ghcr.io/${{ github.actor }}",
+		RegistryGHCR:   "ghcr.io/${{ github.repository_owner }}",
 	}
 
 	RegistryArgs = [...]Args{
