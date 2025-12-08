@@ -13,11 +13,11 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 
 COPY *.go ./
 
-COPY ./pkg ./pkg
+COPY pkg pkg
 
 ARG TARGET
 
-COPY ./cmd/${TARGET} ./cmd/${TARGET}
+COPY cmd/${TARGET} cmd/${TARGET}
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
