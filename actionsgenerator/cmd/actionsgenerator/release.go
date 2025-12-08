@@ -53,10 +53,6 @@ func JobRelease(image *Image) Job {
 		Steps: []Step{{
 			Uses: "actions/checkout@v4",
 		}, {
-			Name: "Set up Go",
-			Uses: "actions/setup-go@v4",
-			With: Args{"go-version": "1.x"},
-		}, {
 			Name: "Set up QEMU",
 			Uses: "docker/setup-qemu-action@v3",
 		}, {
