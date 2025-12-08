@@ -68,9 +68,11 @@
 
                         const namespace = document.createElement("span");
                         namespace.className = "namespace";
+                        namespace.textContent = pod.namespace;
 
                         const name = document.createElement("span");
                         name.className = "pod-name";
+                        name.textContent = pod.name;
 
                         div.replaceChildren(namespace, name);
                         return div;
