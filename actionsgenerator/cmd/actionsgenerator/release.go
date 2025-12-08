@@ -33,10 +33,12 @@ func JobRelease(image *Image) Job {
 			}
 			return strings.Join(lines, "\n")
 		}(),
-		"context":   image.Context,
-		"file":      image.Dockerfile,
-		"platforms": "linux/amd64,linux/arm64",
-		"push":      true,
+		"context":    image.Context,
+		"file":       image.Dockerfile,
+		"platforms":  "linux/amd64,linux/arm64",
+		"push":       true,
+		"cache-from": fmt.Sprintf("type=registry,ref=%s:cache", image.FullName()),
+		"cache-to":   fmt.Sprintf("type=registry,ref=%s:cache,mode=max", image.FullName()),
 		"tags": fmt.Sprintf(
 			"%[1]s:${{ github.sha }}\n%[1]s:latest",
 			image.FullName(),

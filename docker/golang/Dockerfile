@@ -10,7 +10,7 @@ COPY go.mod go.sum ./
 ENV GOMODCACHE=/go-cache/mod
 ENV GOCACHE=/go-cache/build
 RUN go env
-RUN --mount=type=bind,target=/go-cache,source=/tmp/go-cache,rw \
+RUN --mount=type=cache,target=/go-cache \
     echo "GOCACHE=$GOCACHE | GOMODCACHE=$GOMODCACHE" && go mod download
 
 COPY *.go ./
@@ -21,10 +21,10 @@ ARG TARGET
 
 COPY cmd/${TARGET} cmd/${TARGET}
 
-RUN --mount=type=bind,target=/go-cache,source=/tmp/go-cache,rw \
+RUN --mount=type=cache,target=/go-cache \
     CGO_ENABLED=0 go build -ldflags '-s' -v -o /bin/app ./cmd/${TARGET}
 
-RUN --mount=type=bind,target=/go-cache,source=/tmp/go-cache,rw \
+RUN --mount=type=cache,target=/go-cache \
     ls -l $GOCACHE
 
 FROM scratch
