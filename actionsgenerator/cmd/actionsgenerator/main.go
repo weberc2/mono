@@ -11,7 +11,7 @@ func main() {
 		WorkflowRelease(
 			GoImage("kubestatus", "kubestatus").
 				SetRegistry(RegistryGHCR).
-				SetSinglePlatform("linux/arm64"), // TODO: remove this--for testing only
+				SetSinglePlatform("linux/amd64"), // TODO: remove this--for testing only
 			&Image{
 				Name:       "rain",
 				Dockerfile: "./docker/rain/Dockerfile",
