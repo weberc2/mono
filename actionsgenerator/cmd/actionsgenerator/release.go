@@ -64,9 +64,6 @@ func JobRelease(image *Image) Job {
 				"key":  "go-cache", // fixed key, always use the same cache
 			},
 		}, {
-			Name: "Prepare Go Cache Dirs",
-			Run:  "mkdir -p /go-cache/mod /go-cache/build",
-		}, {
 			Name: fmt.Sprintf("Login to %s", RegistryTitles[image.Registry]),
 			If:   "github.event_name != 'pull_request'",
 			Uses: "docker/login-action@v3",
