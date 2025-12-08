@@ -47,7 +47,7 @@ func JobRelease(image *Image) Job {
 		buildArgs["provenance"] = false
 	}
 	return Job{
-		RunsOn: "ubuntu-latest",
+		RunsOn: "ubuntu-24.04-arm64",
 		Steps: []Step{{
 			Uses: "actions/checkout@v4",
 		}, {
