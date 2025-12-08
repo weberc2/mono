@@ -40,8 +40,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: TARGET=linkcheck
-          cache-from: type=gha, scope=${{ github.workflow }}
-          cache-to: type=gha, scope=${{ github.workflow }}
+          cache-from: type=gha,mode=max
+          cache-to: type=gha
           context: linkcheck
           file: docker/golang/Dockerfile
           platforms: linux/amd64,linux/arm64
@@ -83,8 +83,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: ""
-          cache-from: type=gha, scope=${{ github.workflow }}
-          cache-to: type=gha, scope=${{ github.workflow }}
+          cache-from: type=gha,mode=max
+          cache-to: type=gha
           context: ./docker/rain
           file: ./docker/rain/Dockerfile
           platforms: linux/amd64,linux/arm64
@@ -126,8 +126,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: TARGET=serverstatus
-          cache-from: type=gha, scope=${{ github.workflow }}
-          cache-to: type=gha, scope=${{ github.workflow }}
+          cache-from: type=gha,mode=max
+          cache-to: type=gha
           context: serverstatus
           file: docker/golang/Dockerfile
           platforms: linux/amd64,linux/arm64
