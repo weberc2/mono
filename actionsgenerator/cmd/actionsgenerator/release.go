@@ -61,23 +61,6 @@ func JobRelease(image *Image) Job {
 				"cache-dependency-path": image.Context + "/go.sum",
 			},
 		}, {
-			Name: "Determine Go cache paths",
-			Run:  "echo \"GOCACHE=$(go env GOCACHE)\" >> $GITHUB_ENV && echo \"GOMODCACHE=$(go env GOMODCACHE)\" >> $GITHUB_ENV",
-		}, {
-			Name: "Cache Go modules and build cache",
-			Uses: "actions/cache@v4",
-			With: Args{
-				"path": strings.Join([]string{
-					"${{ env.GOCACHE }}",
-					"${{ env.GOMODCACHE }}",
-				}, "\n"),
-				"key":          "${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}",
-				"restore-keys": "${{ runner.os }}-go-",
-			},
-		}, {
-			Name: "Debug Go cache contents",
-			Run:  "echo \"GOMODCACHE=$GOMODCACHE\"; echo \"listing $GOMODCACHE\"; ls -la \"$GOMODCACHE\" || true; echo \"GOCACHE=$GOCACHE\"; echo \"listing $GOCACHE\"; ls -la \"$GOCACHE\" || true",
-		}, {
 			Name: "Set up QEMU",
 			Uses: "docker/setup-qemu-action@v3",
 		}, {

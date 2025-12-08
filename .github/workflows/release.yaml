@@ -16,18 +16,6 @@ jobs:
           cache: true
           cache-dependency-path: linkcheck/go.sum
           go-version: 1.x
-      - name: Determine Go cache paths
-        run: echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_ENV && echo "GOMODCACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
-      - name: Cache Go modules and build cache
-        uses: actions/cache@v4
-        with:
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          path: |-
-            ${{ env.GOCACHE }}
-            ${{ env.GOMODCACHE }}
-          restore-keys: ${{ runner.os }}-go-
-      - name: Debug Go cache contents
-        run: echo "GOMODCACHE=$GOMODCACHE"; echo "listing $GOMODCACHE"; ls -la "$GOMODCACHE" || true; echo "GOCACHE=$GOCACHE"; echo "listing $GOCACHE"; ls -la "$GOCACHE" || true
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -61,18 +49,6 @@ jobs:
           cache: true
           cache-dependency-path: ./docker/rain/go.sum
           go-version: 1.x
-      - name: Determine Go cache paths
-        run: echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_ENV && echo "GOMODCACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
-      - name: Cache Go modules and build cache
-        uses: actions/cache@v4
-        with:
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          path: |-
-            ${{ env.GOCACHE }}
-            ${{ env.GOMODCACHE }}
-          restore-keys: ${{ runner.os }}-go-
-      - name: Debug Go cache contents
-        run: echo "GOMODCACHE=$GOMODCACHE"; echo "listing $GOMODCACHE"; ls -la "$GOMODCACHE" || true; echo "GOCACHE=$GOCACHE"; echo "listing $GOCACHE"; ls -la "$GOCACHE" || true
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -106,18 +82,6 @@ jobs:
           cache: true
           cache-dependency-path: serverstatus/go.sum
           go-version: 1.x
-      - name: Determine Go cache paths
-        run: echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_ENV && echo "GOMODCACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
-      - name: Cache Go modules and build cache
-        uses: actions/cache@v4
-        with:
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          path: |-
-            ${{ env.GOCACHE }}
-            ${{ env.GOMODCACHE }}
-          restore-keys: ${{ runner.os }}-go-
-      - name: Debug Go cache contents
-        run: echo "GOMODCACHE=$GOMODCACHE"; echo "listing $GOMODCACHE"; ls -la "$GOMODCACHE" || true; echo "GOCACHE=$GOCACHE"; echo "listing $GOCACHE"; ls -la "$GOCACHE" || true
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
