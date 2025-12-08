@@ -67,10 +67,10 @@ func JobRelease(image *Image) Job {
 			Name: "Set up Docker Buildx",
 			Uses: "docker/setup-buildx-action@v3",
 		}, {
-			Name: "Login to DockerHub",
+			Name: fmt.Sprintf("Login to %s", RegistryTitles[image.Registry]),
 			If:   "github.event_name != 'pull_request'",
 			Uses: "docker/login-action@v3",
-			With: image.Registry.Args(),
+			With: RegistryArgs[image.Registry],
 		}, {
 			Name: "Build and push",
 			Uses: "docker/build-push-action@v5",
