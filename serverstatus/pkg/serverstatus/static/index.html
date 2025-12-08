@@ -38,7 +38,7 @@
                     return a.localeCompare(b);
                 });
 
-                nodesEl.replaceChildren(sortedNodes.map(nodeName => {
+                nodesEl.replaceChildren(...sortedNodes.map(nodeName => {
                     const pods = data[nodeName];
                     const nodeEl = document.createElement('div');
                     nodeEl.className = 'node';
