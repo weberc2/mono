@@ -4,6 +4,7 @@ metadata:
   namespace: serverstatus
   name: serverstatus
 spec:
+  ingressClassName: nginx
   rules:
     - host: serverstatus
       http:

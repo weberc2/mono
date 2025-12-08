@@ -5,6 +5,7 @@ namespace: serverstatus
 
 resources:
   - namespace.yaml
+  - rbac.yaml
   - deployment.yaml
   - service.yaml
   - ingress.yaml
