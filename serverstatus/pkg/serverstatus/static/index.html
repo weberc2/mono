@@ -17,6 +17,7 @@
     </div>
 
     <script>
+        const nodes = new Map();
         async function loadPods() {
             try {
                 const loadingEl = document.getElementById('loading');
@@ -31,65 +32,82 @@
                 const data = await response.json();
                 loadingEl.style.display = 'none';
 
-                // Sort nodes by pod count (descending), then by name (ascending)
-                const sortedNodes = Object.keys(data).sort((a, b) => {
-                    const countDiff = data[b].length - data[a].length;
-                    if (countDiff !== 0) return countDiff;
-                    return a.localeCompare(b);
+                // sync nodes with data
+                nodes.forEach(node => {
+                    if (!(node in data)) {
+                        nodes.delete(node);
+                    }
+                });
+                Object.keys(data).forEach(node => {
+                    if (!nodes.has(node)) {
+                        const pods = data[node].sort(
+                            (a, b) => {
+                                const cmp = a.namespace.localeCompare(b.namespace);
+                                if (cmp === 0) {
+                                    return a.name.localeCompare(b.name);
+                                }
+                                return cmp;
+                            },
+                        );
+                        const nodeEl = document.createElement('div');
+                        nodeEl.className = 'node';
+
+                        const headerEl = document.createElement('div');
+                        headerEl.className = 'node-header';
+
+                        const toggleEl = document.createElement('span');
+                        toggleEl.className = 'toggle';
+                        toggleEl.textContent = '▶';
+
+                        const nameEl = document.createElement('span');
+                        nameEl.className = 'node-name';
+                        nameEl.textContent = node;
+
+                        const countEl = document.createElement('span');
+                        countEl.className = 'pod-count';
+                        countEl.textContent = `${pods.length} pod${pods.length !== 1 ? 's' : ''}`;
+
+                        headerEl.replaceChildren(toggleEl, nameEl, countEl);
+
+                        const podsEl = document.createElement('div');
+
+                        podsEl.className = 'pods hidden';
+                        podsEl.replaceChildren(...pods.map(pod => {
+                            const div = document.createElement("div");
+                            div.className = "pod";
+
+                            const namespace = document.createElement("span");
+                            namespace.className = "namespace";
+                            namespace.textContent = pod.namespace;
+
+                            const name = document.createElement("span");
+                            name.className = "pod-name";
+                            name.textContent = pod.name;
+
+                            div.replaceChildren(namespace, name);
+                            return div;
+                        }));
+
+                        nodeEl.appendChild(headerEl);
+                        nodeEl.appendChild(podsEl);
+
+                        headerEl.addEventListener('click', () => {
+                            podsEl.classList.toggle('hidden');
+                            const toggle = headerEl.querySelector('.toggle');
+                            toggle.textContent = podsEl.classList.contains('hidden') ? '▶' : '▼';
+                        });
+                        nodes.set(node, nodeEl);
+                    }
                 });
 
-                nodesEl.replaceChildren(...sortedNodes.map(nodeName => {
-                    const pods = data[nodeName];
-                    const nodeEl = document.createElement('div');
-                    nodeEl.className = 'node';
-
-                    const headerEl = document.createElement('div');
-                    headerEl.className = 'node-header';
-
-                    const toggleEl = document.createElement('span');
-                    toggleEl.className = 'toggle';
-                    toggleEl.textContent = '▶';
-
-                    const nameEl = document.createElement('span');
-                    nameEl.className = 'node-name';
-                    nameEl.textContent = nodeName;
-
-                    const countEl = document.createElement('span');
-                    countEl.className = 'pod-count';
-                    countEl.textContent = `${pods.length} pod${pods.length !== 1 ? 's' : ''}`;
-
-                    headerEl.replaceChildren(toggleEl, nameEl, countEl);
-
-                    const podsEl = document.createElement('div');
-                    podsEl.className = 'pods hidden';
-                    podsEl.replaceChildren(...pods.map(pod => {
-                        const div = document.createElement("div");
-                        div.className = "pod";
-
-                        const namespace = document.createElement("span");
-                        namespace.className = "namespace";
-                        namespace.textContent = pod.namespace;
-
-                        const name = document.createElement("span");
-                        name.className = "pod-name";
-                        name.textContent = pod.name;
-
-                        div.replaceChildren(namespace, name);
-                        return div;
-                    }));
-
-                    nodeEl.appendChild(headerEl);
-                    nodeEl.appendChild(podsEl);
-
-                    headerEl.addEventListener('click', () => {
-                        podsEl.classList.toggle('hidden');
-                        const toggle = headerEl.querySelector('.toggle');
-                        toggle.textContent = podsEl.classList.contains('hidden') ? '▶' : '▼';
-                    });
-
-                    return nodeEl;
-                }));
-
+                const sorted = Object.keys(data).sort(
+                    (a, b) => {
+                        const countDiff = data[b].length - data[a].length;
+                        if (countDiff !== 0) return countDiff;
+                        return a.localeCompare(b);
+                    }
+                );
+                nodesEl.replaceChildren(...sorted.map(node => nodes.get(node)));
             } catch (error) {
                 document.getElementById('loading').style.display = 'none';
                 const errorEl = document.getElementById('error');
