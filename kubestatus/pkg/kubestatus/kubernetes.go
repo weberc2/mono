@@ -1,4 +1,4 @@
-package serverstatus
+package kubestatus
 
 import (
 	"fmt"
