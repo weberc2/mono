@@ -2,8 +2,10 @@ package serverstatus
 
 import (
 	"context"
+	"embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
@@ -14,6 +16,9 @@ import (
 	"golang.org/x/sync/errgroup"
 	v1 "k8s.io/api/core/v1"
 )
+
+//go:embed static
+var staticFS embed.FS
 
 func Run(ctx context.Context) error {
 	var (
@@ -94,6 +99,50 @@ func Run(ctx context.Context) error {
 		},
 	)
 
+	// Serve static files (CSS, JS, etc.)
+	staticSub, err := fs.Sub(staticFS, "static")
+	if err != nil {
+		return fmt.Errorf("failed to create static file system: %w", err)
+	}
+	http.Handle(
+		"/static/",
+		http.StripPrefix("/static/", http.FileServer(http.FS(staticSub))),
+	)
+
+	// Serve index.html on /
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		var (
+			level  = slog.LevelInfo
+			status = http.StatusOK
+			attrs  []slog.Attr
+			data   []byte
+			err    error
+		)
+
+		// Accept both `/` and `/index.html` for the index page.
+		if r.URL.Path != "/" && r.URL.Path != "/index.html" {
+			// Not found is client error, log at Info level
+			level = slog.LevelInfo
+			status = http.StatusNotFound
+			data = notFoundBody
+			goto RETURN
+		}
+
+		if data, err = fs.ReadFile(staticFS, "static/index.html"); err != nil {
+			level = slog.LevelError
+			status = http.StatusInternalServerError
+			data = internalServerErrorBody
+			attrs = append(attrs, slog.String("err", err.Error()))
+			goto RETURN
+		}
+
+	RETURN:
+		slog.LogAttrs(r.Context(), level, "serving index", attrs...)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(status)
+		w.Write(data)
+	})
+
 	http.HandleFunc("/pods/", func(w http.ResponseWriter, r *http.Request) {
 		var (
 			level  = slog.LevelInfo
@@ -173,6 +222,7 @@ func Run(ctx context.Context) error {
 }
 
 var (
+	notFoundBody            = []byte("Not Found")
 	notReadyBody            = []byte("Not Ready")
 	readyBody               = []byte("Ready")
 	internalServerErrorBody = []byte("Internal Server Error")

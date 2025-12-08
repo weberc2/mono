@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Status</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1>Server Status</h1>
+        <div id="loading" class="loading">Loading pods...</div>
+        <div id="nodes" class="nodes"></div>
+        <div id="error" class="error" style="display: none;"></div>
+    </div>
+
+    <script>
+        async function loadPods() {
+            try {
+                const loadingEl = document.getElementById('loading');
+                const nodesEl = document.getElementById('nodes');
+                const errorEl = document.getElementById('error');
+
+                const response = await fetch('/pods/');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                loadingEl.style.display = 'none';
+
+                // Sort nodes by name
+                const sortedNodes = Object.keys(data).sort();
+
+                sortedNodes.forEach(nodeName => {
+                    const pods = data[nodeName];
+                    const nodeEl = document.createElement('div');
+                    nodeEl.className = 'node';
+
+                    const headerEl = document.createElement('div');
+                    headerEl.className = 'node-header';
+                    headerEl.innerHTML = `
+                        <span class="toggle">▶</span>
+                        <span class="node-name">${nodeName}</span>
+                        <span class="pod-count">${pods.length} pod${pods.length !== 1 ? 's' : ''}</span>
+                    `;
+
+                    const podsEl = document.createElement('div');
+                    podsEl.className = 'pods hidden';
+                    podsEl.innerHTML = pods.map(pod => `
+                        <div class="pod">
+                            <span class="namespace">${pod.namespace}</span>
+                            <span class="pod-name">${pod.name}</span>
+                        </div>
+                    `).join('');
+
+                    nodeEl.appendChild(headerEl);
+                    nodeEl.appendChild(podsEl);
+
+                    headerEl.addEventListener('click', () => {
+                        podsEl.classList.toggle('hidden');
+                        const toggle = headerEl.querySelector('.toggle');
+                        toggle.textContent = podsEl.classList.contains('hidden') ? '▶' : '▼';
+                    });
+
+                    nodesEl.appendChild(nodeEl);
+                });
+
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                const errorEl = document.getElementById('error');
+                errorEl.style.display = 'block';
+                errorEl.textContent = `Error loading pods: ${error.message}`;
+                console.error('Error:', error);
+            }
+        }
+
+        // Load pods when page loads
+        document.addEventListener('DOMContentLoaded', loadPods);
+
+        // Refresh every 30 seconds
+        setInterval(loadPods, 30000);
+    </script>
+</body>
+
+</html>
