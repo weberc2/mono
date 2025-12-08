@@ -31,9 +31,6 @@
                 const data = await response.json();
                 loadingEl.style.display = 'none';
 
-                // Clear previous nodes
-                nodesEl.innerHTML = '';
-
                 // Sort nodes by pod count (descending), then by name (ascending)
                 const sortedNodes = Object.keys(data).sort((a, b) => {
                     const countDiff = data[b].length - data[a].length;
@@ -41,27 +38,45 @@
                     return a.localeCompare(b);
                 });
 
-                sortedNodes.forEach(nodeName => {
+                nodesEl.replaceChildren(sortedNodes.map(nodeName => {
                     const pods = data[nodeName];
                     const nodeEl = document.createElement('div');
                     nodeEl.className = 'node';
 
                     const headerEl = document.createElement('div');
                     headerEl.className = 'node-header';
-                    headerEl.innerHTML = `
-                        <span class="toggle">▶</span>
-                        <span class="node-name">${nodeName}</span>
-                        <span class="pod-count">${pods.length} pod${pods.length !== 1 ? 's' : ''}</span>
-                    `;
+
+                    const toggleEl = document.createElement('span');
+                    toggleEl.className = 'toggle';
+                    toggleEl.textContent = '▶';
+
+                    const nameEl = document.createElement('span');
+                    nameEl.className = 'node-name';
+                    nameEl.textContent = nodeName;
+
+                    const countEl = document.createElement('span');
+                    countEl.className = 'pod-count';
+                    countEl.textContent = `${pods.length} pod${pods.length !== 1 ? 's' : ''}`;
+
+                    headerEl.appendChild(toggleEl);
+                    headerEl.appendChild(nameEl);
+                    headerEl.appendChild(countEl);
 
                     const podsEl = document.createElement('div');
                     podsEl.className = 'pods hidden';
-                    podsEl.innerHTML = pods.map(pod => `
-                        <div class="pod">
-                            <span class="namespace">${pod.namespace}</span>
-                            <span class="pod-name">${pod.name}</span>
-                        </div>
-                    `).join('');
+                    podsEl.replaceChildren(pods.map(pod => {
+                        const div = document.createElement("div");
+                        div.className = "pod";
+
+                        const namespace = document.createElement("span");
+                        namespace.className = "namespace";
+
+                        const name = document.createElement("span");
+                        name.className = "pod-name";
+
+                        div.replaceChildren(namespace, name);
+                        return div;
+                    }));
 
                     nodeEl.appendChild(headerEl);
                     nodeEl.appendChild(podsEl);
@@ -72,8 +87,8 @@
                         toggle.textContent = podsEl.classList.contains('hidden') ? '▶' : '▼';
                     });
 
-                    nodesEl.appendChild(nodeEl);
-                });
+                    return nodeEl;
+                }));
 
             } catch (error) {
                 document.getElementById('loading').style.display = 'none';
