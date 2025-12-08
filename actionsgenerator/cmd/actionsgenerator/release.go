@@ -55,11 +55,7 @@ func JobRelease(image *Image) Job {
 		}, {
 			Name: "Set up Go",
 			Uses: "actions/setup-go@v4",
-			With: Args{
-				"go-version":            "1.x",
-				"cache":                 true,
-				"cache-dependency-path": image.Context + "/go.sum",
-			},
+			With: Args{"go-version": "1.x"},
 		}, {
 			Name: "Set up QEMU",
 			Uses: "docker/setup-qemu-action@v3",
