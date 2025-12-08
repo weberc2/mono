@@ -31,6 +31,9 @@
                 const data = await response.json();
                 loadingEl.style.display = 'none';
 
+                // Clear previous nodes
+                nodesEl.innerHTML = '';
+
                 // Sort nodes by pod count (descending), then by name (ascending)
                 const sortedNodes = Object.keys(data).sort((a, b) => {
                     const countDiff = data[b].length - data[a].length;
