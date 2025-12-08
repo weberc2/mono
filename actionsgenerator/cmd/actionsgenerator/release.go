@@ -53,6 +53,21 @@ func JobRelease(image *Image) Job {
 		Steps: []Step{{
 			Uses: "actions/checkout@v4",
 		}, {
+			Name: "Set up Go",
+			Uses: "actions/setup-go@v4",
+			With: Args{"go-version": "1.x"},
+		}, {
+			Name: "Cache Go modules and build cache",
+			Uses: "actions/cache@v4",
+			With: Args{
+				"path": strings.Join([]string{
+					"~/.cache/go-build",
+					"~/go/pkg/mod",
+				}, "\n"),
+				"key":          "${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}",
+				"restore-keys": "${{ runner.os }}-go-",
+			},
+		}, {
 			Name: "Set up QEMU",
 			Uses: "docker/setup-qemu-action@v3",
 		}, {
