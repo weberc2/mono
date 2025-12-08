@@ -20,10 +20,6 @@
         const nodes = new Map();
         async function loadPods() {
             try {
-                const loadingEl = document.getElementById('loading');
-                const nodesEl = document.getElementById('nodes');
-                const errorEl = document.getElementById('error');
-
                 const response = await fetch('/pods/');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -31,6 +27,10 @@
 
                 const data = await response.json();
                 loadingEl.style.display = 'none';
+
+                const loadingEl = document.getElementById('loading');
+                const nodesEl = document.getElementById('nodes');
+                const errorEl = document.getElementById('error');
 
                 // sync nodes with data
                 nodes.forEach(node => {

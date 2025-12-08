@@ -33,10 +33,12 @@ func JobRelease(image *Image) Job {
 			}
 			return strings.Join(lines, "\n")
 		}(),
-		"context":   image.Context,
-		"file":      image.Dockerfile,
-		"platforms": "linux/amd64,linux/arm64",
-		"push":      true,
+		"context":    image.Context,
+		"file":       image.Dockerfile,
+		"platforms":  "linux/amd64,linux/arm64",
+		"push":       true,
+		"cache-from": fmt.Sprintf("type=registry,ref=%s:cache", image.FullName()),
+		"cache-to":   fmt.Sprintf("type=registry,ref=%s:cache,mode=max", image.FullName()),
 		"tags": fmt.Sprintf(
 			"%[1]s:${{ github.sha }}\n%[1]s:latest",
 			image.FullName(),
@@ -50,19 +52,12 @@ func JobRelease(image *Image) Job {
 		RunsOn: "ubuntu-latest",
 		Steps: []Step{{
 			Uses: "actions/checkout@v4",
-		}, {
-			Name: "Setup QEMU",
-			Uses: "docker/setup-qemu-action@v3",
+			// }, {
+			// 	Name: "Setup QEMU",
+			// 	Uses: "docker/setup-qemu-action@v3",
 		}, {
 			Name: "Setup Docker Buildx",
 			Uses: "docker/setup-buildx-action@v3",
-		}, {
-			Name: "Setup Go Build Cache",
-			Uses: "actions/cache@v4",
-			With: Args{
-				"path": `/go-cache`,
-				"key":  "go-cache", // fixed key, always use the same cache
-			},
 		}, {
 			Name: fmt.Sprintf("Login to %s", RegistryTitles[image.Registry]),
 			If:   "github.event_name != 'pull_request'",
