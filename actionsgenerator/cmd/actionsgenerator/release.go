@@ -41,8 +41,8 @@ func JobRelease(image *Image) Job {
 			"%[1]s:${{ github.sha }}\n%[1]s:latest",
 			image.FullName(),
 		),
-		"cache-from": "type=gha, scope=${{ github.workflow }}",
-		"cache-to":   "type=gha, scope=${{ github.workflow }}",
+		"cache-to":   "type=gha,mode=max",
+		"cache-from": "type=gha",
 	}
 	if image.SinglePlatform != "" {
 		buildArgs["platforms"] = image.SinglePlatform
@@ -53,16 +53,24 @@ func JobRelease(image *Image) Job {
 		Steps: []Step{{
 			Uses: "actions/checkout@v4",
 		}, {
+			Name: "Set up Go",
+			Uses: "actions/setup-go@v4",
+			With: Args{
+				"go-version":            "1.x",
+				"cache":                 true,
+				"cache-dependency-path": image.Context + "/go.sum",
+			},
+		}, {
 			Name: "Set up QEMU",
 			Uses: "docker/setup-qemu-action@v3",
 		}, {
 			Name: "Set up Docker Buildx",
 			Uses: "docker/setup-buildx-action@v3",
 		}, {
-			Name: "Login to DockerHub",
+			Name: fmt.Sprintf("Login to %s", RegistryTitles[image.Registry]),
 			If:   "github.event_name != 'pull_request'",
 			Uses: "docker/login-action@v3",
-			With: image.Registry.Args(),
+			With: RegistryArgs[image.Registry],
 		}, {
 			Name: "Build and push",
 			Uses: "docker/build-push-action@v5",

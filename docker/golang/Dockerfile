@@ -1,4 +1,5 @@
-FROM golang:1.22
+# syntax=docker/dockerfile:1.4
+FROM golang:1.25
 
 RUN apt-get update && apt-get install -y ca-certificates
 
@@ -6,17 +7,21 @@ WORKDIR /workspace
 
 COPY go.mod go.sum ./
 
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go mod download
 
 COPY *.go ./
 
-COPY ./pkg ./pkg
+COPY pkg pkg
 
 ARG TARGET
 
-COPY ./cmd/${TARGET} ./cmd/${TARGET}
+COPY cmd/${TARGET} cmd/${TARGET}
 
-RUN CGO_ENABLED=0 go build -ldflags '-s' -v -o /bin/app ./cmd/${TARGET}
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -ldflags '-s' -v -o /bin/app ./cmd/${TARGET}
 
 FROM scratch
 

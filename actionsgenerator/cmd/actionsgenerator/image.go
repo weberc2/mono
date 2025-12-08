@@ -43,23 +43,17 @@ func (image *Image) SetDockerfile(dockerfile string) *Image {
 }
 
 // SetRegistry sets the Registry field.
-func (image *Image) SetRegistry(registry *Registry) *Image {
-	image.Registry = *registry
+func (image *Image) SetRegistry(registry Registry) *Image {
+	image.Registry = registry
 	return image
 }
 
 // FullName gives the fully-qualified name of the image (including the registry
 // prefix).
 func (image *Image) FullName() string {
-	if image.Registry.Type == RegistryTypeDocker {
-		if image.Registry.ID == "" {
-			return fmt.Sprintf("${{ secrets.DOCKER_USERNAME }}/%s", image.Name)
-		}
-		return fmt.Sprintf(
-			"%s/${{ secrets.DOCKER_USERNAME }}/%s",
-			image.Registry.ID,
-			image.Name,
-		)
-	}
-	return fmt.Sprintf("%s/%s", image.Registry.ID, image.Name)
+	return fmt.Sprintf(
+		"%s/%s",
+		RegistryPrefixes[image.Registry],
+		image.Name,
+	)
 }
