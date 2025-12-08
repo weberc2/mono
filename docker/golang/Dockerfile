@@ -9,8 +9,9 @@ COPY go.mod go.sum ./
 
 ENV GOMODCACHE=/go-cache/mod
 ENV GOCACHE=/go-cache/build
+RUN go env
 RUN --mount=type=bind,target=/go-cache,rw \
-    echo "GOCACHE=$GOCACHE | GOMODCACHE=$GOMODCACHE" && go mod download
+    echo "GOCACHE=$GOCACHE | GOMODCACHE=$GOMODCACHE" && mkdir -p $GOCACHE && mkdir -p $GOMODCACHE && go mod download
 
 COPY *.go ./
 
