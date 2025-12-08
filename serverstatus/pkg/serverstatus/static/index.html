@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Server Status</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
+
 <body>
     <div class="container">
         <h1>Server Status</h1>
@@ -29,8 +31,12 @@
                 const data = await response.json();
                 loadingEl.style.display = 'none';
 
-                // Sort nodes by name
-                const sortedNodes = Object.keys(data).sort();
+                // Sort nodes by pod count (descending), then by name (ascending)
+                const sortedNodes = Object.keys(data).sort((a, b) => {
+                    const countDiff = data[b].length - data[a].length;
+                    if (countDiff !== 0) return countDiff;
+                    return a.localeCompare(b);
+                });
 
                 sortedNodes.forEach(nodeName => {
                     const pods = data[nodeName];
@@ -77,9 +83,10 @@
 
         // Load pods when page loads
         document.addEventListener('DOMContentLoaded', loadPods);
-        
+
         // Refresh every 30 seconds
         setInterval(loadPods, 30000);
     </script>
 </body>
+
 </html>
