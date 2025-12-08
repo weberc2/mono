@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: main
-          image: weberc2/serverstatus
+          image: ghcr.io/weberc2/serverstatus
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
