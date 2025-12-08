@@ -59,18 +59,6 @@ func JobRelease(image *Image) Job {
 			Name: "Setup Docker Buildx",
 			Uses: "docker/setup-buildx-action@v3",
 		}, {
-			Name: "Setup Go Build Cache",
-			Uses: "actions/cache@v4",
-			With: Args{
-				"path": `
-/tmp/go-cache/cache
-/tmp/go-cache/mod`,
-				"key": "go-cache", // fixed key, always use the same cache
-			},
-		}, {
-			Name: "Debug",
-			Run:  "mkdir -p /tmp/go-cache && ls -l /tmp/go-cache",
-		}, {
 			Name: fmt.Sprintf("Login to %s", RegistryTitles[image.Registry]),
 			If:   "github.event_name != 'pull_request'",
 			Uses: "docker/login-action@v3",
