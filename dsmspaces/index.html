@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>DSM Spaces</title>
+</head>
+
+<body>
+    <h1>DSM Spaces</h1>
+    <div id="error"></div>
+    <input type="text" id="query" />
+    <button id="submit">Search</button>
+    <div id="results"></div>
+    <script>
+        const body = document.querySelector("body");
+        const errorElt = document.getElementById("error");
+        const queryElt = document.getElementById("query");
+        const resultsElt = document.getElementById("results");
+        const submitElt = document.getElementById("submit");
+        submitElt.onclick = async () => {
+            try {
+                const rsp = await fetch(
+                    "/search?"+(new URLSearchParams({q: queryElt.value})).toString(),
+                );
+                if (rsp.status === 200) {
+                    const results = await rsp.json();
+                    resultsElt.replaceChildren(...results.map(result => {
+                        const elt = document.createElement("p");
+                        elt.textContent = `${result.place.name}: ${result.score}`;
+                        return elt;
+                    }));
+                } else {
+                    errorElt = await rsp.text();
+                }
+            } catch (e) {
+                errorElt.textContent = e;
+            }
+        };
+    </script>
+</body>
+
+</html>

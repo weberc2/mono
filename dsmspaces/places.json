@@ -1,0 +1,86 @@
+[
+    {
+        "id": "public-library-franklin-avenue",
+        "name": "Franklin Avenue Public Library",
+        "type": "PUBLIC",
+        "attributes": {
+            "cozy": 0.8,
+            "spacious": 0.5,
+            "quiet": 0.8,
+            "screenless": 1.0,
+            "affordable": 1.0,
+            "classy": 0.5,
+            "coffee": 0.0,
+            "alcohol": 0.0,
+            "readingFriendly": 1.0,
+            "eveningFriendly": 0.6
+        }
+    },
+    {
+        "id": "surety-hotel-lobby",
+        "name": "Surety Hotel Lobby",
+        "type": "BUSINESS",
+        "attributes": {
+            "cozy": 0.8,
+            "quiet": 0.7,
+            "screenless": 1.0,
+            "spacious": 0.5,
+            "affordable": 0.6,
+            "classy": 0.8,
+            "coffee": 1.0,
+            "alcohol": 1.0,
+            "readingFriendly": 0.9,
+            "eveningFriendly": 1.0
+        }
+    },
+    {
+        "id": "beaverdale-books",
+        "name": "Beaverdale Books",
+        "type": "BUSINESS",
+        "attributes": {
+            "cozy": 0.8,
+            "quiet": 0.7,
+            "screenless": 1.0,
+            "spacious": 0.2,
+            "affordable": 0.5,
+            "coffee": 0.0,
+            "alcohol": 0.0,
+            "classy": 0.3,
+            "readingFriendly": 0.1,
+            "eveningFriendly": 0.5
+        }
+    },
+    {
+        "id": "royal-mile",
+        "name": "Royal Mile",
+        "type": "BUSINESS",
+        "attributes": {
+            "screenless": 0.1,
+            "cozy": 0.6,
+            "spacious": 0.7,
+            "classy": 0.4,
+            "coffee": 0.0,
+            "alcohol": 1.0,
+            "affordable": 0.7,
+            "readingFriendly": 0.5,
+            "eveningFriendly": 1.0
+        }
+    },
+    {
+        "id": "grounds-for-celebration",
+        "name": "Grounds For Celebration",
+        "type": "BUSINESS",
+        "attributes": {
+            "screenless": 1.0,
+            "spacious": 0.5,
+            "cozy": 0.5,
+            "classy": 0.5,
+            "quiet": 0.7,
+            "coffee": 1.0,
+            "alcohol": 0.0,
+            "affordable": 0.8,
+            "readingFriendly": 0.9,
+            "eveningFriendly": 0.1
+        }
+    }
+]
