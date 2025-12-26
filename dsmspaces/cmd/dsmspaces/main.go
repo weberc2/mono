@@ -17,7 +17,10 @@ func main() {
 }
 
 func run() error {
-	slog.SetLogLoggerLevel(slog.LevelDebug)
+	slog.SetDefault(slog.New(slog.NewJSONHandler(
+		os.Stderr,
+		&slog.HandlerOptions{Level: slog.LevelDebug},
+	)))
 	indexFile := os.Getenv("INDEXFILE")
 	if indexFile == "" {
 		return fmt.Errorf("missing required environment variable: INDEXFILE")

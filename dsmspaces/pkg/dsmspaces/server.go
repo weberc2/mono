@@ -3,41 +3,24 @@ package dsmspaces
 import (
 	"dsmspaces/pkg/logger"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
-	"slices"
 )
 
 type Server struct {
 	Places       []Place
-	Attributes   []byte
 	IndexFile    string
-	IntentParser IntentParser
+	IntentParser IntentsParser
 }
 
-func NewServer(indexFile string, places []Place, openaiAPIKey string) (server Server) {
+func NewServer(
+	indexFile string,
+	places []Place,
+	openaiAPIKey string,
+) (server Server) {
 	server.IndexFile = indexFile
 	server.Places = places
-	server.IntentParser = NewIntentParser(openaiAPIKey)
-
-	attrs := make(map[Attr]struct{}, len(places))
-	for i := range places {
-		for attr := range places[i].Attributes {
-			attrs[attr] = struct{}{}
-		}
-	}
-
-	attributes := make([]Attr, 0, len(attrs))
-	for attr := range attrs {
-		attributes = append(attributes, attr)
-	}
-	slices.Sort(attributes)
-
-	var err error
-	if server.Attributes, err = json.Marshal(attributes); err != nil {
-		panic(fmt.Sprintf("marshaling attributes: %v", err))
-	}
+	server.IntentParser = NewIntentsParser(openaiAPIKey)
 	return
 }
 
@@ -64,58 +47,45 @@ func (s *Server) ServeIndex(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) ListAttributes(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "application/json")
-	if _, err := w.Write(s.Attributes); err != nil {
-		logger.Get(r.Context()).Warn(
-			"listing attributes",
-			"action", "writing response body",
-			"err", err.Error(),
-		)
-	} else {
-		logger.Get(r.Context()).Info("listing attributes")
-	}
-}
-
 func (s *Server) Search(w http.ResponseWriter, r *http.Request) {
 	var (
-		l            = logger.Get(r.Context())
-		expectations map[Attr]float64
-		data         []byte
-		err          error
+		l       = logger.Get(r.Context())
+		intents Intents
+		data    json.RawMessage
+		err     error
 	)
 
 	if query := r.URL.Query().Get("q"); query != "" {
-		if expectations, err = s.IntentParser.ParseIntent(
+		l = l.With("query", query)
+		if data, err = s.IntentParser.ParseIntentsJSON(
 			r.Context(),
 			query,
 		); err != nil {
-			l.Warn("searching", "action", "parsing intent", "err", err.Error())
+			l.Warn(
+				"searching",
+				"action", "parsing intents",
+				"err", err.Error(),
+				"intents", data,
+			)
 			httperr(w, http.StatusInternalServerError)
 			return
 		}
-		/*	} else {
-			defer func() {
-				if err := r.Body.Close(); err != nil {
-					l.Warn("searching", "action", "closing request body", "err", err.Error())
-				}
-			}()
 
-			const limit = 1024 * 1024
-			if data, err = io.ReadAll(io.LimitReader(r.Body, limit)); err != nil {
-				l.Warn("searching", "action", "reading request body", "err", err.Error())
-				httperr(w, http.StatusInternalServerError)
-				return
-			}
+		l = l.With("intents", data)
 
-			if err := json.Unmarshal(data, &expectations); err != nil {
-				l.Info("searching", "action", "unmarshaling request body", "err", err.Error())
-				http.Error(w, "Bad Request", http.StatusBadRequest)
-				return
-			}
-		*/
+		if err = json.Unmarshal(data, &intents); err != nil {
+			l.Warn(
+				"searching",
+				"action", "unmarshaling intents",
+				"err", err.Error(),
+				"intents", string(data),
+			)
+			httperr(w, http.StatusInternalServerError)
+			return
+		}
 	}
-	results := Search(s.Places, expectations, 0.0)
+
+	results := Search(s.Places, &intents)
 	if results == nil { // fix broken json marshaling of nil slices
 		results = []ScoredPlace{}
 	}
@@ -126,10 +96,11 @@ func (s *Server) Search(w http.ResponseWriter, r *http.Request) {
 			"err", err.Error(),
 			"results", results,
 		)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		httperr(w, http.StatusInternalServerError)
 		return
 	}
 
+	l.Debug("searched places", "results", data)
 	w.Header().Add("Content-Type", "application/json")
 	w.Write(data)
 }
@@ -144,12 +115,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "/", "/index.html":
 		if r.Method == http.MethodGet {
 			s.ServeIndex(w, r)
-		} else {
-			httperr(w, http.StatusMethodNotAllowed)
-		}
-	case "/attributes":
-		if r.Method == http.MethodGet {
-			s.ListAttributes(w, r)
 		} else {
 			httperr(w, http.StatusMethodNotAllowed)
 		}

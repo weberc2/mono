@@ -1,0 +1,194 @@
+[
+  {
+    "id": "rook_room_game_lounge_cafe",
+    "name": "Rook Room Game Lounge & Cafe",
+    "location": {
+      "coordinates": {"latitude": 41.5861, "longitude": -93.6267},
+      "neighborhood": "Downtown",
+      "address": "300 SW 5th St, Des Moines, IA 50309"
+    },
+    "features": {
+      "quiet": -0.2,
+      "kidFriendly": 0.6,
+      "dogFriendly": 0.4,
+      "readingFriendly": 0.2,
+      "coffee": 1.0,
+      "alcohol": 0.8,
+      "screens": 0.9
+    },
+    "hours": {
+      "MORNING": true,
+      "AFTERNOON": true,
+      "EVENING": true,
+      "LATENIGHT": false
+    }
+  },
+  {
+    "id": "plain_talk_books_and_coffee",
+    "name": "Plain Talk Books & Coffee",
+    "location": {
+      "coordinates": {"latitude": 41.5882, "longitude": -93.6160},
+      "neighborhood": "East Village",
+      "address": "602 E Grand Ave, Des Moines, IA 50309"
+    },
+    "features": {
+      "quiet": 0.7,
+      "kidFriendly": 0.6,
+      "dogFriendly": 0.3,
+      "readingFriendly": 0.9,
+      "coffee": 1.0,
+      "alcohol": 0.0,
+      "screens": 0.2
+    },
+    "hours": {
+      "MORNING": true,
+      "AFTERNOON": true,
+      "EVENING": false,
+      "LATENIGHT": false
+    }
+  },
+  {
+    "id": "the_slow_down_coffee",
+    "name": "The Slow Down Coffee Co.",
+    "location": {
+      "coordinates": {"latitude": 41.6168, "longitude": -93.6211},
+      "neighborhood": "Highland Park",
+      "address": "3613 6th Ave, Des Moines, IA 50313"
+    },
+    "features": {
+      "quiet": 0.6,
+      "kidFriendly": 0.5,
+      "dogFriendly": 0.5,
+      "readingFriendly": 0.8,
+      "coffee": 1.0,
+      "alcohol": 0.0,
+      "screens": 0.3
+    },
+    "hours": {
+      "MORNING": true,
+      "AFTERNOON": true,
+      "EVENING": false,
+      "LATENIGHT": false
+    }
+  },
+  {
+    "id": "northern_vessel_coffee",
+    "name": "Northern Vessel",
+    "location": {
+      "coordinates": {"latitude": 41.5905, "longitude": -93.6198},
+      "neighborhood": "Downtown",
+      "address": "1201 Keosauqua Way, Des Moines, IA 50309"
+    },
+    "features": {
+      "quiet": 0.7,
+      "kidFriendly": 0.5,
+      "dogFriendly": 0.4,
+      "readingFriendly": 0.8,
+      "coffee": 1.0,
+      "alcohol": 0.0,
+      "screens": 0.1
+    },
+    "hours": {
+      "MORNING": true,
+      "AFTERNOON": true,
+      "EVENING": false,
+      "LATENIGHT": false
+    }
+  },
+  {
+    "id": "scenic_route_bakery",
+    "name": "Scenic Route Bakery",
+    "location": {
+      "coordinates": {"latitude": 41.5870, "longitude": -93.6210},
+      "neighborhood": "East Village",
+      "address": "350 E Locust St Ste 104, Des Moines, IA 50309"
+    },
+    "features": {
+      "quiet": 0.5,
+      "kidFriendly": 0.5,
+      "dogFriendly": 0.3,
+      "readingFriendly": 0.6,
+      "coffee": 0.6,
+      "alcohol": 0.0,
+      "screens": 0.1
+    },
+    "hours": {
+      "MORNING": true,
+      "AFTERNOON": true,
+      "EVENING": false,
+      "LATENIGHT": false
+    }
+  },
+  {
+    "id": "shelf_love_dsm",
+    "name": "Shelf Love DSM",
+    "location": {
+      "coordinates": {"latitude": 41.6090, "longitude": -93.6330},
+      "neighborhood": "Sherman Hill",
+      "address": "2326 University Ave, Des Moines, IA 50311"
+    },
+    "features": {
+      "quiet": 0.8,
+      "kidFriendly": 0.7,
+      "dogFriendly": 0.2,
+      "readingFriendly": 0.9,
+      "coffee": 0.0,
+      "alcohol": 0.0,
+      "screens": 0.0
+    },
+    "hours": {
+      "MORNING": false,
+      "AFTERNOON": true,
+      "EVENING": false,
+      "LATENIGHT": false
+    }
+  },
+  {
+    "id": "coffee_cats_cafe",
+    "name": "Coffee Cats Cafe",
+    "location": {
+      "coordinates": {"latitude": 41.5727, "longitude": -93.7141},
+      "neighborhood": "Valley Junction",
+      "address": "312 5th St, West Des Moines, IA 50265"
+    },
+    "features": {
+      "quiet": 0.7,
+      "kidFriendly": 0.6,
+      "dogFriendly": 0.2,
+      "readingFriendly": 0.7,
+      "coffee": 1.0,
+      "alcohol": 0.0,
+      "screens": 0.0
+    },
+    "hours": {
+      "MORNING": true,
+      "AFTERNOON": true,
+      "EVENING": true,
+      "LATENIGHT": false
+    }
+  },
+  {
+    "id": "smokey_row_coffee",
+    "name": "Smokey Row Coffee",
+    "location": {
+      "coordinates": {"latitude": 41.5720, "longitude": -93.6215},
+      "neighborhood": "Sherman Hill",
+      "address": "1910 Cottage Grove Ave, Des Moines, IA 50314"
+    },
+    "features": {
+      "quiet": 0.4,
+      "kidFriendly": 0.5,
+      "dogFriendly": 0.3,
+      "readingFriendly": 0.5,
+      "coffee": 1.0,
+      "alcohol": 0.0,
+      "screens": 0.1
+    },
+    "hours": {
+      "MORNING": true,
+      "AFTERNOON": true,
+      "EVENING": true,
+      "LATENIGHT": false
+    }
+  }
+]
