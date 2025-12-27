@@ -3,9 +3,10 @@ package dsmspaces
 import "encoding/json"
 
 type Place struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Location struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitzero"`
+	Location    struct {
 		Coordinates Coordinates `json:"coordinates"`
 	} `json:"location"`
 	Attributes map[string]float64 `json:"features"`

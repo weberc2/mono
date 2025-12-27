@@ -3,6 +3,7 @@ package dsmspaces
 import (
 	"dsmspaces/pkg/logger"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 )
@@ -89,12 +90,24 @@ func (s *Server) Search(w http.ResponseWriter, r *http.Request) {
 	if results == nil { // fix broken json marshaling of nil slices
 		results = []ScoredPlace{}
 	}
+
+	// filter results to only those above a certain score threshold. since the
+	// results are sorted in descending order by score, we can stop iterating
+	// as soon as we hit one below the threshold.
+	const threshold = 0.5
+	for i := range results {
+		if results[i].Score < threshold {
+			results = results[:i]
+			break
+		}
+	}
+
 	if data, err = json.Marshal(results); err != nil {
 		l.Warn(
 			"searching",
 			"action", "marshaling results",
 			"err", err.Error(),
-			"results", results,
+			"results", fmt.Sprintf("%# v", results),
 		)
 		httperr(w, http.StatusInternalServerError)
 		return

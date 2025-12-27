@@ -2,8 +2,12 @@
   {
     "id": "rook_room_game_lounge_cafe",
     "name": "Rook Room Game Lounge & Cafe",
+    "description": "Lively game lounge and cafe in downtown with coffee, drinks, and many screens—great for social gaming and evenings.",
     "location": {
-      "coordinates": {"latitude": 41.5861, "longitude": -93.6267},
+      "coordinates": {
+        "latitude": 41.581223,
+        "longitude": -93.621953
+      },
       "neighborhood": "Downtown",
       "address": "300 SW 5th St, Des Moines, IA 50309"
     },
@@ -26,8 +30,12 @@
   {
     "id": "plain_talk_books_and_coffee",
     "name": "Plain Talk Books & Coffee",
+    "description": "Independent bookstore and cafe in East Village offering a quiet, reading-friendly space and excellent coffee.",
     "location": {
-      "coordinates": {"latitude": 41.5882, "longitude": -93.6160},
+      "coordinates": {
+        "latitude": 41.591128,
+        "longitude": -93.610039
+      },
       "neighborhood": "East Village",
       "address": "602 E Grand Ave, Des Moines, IA 50309"
     },
@@ -50,8 +58,12 @@
   {
     "id": "the_slow_down_coffee",
     "name": "The Slow Down Coffee Co.",
+    "description": "Cozy Highland Park coffee shop focused on a relaxed atmosphere and quality coffee—popular for reading and working.",
     "location": {
-      "coordinates": {"latitude": 41.6168, "longitude": -93.6211},
+      "coordinates": {
+        "latitude": 41.628136,
+        "longitude": -93.624404
+      },
       "neighborhood": "Highland Park",
       "address": "3613 6th Ave, Des Moines, IA 50313"
     },
@@ -74,8 +86,12 @@
   {
     "id": "northern_vessel_coffee",
     "name": "Northern Vessel",
+    "description": "Modern downtown coffee shop known for quality espresso and a calm, reading-friendly environment.",
     "location": {
-      "coordinates": {"latitude": 41.5905, "longitude": -93.6198},
+      "coordinates": {
+        "latitude": 41.593200,
+        "longitude": -93.632440
+      },
       "neighborhood": "Downtown",
       "address": "1201 Keosauqua Way, Des Moines, IA 50309"
     },
@@ -98,8 +114,12 @@
   {
     "id": "scenic_route_bakery",
     "name": "Scenic Route Bakery",
+    "description": "East Village bakery serving pastries and coffee in a relaxed setting—great for casual mornings and afternoons.",
     "location": {
-      "coordinates": {"latitude": 41.5870, "longitude": -93.6210},
+      "coordinates": {
+        "latitude": 41.589469,
+        "longitude": -93.613188
+      },
       "neighborhood": "East Village",
       "address": "350 E Locust St Ste 104, Des Moines, IA 50309"
     },
@@ -122,9 +142,13 @@
   {
     "id": "shelf_love_dsm",
     "name": "Shelf Love DSM",
+    "description": "Community-focused bookstore in Drake with a very quiet, book-friendly atmosphere and no coffee service.",
     "location": {
-      "coordinates": {"latitude": 41.6090, "longitude": -93.6330},
-      "neighborhood": "Sherman Hill",
+      "coordinates": {
+        "latitude": 41.600231,
+        "longitude": -93.649163
+      },
+      "neighborhood": "Drake",
       "address": "2326 University Ave, Des Moines, IA 50311"
     },
     "features": {
@@ -146,8 +170,12 @@
   {
     "id": "coffee_cats_cafe",
     "name": "Coffee Cats Cafe",
+    "description": "Valley Junction cafe with a friendly vibe, great coffee, and a cozy space suitable for reading and socializing.",
     "location": {
-      "coordinates": {"latitude": 41.5727, "longitude": -93.7141},
+      "coordinates": {
+        "latitude": 41.573075,
+        "longitude": -93.709304
+      },
       "neighborhood": "Valley Junction",
       "address": "312 5th St, West Des Moines, IA 50265"
     },
@@ -170,8 +198,12 @@
   {
     "id": "smokey_row_coffee",
     "name": "Smokey Row Coffee",
+    "description": "Neighborhood coffee shop in Sherman Hill with a warm atmosphere and extended evening hours.",
     "location": {
-      "coordinates": {"latitude": 41.5720, "longitude": -93.6215},
+      "coordinates": {
+        "latitude": 41.593467,
+        "longitude": -93.643001
+      },
       "neighborhood": "Sherman Hill",
       "address": "1910 Cottage Grove Ave, Des Moines, IA 50314"
     },

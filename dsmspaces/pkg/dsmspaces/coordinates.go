@@ -8,21 +8,19 @@ type Coordinates struct {
 }
 
 func (c *Coordinates) WithinRadius(other *Coordinates, radiusKM float64) bool {
-	return c.HaversineKM(other) <= radiusKM
+	return c.DistanceKM(other) <= radiusKM
 }
 
-func (c *Coordinates) HaversineKM(other *Coordinates) float64 {
+// DistanceKM computes the distance between two coordinates using the
+// Haversine formula, returning the distance in kilometers.
+func (c *Coordinates) DistanceKM(other *Coordinates) float64 {
 	delta := Coordinates{
 		Latitude:  rad(other.Latitude-c.Latitude) / 2,
 		Longitude: rad(other.Longitude-c.Longitude) / 2,
 	}
-
-	a := math.Sin(delta.Latitude)*math.Sin(delta.Longitude) +
-		math.Cos(rad(c.Latitude))*
-			math.Cos(rad(other.Latitude))*
-			math.Sin(delta.Longitude)*
-			math.Sin(delta.Longitude)
-
+	a := math.Pow(math.Sin(delta.Latitude), 2) +
+		math.Cos(rad(c.Latitude))*math.Cos(rad(other.Latitude))*
+			math.Pow(math.Sin(delta.Longitude), 2)
 	return earthRadiusKM * 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 }
 

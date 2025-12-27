@@ -10,7 +10,6 @@ func Search(places []Place, intents *Intents) (results []ScoredPlace) {
 		return
 	}
 
-	const threshold = 0.0
 	results = make([]ScoredPlace, len(places))
 	for i := range places {
 		results[i] = Score(&places[i], intents)
@@ -21,17 +20,14 @@ func Search(places []Place, intents *Intents) (results []ScoredPlace) {
 		return -cmp.Compare(a.Score, b.Score)
 	})
 
-	// truncate the results as soon as one of the scores drop below the
-	// threshold
+	// curve the scores--the first score is the highest as a consequence of
+	// the previous sort, so we can divide everything by it as the curving
+	// mechanism
+	if results[0].Score == 0 {
+		return
+	}
 	for i := range results {
-		// curve the scores--the first score is the highest as a consequence of
-		// the previous sort, so we can divide everything by it as the curving
-		// mechanism
 		results[i].Score = results[i].Score / results[0].Score
-		if results[i].Score < threshold {
-			results = results[:i]
-			return
-		}
 	}
 	return
 }
