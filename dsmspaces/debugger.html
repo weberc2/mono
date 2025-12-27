@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>PMTiles Road Debugger</title>
+    <script src="https://unpkg.com/pmtiles@3.0.7/dist/pmtiles.js"></script>
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+    <style>
+        body { margin: 0; padding: 0; font-family: sans-serif; }
+        #map { position: absolute; top: 0; bottom: 250px; width: 100%; }
+        #controls { position: absolute; top: 10px; left: 10px; background: white;
+                    padding: 10px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        #info { position: absolute; bottom: 0; width: 100%; height: 250px; 
+                background: #f5f5f5; padding: 20px; box-sizing: border-box;
+                overflow-y: auto; }
+        button { margin: 5px; padding: 8px 12px; cursor: pointer; }
+        .active { background: #4CAF50; color: white; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="controls">
+        <div><strong>Toggle Layers:</strong></div>
+        <button id="toggle-landuse">Landuse</button>
+        <button id="toggle-water">Water</button>
+        <button id="toggle-buildings">Buildings</button>
+        <button id="toggle-roads">Roads</button>
+    </div>
+    <div id="info">
+        <h3>Click on the map to inspect features</h3>
+        <div id="output"></div>
+    </div>
+
+    <script>
+        const protocol = new pmtiles.Protocol();
+        maplibregl.addProtocol("pmtiles", protocol.tile);
+        
+        // Try multiple possible layer configurations for roads
+        const roadLayers = [
+            {
+                "id": "roads-motorway",
+                "type": "line",
+                "source": "basemap",
+                "source-layer": "transportation",
+                "filter": ["==", ["get", "class"], "motorway"],
+                "paint": { 
+                    "line-color": "#ff6b6b",
+                    "line-width": 4
+                }
+            },
+            {
+                "id": "roads-trunk",
+                "type": "line",
+                "source": "basemap",
+                "source-layer": "transportation",
+                "filter": ["==", ["get", "class"], "trunk"],
+                "paint": { 
+                    "line-color": "#ff8c42",
+                    "line-width": 3
+                }
+            },
+            {
+                "id": "roads-primary",
+                "type": "line",
+                "source": "basemap",
+                "source-layer": "transportation",
+                "filter": ["==", ["get", "class"], "primary"],
+                "paint": { 
+                    "line-color": "#ffd93d",
+                    "line-width": 3
+                }
+            },
+            {
+                "id": "roads-secondary",
+                "type": "line",
+                "source": "basemap",
+                "source-layer": "transportation",
+                "filter": ["==", ["get", "class"], "secondary"],
+                "paint": { 
+                    "line-color": "#95e1d3",
+                    "line-width": 2
+                }
+            },
+            {
+                "id": "roads-all",
+                "type": "line",
+                "source": "basemap",
+                "source-layer": "transportation",
+                "paint": { 
+                    "line-color": "#ffffff",
+                    "line-width": [
+                        "interpolate",
+                        ["linear"],
+                        ["zoom"],
+                        10, 1,
+                        14, 2,
+                        18, 8
+                    ]
+                }
+            },
+            {
+                "id": "roads-alt",
+                "type": "line",
+                "source": "basemap",
+                "source-layer": "road",
+                "paint": { 
+                    "line-color": "#00ff00",
+                    "line-width": 3
+                }
+            },
+            {
+                "id": "transportation-name",
+                "type": "line",
+                "source": "basemap",
+                "source-layer": "transportation_name",
+                "paint": { 
+                    "line-color": "#ff00ff",
+                    "line-width": 2
+                }
+            }
+        ];
+
+        const map = new maplibregl.Map({
+            container: "map",
+            style: {
+                "version": 8,
+                "sources": {
+                    "basemap": {
+                        "type": "vector",
+                        "url": "pmtiles:///tiles/desmoines.pmtiles"
+                    }
+                },
+                "layers": [
+                    {
+                        "id": "background",
+                        "type": "background",
+                        "paint": { "background-color": "#f0f0f0" }
+                    },
+                    {
+                        "id": "landuse",
+                        "type": "fill",
+                        "source": "basemap",
+                        "source-layer": "landuse",
+                        "paint": { 
+                            "fill-color": "#e8e8e8",
+                            "fill-opacity": 0.4
+                        }
+                    },
+                    {
+                        "id": "water",
+                        "type": "fill",
+                        "source": "basemap",
+                        "source-layer": "water",
+                        "paint": { "fill-color": "#aadaff" }
+                    },
+                    ...roadLayers,
+                    {
+                        "id": "building",
+                        "type": "fill",
+                        "source": "basemap",
+                        "source-layer": "building",
+                        "paint": { 
+                            "fill-color": "#d9d0c9",
+                            "fill-opacity": 0.8
+                        }
+                    }
+                ]
+            },
+            center: [-93.62, 41.59],
+            zoom: 14
+        });
+
+        const layerStates = {
+            landuse: true,
+            water: true,
+            building: true,
+            roads: true
+        };
+
+        function toggleLayer(layerPrefix, state) {
+            const layers = map.getStyle().layers;
+            layers.forEach(layer => {
+                if (layer.id.startsWith(layerPrefix) || 
+                    (layerPrefix === 'roads' && (layer.id.includes('road') || layer.id.includes('transportation')))) {
+                    map.setLayoutProperty(layer.id, 'visibility', state ? 'visible' : 'none');
+                }
+            });
+        }
+
+        document.getElementById('toggle-landuse').addEventListener('click', (e) => {
+            layerStates.landuse = !layerStates.landuse;
+            toggleLayer('landuse', layerStates.landuse);
+            e.target.classList.toggle('active', layerStates.landuse);
+        });
+
+        document.getElementById('toggle-water').addEventListener('click', (e) => {
+            layerStates.water = !layerStates.water;
+            toggleLayer('water', layerStates.water);
+            e.target.classList.toggle('active', layerStates.water);
+        });
+
+        document.getElementById('toggle-buildings').addEventListener('click', (e) => {
+            layerStates.building = !layerStates.building;
+            toggleLayer('building', layerStates.building);
+            e.target.classList.toggle('active', layerStates.building);
+        });
+
+        document.getElementById('toggle-roads').addEventListener('click', (e) => {
+            layerStates.roads = !layerStates.roads;
+            toggleLayer('roads', layerStates.roads);
+            e.target.classList.toggle('active', layerStates.roads);
+        });
+
+        map.on('load', () => {
+            document.querySelectorAll('button').forEach(btn => btn.classList.add('active'));
+        });
+
+        map.on('click', (e) => {
+            const features = map.queryRenderedFeatures(e.point);
+            const output = document.getElementById('output');
+            
+            if (features.length === 0) {
+                output.innerHTML = '<p><strong>No features found. Zoom in more or click on visible features.</strong></p>';
+                return;
+            }
+
+            const byLayer = {};
+            features.forEach(f => {
+                const layer = f.sourceLayer || 'unknown';
+                if (!byLayer[layer]) byLayer[layer] = [];
+                byLayer[layer].push(f);
+            });
+
+            let html = `<p><strong>Found ${features.length} features at zoom ${Math.round(map.getZoom() * 10) / 10}:</strong></p>`;
+            
+            Object.keys(byLayer).forEach(layerName => {
+                const layerFeatures = byLayer[layerName];
+                html += `<div style="margin: 10px 0; padding: 10px; background: white; border-radius: 4px;">`;
+                html += `<strong style="color: #2196F3;">${layerName}</strong> (${layerFeatures.length} features)<br>`;
+                
+                const props = layerFeatures[0].properties;
+                if (props) {
+                    html += `<pre style="font-size: 11px; margin: 5px 0;">${JSON.stringify(props, null, 2)}</pre>`;
+                }
+                html += `</div>`;
+            });
+            
+            output.innerHTML = html;
+        });
+    </script>
+</body>
+</html>
