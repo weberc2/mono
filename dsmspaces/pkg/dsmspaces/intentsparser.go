@@ -8,15 +8,30 @@ import (
 
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
+	"github.com/openai/openai-go/packages/param"
 )
 
 type IntentsParser struct {
-	openAI openai.Client
+	openAI   openai.Client
+	recorder IntentsParseRecorder
 }
 
-func NewIntentsParser(apiKey string) (parser IntentsParser) {
+func NewIntentsParser(
+	apiKey string,
+	options ...func(*IntentsParser),
+) (parser IntentsParser) {
 	parser.openAI = openai.NewClient(option.WithAPIKey(apiKey))
+	parser.recorder = NullIntentsParseRecorder{}
+	for _, option := range options {
+		option(&parser)
+	}
 	return
+}
+
+func WithRecorder(recorder IntentsParseRecorder) func(*IntentsParser) {
+	return func(p *IntentsParser) {
+		p.recorder = recorder
+	}
 }
 
 func (p *IntentsParser) ParseIntents(
@@ -41,8 +56,9 @@ func (p *IntentsParser) ParseIntentsJSON(
 	query string,
 ) (intents json.RawMessage, err error) {
 	var (
-		prompt     = buildSystemPrompt(query)
-		completion *openai.ChatCompletion
+		prompt      = buildSystemPrompt(query)
+		temperature = param.NewOpt[float64](0)
+		completion  *openai.ChatCompletion
 	)
 	if completion, err = p.openAI.Chat.Completions.New(
 		ctx,
@@ -51,6 +67,7 @@ func (p *IntentsParser) ParseIntentsJSON(
 			Messages: []openai.ChatCompletionMessageParamUnion{
 				openai.SystemMessage(prompt),
 			},
+			Temperature: temperature,
 		},
 	); err != nil {
 		err = fmt.Errorf("parsing intent: %w", err)
@@ -62,6 +79,18 @@ func (p *IntentsParser) ParseIntentsJSON(
 	intents = []byte(sanitizeResponse(response))
 	if err = ValidateIntents(intents); err != nil {
 		err = fmt.Errorf("parsing intent: validating model response: %w", err)
+		return
+	}
+	if err = p.recorder.RecordIntentsParse(
+		ctx,
+		query,
+		intents,
+		prompt,
+		openai.ChatModelGPT3_5Turbo1106,
+		temperature,
+	); err != nil {
+		err = fmt.Errorf("parsing intent: %w", err)
+		return
 	}
 	return
 }

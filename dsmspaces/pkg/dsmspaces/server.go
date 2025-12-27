@@ -12,17 +12,7 @@ type Server struct {
 	Places       []Place
 	IndexFile    string
 	IntentParser IntentsParser
-}
-
-func NewServer(
-	indexFile string,
-	places []Place,
-	openaiAPIKey string,
-) (server Server) {
-	server.IndexFile = indexFile
-	server.Places = places
-	server.IntentParser = NewIntentsParser(openaiAPIKey)
-	return
+	PMTilesFile  string
 }
 
 func (s *Server) ServeIndex(w http.ResponseWriter, r *http.Request) {
@@ -128,6 +118,24 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "/", "/index.html":
 		if r.Method == http.MethodGet {
 			s.ServeIndex(w, r)
+		} else {
+			httperr(w, http.StatusMethodNotAllowed)
+		}
+	case "/inspector.html":
+		if r.Method == http.MethodGet {
+			http.ServeFile(w, r, "./inspector.html")
+		} else {
+			httperr(w, http.StatusMethodNotAllowed)
+		}
+	case "/debugger.html":
+		if r.Method == http.MethodGet {
+			http.ServeFile(w, r, "./debugger.html")
+		} else {
+			httperr(w, http.StatusMethodNotAllowed)
+		}
+	case "/tiles/desmoines.pmtiles":
+		if r.Method == http.MethodGet {
+			http.ServeFile(w, r, s.PMTilesFile)
 		} else {
 			httperr(w, http.StatusMethodNotAllowed)
 		}
